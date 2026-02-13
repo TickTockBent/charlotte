@@ -6,6 +6,8 @@ import type { ElementIdGenerator } from "./renderer/element-id-generator.js";
 import { registerEvaluateTools } from "./tools/evaluate.js";
 import { registerNavigationTools } from "./tools/navigation.js";
 import { registerObservationTools } from "./tools/observation.js";
+import { registerInteractionTools } from "./tools/interaction.js";
+import { registerSessionTools } from "./tools/session.js";
 
 export interface ServerDeps {
   browserManager: BrowserManager;
@@ -43,6 +45,10 @@ export function createServer(deps: ServerDeps): McpServer {
 
   registerNavigationTools(server, toolDeps);
   registerObservationTools(server, toolDeps);
+
+  // Phase 3: interaction + session tools
+  registerInteractionTools(server, toolDeps);
+  registerSessionTools(server, toolDeps);
 
   return server;
 }

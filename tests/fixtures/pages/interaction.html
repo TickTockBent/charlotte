@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interaction Test Page</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: sans-serif; padding: 20px; }
+    label { display: block; margin-bottom: 4px; font-weight: bold; }
+    input, select, textarea { margin-bottom: 12px; padding: 8px; width: 300px; display: block; }
+    button { padding: 8px 16px; cursor: pointer; margin-right: 8px; margin-bottom: 8px; }
+    .result { margin: 10px 0; padding: 10px; background: #f0f0f0; border: 1px solid #ddd; }
+    .hidden { display: none; }
+    .hovered { background: #e0e0ff; }
+    .scrollable { height: 100px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; margin: 10px 0; }
+    .scroll-content { height: 500px; }
+  </style>
+</head>
+<body>
+  <main role="main" aria-label="Interaction test content">
+    <h1>Interaction Test</h1>
+
+    <div id="result" class="result">Ready</div>
+
+    <!-- Click tests -->
+    <section aria-label="Click tests">
+      <h2>Click Tests</h2>
+      <button id="click-btn" onclick="document.getElementById('result').textContent = 'Button clicked'">Click Me</button>
+      <button id="double-click-btn" ondblclick="document.getElementById('result').textContent = 'Double clicked'">Double Click Me</button>
+      <button id="right-click-btn" oncontextmenu="document.getElementById('result').textContent = 'Right clicked'; return false;">Right Click Me</button>
+    </section>
+
+    <!-- Type tests -->
+    <section aria-label="Type tests">
+      <h2>Type Tests</h2>
+      <form id="type-form" aria-label="Type form">
+        <label for="text-input">Text Input</label>
+        <input type="text" id="text-input" name="text" placeholder="Type here" value="initial value">
+
+        <label for="empty-input">Empty Input</label>
+        <input type="text" id="empty-input" name="empty" placeholder="Start typing...">
+
+        <label for="search-input">Search</label>
+        <input type="text" id="search-input" name="search" placeholder="Search..."
+               oninput="document.getElementById('result').textContent = 'Typed: ' + this.value">
+      </form>
+    </section>
+
+    <!-- Select tests -->
+    <section aria-label="Select tests">
+      <h2>Select Tests</h2>
+      <label for="color-select">Color</label>
+      <select id="color-select" name="color" onchange="document.getElementById('result').textContent = 'Selected: ' + this.value">
+        <option value="">Choose a color</option>
+        <option value="red">Red</option>
+        <option value="green">Green</option>
+        <option value="blue">Blue</option>
+      </select>
+    </section>
+
+    <!-- Toggle tests -->
+    <section aria-label="Toggle tests">
+      <h2>Toggle Tests</h2>
+      <label>
+        <input type="checkbox" id="agree-checkbox" name="agree"
+               onchange="document.getElementById('result').textContent = 'Checkbox: ' + this.checked">
+        I agree to terms
+      </label>
+      <br>
+      <label>
+        <input type="checkbox" id="checked-checkbox" name="prechecked" checked>
+        Already checked
+      </label>
+    </section>
+
+    <!-- Hover tests -->
+    <section aria-label="Hover tests">
+      <h2>Hover Tests</h2>
+      <button id="hover-btn"
+              onmouseenter="this.classList.add('hovered'); document.getElementById('result').textContent = 'Hovered'"
+              onmouseleave="this.classList.remove('hovered')">Hover Over Me</button>
+    </section>
+
+    <!-- Key tests -->
+    <section aria-label="Key tests">
+      <h2>Key Tests</h2>
+      <input type="text" id="key-input" name="key"
+             onkeydown="document.getElementById('result').textContent = 'Key: ' + event.key + (event.ctrlKey ? ' +Ctrl' : '')">
+    </section>
+
+    <!-- Scroll test -->
+    <section aria-label="Scroll tests">
+      <h2>Scroll Tests</h2>
+      <div id="scroll-container" class="scrollable" aria-label="Scrollable container">
+        <div class="scroll-content">
+          <p>Line 1</p>
+          <p style="margin-top: 200px;">Line at 200px</p>
+          <p style="margin-top: 200px;">Line at 400px</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Delayed action for wait_for -->
+    <section aria-label="Async tests">
+      <h2>Async Tests</h2>
+      <button id="delayed-btn" onclick="setTimeout(function() { document.getElementById('delayed-result').textContent = 'Async done'; document.getElementById('delayed-result').classList.remove('hidden'); }, 300)">Start Async</button>
+      <div id="delayed-result" class="result hidden">Waiting...</div>
+      <button id="slow-btn" onclick="setTimeout(function() { document.getElementById('result').textContent = 'Slow complete'; }, 2000)">Slow Action (2s)</button>
+    </section>
+
+    <!-- Form submit test -->
+    <section aria-label="Submit tests">
+      <h2>Submit Tests</h2>
+      <form id="submit-form" aria-label="Submit form" onsubmit="document.getElementById('result').textContent = 'Form submitted'; return false;">
+        <label for="submit-input">Name</label>
+        <input type="text" id="submit-input" name="name" placeholder="Your name">
+        <button type="submit" id="submit-btn">Submit</button>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

@@ -4,6 +4,8 @@ import type { PageManager } from "./browser/page-manager.js";
 import type { RendererPipeline } from "./renderer/renderer-pipeline.js";
 import type { ElementIdGenerator } from "./renderer/element-id-generator.js";
 import { registerEvaluateTools } from "./tools/evaluate.js";
+import { registerNavigationTools } from "./tools/navigation.js";
+import { registerObservationTools } from "./tools/observation.js";
 
 export interface ServerDeps {
   browserManager: BrowserManager;
@@ -30,6 +32,17 @@ export function createServer(deps: ServerDeps): McpServer {
     browserManager: deps.browserManager,
     getActivePage: () => deps.pageManager.getActivePage(),
   });
+
+  // Phase 2: navigation + observation tools
+  const toolDeps = {
+    browserManager: deps.browserManager,
+    pageManager: deps.pageManager,
+    rendererPipeline: deps.rendererPipeline,
+    elementIdGenerator: deps.elementIdGenerator,
+  };
+
+  registerNavigationTools(server, toolDeps);
+  registerObservationTools(server, toolDeps);
 
   return server;
 }

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SPA Test Page</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: sans-serif; }
+    header { height: 50px; background: #333; color: white; display: flex; align-items: center; padding: 0 20px; }
+    nav { display: flex; gap: 20px; margin-left: 20px; }
+    nav a { color: white; text-decoration: none; padding: 4px 8px; }
+    nav a.active { background: #555; border-radius: 4px; }
+    main { padding: 20px; }
+    .page { display: none; }
+    .page.active { display: block; }
+  </style>
+</head>
+<body>
+  <header role="banner">
+    <h1>SPA App</h1>
+    <nav role="navigation" aria-label="Main navigation">
+      <a href="#home" class="active" data-page="home">Home</a>
+      <a href="#about" data-page="about">About</a>
+      <a href="#contact" data-page="contact">Contact</a>
+    </nav>
+  </header>
+
+  <main role="main" aria-label="Page content">
+    <div id="page-home" class="page active">
+      <h2>Home</h2>
+      <p>Welcome to the SPA test page.</p>
+      <button id="home-action">Get Started</button>
+    </div>
+
+    <div id="page-about" class="page">
+      <h2>About</h2>
+      <p>This is the about page of the single-page application.</p>
+      <a href="https://example.com">Learn More</a>
+    </div>
+
+    <div id="page-contact" class="page">
+      <h2>Contact</h2>
+      <form id="contact-form">
+        <label for="contact-name">Name</label>
+        <input type="text" id="contact-name" name="name" placeholder="Your name">
+        <label for="contact-message">Message</label>
+        <textarea id="contact-message" name="message" placeholder="Your message"></textarea>
+        <button type="submit">Send</button>
+      </form>
+    </div>
+  </main>
+
+  <script>
+    // Simple hash-based routing
+    function navigate(hash) {
+      document.querySelectorAll('.page').forEach(function(page) {
+        page.classList.remove('active');
+      });
+      document.querySelectorAll('nav a').forEach(function(link) {
+        link.classList.remove('active');
+      });
+
+      var pageName = hash.replace('#', '') || 'home';
+      var pageElement = document.getElementById('page-' + pageName);
+      if (pageElement) {
+        pageElement.classList.add('active');
+        document.title = 'SPA Test Page - ' + pageName.charAt(0).toUpperCase() + pageName.slice(1);
+      }
+
+      var activeLink = document.querySelector('nav a[data-page="' + pageName + '"]');
+      if (activeLink) {
+        activeLink.classList.add('active');
+      }
+    }
+
+    window.addEventListener('hashchange', function() {
+      navigate(location.hash);
+    });
+
+    // Handle initial hash
+    if (location.hash) {
+      navigate(location.hash);
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Form Test Page</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: sans-serif; padding: 20px; }
+    .form-section { margin-bottom: 30px; }
+    label { display: block; margin-bottom: 4px; font-weight: bold; }
+    input, select, textarea { margin-bottom: 12px; padding: 8px; width: 300px; display: block; }
+    button { padding: 8px 16px; cursor: pointer; margin-right: 8px; }
+    fieldset { padding: 16px; margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <main role="main" aria-label="Form test content">
+    <h1>Registration Form</h1>
+
+    <form id="registration-form" action="/api/register" method="POST" aria-label="Registration">
+      <fieldset>
+        <legend>Personal Information</legend>
+
+        <label for="first-name">First Name</label>
+        <input type="text" id="first-name" name="firstName" placeholder="Enter first name" required>
+
+        <label for="last-name">Last Name</label>
+        <input type="text" id="last-name" name="lastName" placeholder="Enter last name" required>
+
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" placeholder="you@example.com" required>
+
+        <label for="phone">Phone</label>
+        <input type="tel" id="phone" name="phone" placeholder="555-0100">
+      </fieldset>
+
+      <fieldset>
+        <legend>Preferences</legend>
+
+        <label for="country">Country</label>
+        <select id="country" name="country">
+          <option value="">Select a country</option>
+          <option value="us">United States</option>
+          <option value="uk">United Kingdom</option>
+          <option value="ca">Canada</option>
+          <option value="au">Australia</option>
+        </select>
+
+        <label for="bio">Bio</label>
+        <textarea id="bio" name="bio" rows="4" placeholder="Tell us about yourself"></textarea>
+
+        <label>
+          <input type="checkbox" id="newsletter" name="newsletter"> Subscribe to newsletter
+        </label>
+
+        <br>
+
+        <label>Notification preference:</label>
+        <label>
+          <input type="radio" name="notifications" value="email" checked> Email
+        </label>
+        <label>
+          <input type="radio" name="notifications" value="sms"> SMS
+        </label>
+        <label>
+          <input type="radio" name="notifications" value="none"> None
+        </label>
+      </fieldset>
+
+      <button type="submit" id="submit-btn">Register</button>
+      <button type="reset" id="reset-btn">Reset</button>
+    </form>
+
+    <section>
+      <h2>Search</h2>
+      <form id="search-form" action="/api/search" method="GET" aria-label="Search">
+        <label for="search-query">Search</label>
+        <input type="text" id="search-query" name="q" placeholder="Search...">
+        <button type="submit">Go</button>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

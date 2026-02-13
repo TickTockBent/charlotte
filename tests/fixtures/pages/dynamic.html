@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dynamic Test Page</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: sans-serif; padding: 20px; }
+    .item { padding: 10px; margin: 5px 0; background: #f0f0f0; border: 1px solid #ddd; }
+    #status { margin: 10px 0; padding: 8px; font-weight: bold; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <main role="main" aria-label="Dynamic content">
+    <h1>Dynamic Page</h1>
+
+    <div id="status">Ready</div>
+
+    <button id="add-item-btn" onclick="addItem()">Add Item</button>
+    <button id="toggle-section-btn" onclick="toggleSection()">Toggle Section</button>
+    <button id="delayed-update-btn" onclick="delayedUpdate()">Delayed Update</button>
+
+    <section id="item-list" aria-label="Item list">
+      <h2>Items</h2>
+      <div id="items-container">
+        <div class="item">Item 1</div>
+        <div class="item">Item 2</div>
+      </div>
+    </section>
+
+    <section id="toggle-section" aria-label="Toggleable section">
+      <h2>Extra Content</h2>
+      <p>This section can be toggled.</p>
+      <a href="/details">View Details</a>
+    </section>
+  </main>
+
+  <script>
+    let itemCount = 2;
+
+    function addItem() {
+      itemCount++;
+      const container = document.getElementById('items-container');
+      const newItem = document.createElement('div');
+      newItem.className = 'item';
+      newItem.textContent = 'Item ' + itemCount;
+      container.appendChild(newItem);
+      document.getElementById('status').textContent = 'Added item ' + itemCount;
+    }
+
+    function toggleSection() {
+      const section = document.getElementById('toggle-section');
+      section.classList.toggle('hidden');
+      const isHidden = section.classList.contains('hidden');
+      document.getElementById('status').textContent = isHidden ? 'Section hidden' : 'Section visible';
+    }
+
+    function delayedUpdate() {
+      document.getElementById('status').textContent = 'Updating...';
+      setTimeout(function() {
+        document.getElementById('status').textContent = 'Update complete';
+      }, 500);
+    }
+  </script>
+</body>
+</html>

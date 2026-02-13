@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple Test Page</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: sans-serif; }
+    header { height: 64px; background: #333; color: white; display: flex; align-items: center; padding: 0 20px; }
+    nav { width: 240px; position: fixed; top: 64px; left: 0; bottom: 0; background: #f0f0f0; padding: 20px; }
+    nav ul { list-style: none; }
+    nav li { margin-bottom: 10px; }
+    main { margin-left: 240px; margin-top: 64px; padding: 20px; }
+    .search-bar { margin-bottom: 20px; }
+    .search-bar input { padding: 8px; width: 300px; }
+    .actions { margin-bottom: 20px; }
+    .actions button { padding: 8px 16px; cursor: pointer; }
+    .content-section { margin-bottom: 30px; }
+    .metrics { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .metric-card { padding: 20px; background: #f9f9f9; border: 1px solid #ddd; }
+  </style>
+</head>
+<body>
+  <header role="banner">
+    <h1>Test Dashboard</h1>
+  </header>
+
+  <nav role="navigation" aria-label="Main navigation">
+    <ul>
+      <li><a href="/dashboard">Dashboard</a></li>
+      <li><a href="/projects">Projects</a></li>
+      <li><a href="/tasks">Tasks</a></li>
+      <li><a href="/reports">Reports</a></li>
+      <li><a href="/settings">Settings</a></li>
+    </ul>
+  </nav>
+
+  <main role="main" aria-label="Dashboard content">
+    <div class="search-bar">
+      <form action="/api/search" method="GET">
+        <label for="search-input">Search</label>
+        <input type="text" id="search-input" name="q" placeholder="Search projects...">
+      </form>
+    </div>
+
+    <div class="actions">
+      <button id="create-btn">Create New Project</button>
+      <button id="export-btn" disabled>Export Data</button>
+    </div>
+
+    <section class="content-section">
+      <h2>Recent Activity</h2>
+      <p>Here is some recent activity on your dashboard.</p>
+      <ul>
+        <li>Project Alpha updated</li>
+        <li>New task assigned</li>
+        <li>Report generated</li>
+      </ul>
+    </section>
+
+    <section class="content-section">
+      <h2>Metrics</h2>
+      <div class="metrics">
+        <div class="metric-card">
+          <h3>Active Projects</h3>
+          <p>12</p>
+        </div>
+        <div class="metric-card">
+          <h3>Open Tasks</h3>
+          <p>47</p>
+        </div>
+        <div class="metric-card">
+          <h3>Team Members</h3>
+          <p>8</p>
+        </div>
+        <div class="metric-card">
+          <h3>Completion Rate</h3>
+          <p>78%</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="content-section">
+      <h2>Settings</h2>
+      <form>
+        <label for="theme-select">Theme</label>
+        <select id="theme-select">
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+          <option value="auto">Auto</option>
+        </select>
+
+        <br><br>
+
+        <label>
+          <input type="checkbox" id="notifications-check"> Enable notifications
+        </label>
+
+        <br><br>
+
+        <button type="submit">Save Settings</button>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

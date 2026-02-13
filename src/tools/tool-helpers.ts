@@ -5,6 +5,7 @@ import type { RendererPipeline } from "../renderer/renderer-pipeline.js";
 import type { ElementIdGenerator } from "../renderer/element-id-generator.js";
 import type { SnapshotStore } from "../state/snapshot-store.js";
 import type { CharlotteConfig } from "../types/config.js";
+import type { DevModeState } from "../dev/dev-mode-state.js";
 import type {
   PageRepresentation,
   InteractiveElement,
@@ -20,6 +21,7 @@ export interface ToolDependencies {
   elementIdGenerator: ElementIdGenerator;
   snapshotStore: SnapshotStore;
   config: CharlotteConfig;
+  devModeState?: DevModeState;
 }
 
 export interface RenderOptions {
@@ -71,6 +73,12 @@ export async function renderActivePage(
 
   if (shouldSnapshot) {
     deps.snapshotStore.push(representation);
+  }
+
+  // Attach pending reload event from dev mode, if any
+  const pendingReloadEvent = deps.devModeState?.consumePendingReloadEvent();
+  if (pendingReloadEvent) {
+    representation.reload_event = pendingReloadEvent;
   }
 
   return representation;

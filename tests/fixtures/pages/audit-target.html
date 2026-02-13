@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Audit Target Page</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: sans-serif; padding: 20px; background: #fff; }
+    .low-contrast { color: #ccc; background: #fff; }
+    .good-contrast { color: #000; background: #fff; }
+  </style>
+</head>
+<body>
+  <h1>First Heading</h1>
+  <h1>Duplicate Heading</h1>
+
+  <!-- Image without alt text -->
+  <img src="nonexistent.png">
+
+  <!-- Image with alt text (should pass) -->
+  <img src="also-nonexistent.png" alt="A decorative image">
+
+  <!-- Empty button -->
+  <button id="empty-btn"></button>
+
+  <!-- Good button (should pass) -->
+  <button id="good-btn">Click me</button>
+
+  <!-- Empty link -->
+  <a href="/nowhere" id="empty-link"></a>
+
+  <!-- Good link (should pass) -->
+  <a href="/somewhere" id="good-link">Go somewhere</a>
+
+  <!-- Input without label -->
+  <input type="text" id="unlabeled-input" placeholder="No label">
+
+  <!-- Input with label (should pass) -->
+  <label for="labeled-input">Name</label>
+  <input type="text" id="labeled-input" placeholder="Your name">
+
+  <!-- Low contrast text -->
+  <p class="low-contrast">This text has very low contrast</p>
+
+  <!-- Good contrast text -->
+  <p class="good-contrast">This text has good contrast</p>
+
+  <!-- Heading hierarchy skip: h1 then h3 -->
+  <h3>Skipped heading level</h3>
+
+  <!-- Broken link (non-existent URL for link audit) -->
+  <a href="http://localhost:1/this-should-not-exist">Broken link target</a>
+</body>
+</html>

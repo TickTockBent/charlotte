@@ -7,6 +7,7 @@ import { ElementIdGenerator } from "./renderer/element-id-generator.js";
 import { SnapshotStore } from "./state/snapshot-store.js";
 import { createDefaultConfig } from "./types/config.js";
 import { createServer } from "./server.js";
+import { DevModeState } from "./dev/dev-mode-state.js";
 import { logger } from "./utils/logger.js";
 
 async function main(): Promise<void> {
@@ -34,6 +35,9 @@ async function main(): Promise<void> {
   const config = createDefaultConfig();
   const snapshotStore = new SnapshotStore(config.snapshotDepth);
 
+  // Initialize dev mode state
+  const devModeState = new DevModeState();
+
   // Create and configure MCP server
   const mcpServer = createServer({
     browserManager,
@@ -42,6 +46,7 @@ async function main(): Promise<void> {
     elementIdGenerator,
     snapshotStore,
     config,
+    devModeState,
   });
 
   // Connect stdio transport
@@ -53,6 +58,7 @@ async function main(): Promise<void> {
   // Graceful shutdown
   const shutdown = async () => {
     logger.info("Shutting down");
+    await devModeState.stopAll();
     await mcpServer.close();
     await browserManager.close();
     process.exit(0);

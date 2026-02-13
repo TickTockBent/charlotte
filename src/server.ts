@@ -10,6 +10,8 @@ import { registerNavigationTools } from "./tools/navigation.js";
 import { registerObservationTools } from "./tools/observation.js";
 import { registerInteractionTools } from "./tools/interaction.js";
 import { registerSessionTools } from "./tools/session.js";
+import { registerDevModeTools } from "./tools/dev-mode.js";
+import type { DevModeState } from "./dev/dev-mode-state.js";
 
 export interface ServerDeps {
   browserManager: BrowserManager;
@@ -18,6 +20,7 @@ export interface ServerDeps {
   elementIdGenerator: ElementIdGenerator;
   snapshotStore: SnapshotStore;
   config: CharlotteConfig;
+  devModeState?: DevModeState;
 }
 
 export function createServer(deps: ServerDeps): McpServer {
@@ -47,12 +50,14 @@ export function createServer(deps: ServerDeps): McpServer {
     elementIdGenerator: deps.elementIdGenerator,
     snapshotStore: deps.snapshotStore,
     config: deps.config,
+    devModeState: deps.devModeState,
   };
 
   registerNavigationTools(server, toolDeps);
   registerObservationTools(server, toolDeps);
   registerInteractionTools(server, toolDeps);
   registerSessionTools(server, toolDeps);
+  registerDevModeTools(server, toolDeps);
 
   return server;
 }

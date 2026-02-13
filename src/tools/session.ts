@@ -3,7 +3,11 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { logger } from "../utils/logger.js";
 import type { AutoSnapshotMode } from "../types/config.js";
 import type { ToolDependencies } from "./tool-helpers.js";
-import { handleToolError } from "./tool-helpers.js";
+import {
+  renderActivePage,
+  formatPageResponse,
+  handleToolError,
+} from "./tool-helpers.js";
 
 const CookieSchema = z.object({
   name: z.string().describe("Cookie name"),
@@ -157,6 +161,311 @@ export function registerSessionTools(
                   snapshot_depth: deps.config.snapshotDepth,
                   auto_snapshot: deps.config.autoSnapshot,
                 },
+              }),
+            },
+          ],
+        };
+      } catch (error: unknown) {
+        return handleToolError(error);
+      }
+    },
+  );
+
+  // ─── charlotte:tabs ───
+  server.registerTool(
+    "charlotte:tabs",
+    {
+      description: "List all open browser tabs with their URLs, titles, and active status.",
+      inputSchema: {},
+    },
+    async () => {
+      try {
+        await deps.browserManager.ensureConnected();
+
+        const tabs = await deps.pageManager.listTabs();
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify({ tabs }),
+            },
+          ],
+        };
+      } catch (error: unknown) {
+        return handleToolError(error);
+      }
+    },
+  );
+
+  // ─── charlotte:tab_open ───
+  server.registerTool(
+    "charlotte:tab_open",
+    {
+      description:
+        "Open a new browser tab. Optionally navigate to a URL. The new tab becomes the active tab.",
+      inputSchema: {
+        url: z
+          .string()
+          .optional()
+          .describe("URL to navigate to (default: blank page)"),
+      },
+    },
+    async ({ url }) => {
+      try {
+        await deps.browserManager.ensureConnected();
+
+        const tabId = await deps.pageManager.openTab(deps.browserManager, url);
+        logger.info("Opened new tab", { tabId, url });
+
+        const representation = await renderActivePage(deps, {
+          source: "action",
+        });
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify({
+                tab_id: tabId,
+                ...representation,
+              }, null, 2),
+            },
+          ],
+        };
+      } catch (error: unknown) {
+        return handleToolError(error);
+      }
+    },
+  );
+
+  // ─── charlotte:tab_switch ───
+  server.registerTool(
+    "charlotte:tab_switch",
+    {
+      description:
+        "Switch to a different browser tab by its tab ID. Returns the page representation of the activated tab.",
+      inputSchema: {
+        tab_id: z.string().describe("ID of the tab to switch to"),
+      },
+    },
+    async ({ tab_id }) => {
+      try {
+        await deps.browserManager.ensureConnected();
+
+        await deps.pageManager.switchTab(tab_id);
+        logger.info("Switched to tab", { tab_id });
+
+        const representation = await renderActivePage(deps, {
+          source: "action",
+        });
+
+        return formatPageResponse(representation);
+      } catch (error: unknown) {
+        return handleToolError(error);
+      }
+    },
+  );
+
+  // ─── charlotte:tab_close ───
+  server.registerTool(
+    "charlotte:tab_close",
+    {
+      description:
+        "Close a browser tab by its ID. If the closed tab was active, switches to the first remaining tab.",
+      inputSchema: {
+        tab_id: z.string().describe("ID of the tab to close"),
+      },
+    },
+    async ({ tab_id }) => {
+      try {
+        await deps.browserManager.ensureConnected();
+
+        await deps.pageManager.closeTab(tab_id);
+        logger.info("Closed tab", { tab_id });
+
+        const remainingTabs = await deps.pageManager.listTabs();
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify({
+                success: true,
+                closed: tab_id,
+                remaining_tabs: remainingTabs,
+              }),
+            },
+          ],
+        };
+      } catch (error: unknown) {
+        return handleToolError(error);
+      }
+    },
+  );
+
+  // ─── charlotte:viewport ───
+
+  const DEVICE_PRESETS: Record<string, { width: number; height: number }> = {
+    mobile: { width: 375, height: 667 },
+    tablet: { width: 768, height: 1024 },
+    desktop: { width: 1280, height: 720 },
+  };
+
+  server.registerTool(
+    "charlotte:viewport",
+    {
+      description:
+        "Change the browser viewport dimensions. Use a device preset or specify custom width/height. Returns page representation at the new viewport size.",
+      inputSchema: {
+        width: z
+          .number()
+          .optional()
+          .describe("Viewport width in pixels"),
+        height: z
+          .number()
+          .optional()
+          .describe("Viewport height in pixels"),
+        device: z
+          .enum(["mobile", "tablet", "desktop"])
+          .optional()
+          .describe(
+            'Device preset (overrides width/height). "mobile" = 375×667, "tablet" = 768×1024, "desktop" = 1280×720',
+          ),
+      },
+    },
+    async ({ width, height, device }) => {
+      try {
+        await deps.browserManager.ensureConnected();
+        const page = deps.pageManager.getActivePage();
+
+        let viewportWidth: number;
+        let viewportHeight: number;
+
+        if (device) {
+          const preset = DEVICE_PRESETS[device];
+          viewportWidth = preset.width;
+          viewportHeight = preset.height;
+        } else if (width !== undefined && height !== undefined) {
+          viewportWidth = width;
+          viewportHeight = height;
+        } else {
+          viewportWidth = width ?? 1280;
+          viewportHeight = height ?? 720;
+        }
+
+        logger.info("Setting viewport", {
+          width: viewportWidth,
+          height: viewportHeight,
+          device,
+        });
+
+        await page.setViewport({
+          width: viewportWidth,
+          height: viewportHeight,
+        });
+
+        const representation = await renderActivePage(deps, {
+          source: "action",
+        });
+
+        return formatPageResponse(representation);
+      } catch (error: unknown) {
+        return handleToolError(error);
+      }
+    },
+  );
+
+  // ─── charlotte:network ───
+
+  const THROTTLE_PRESETS: Record<
+    string,
+    {
+      offline: boolean;
+      downloadThroughput: number;
+      uploadThroughput: number;
+      latency: number;
+    }
+  > = {
+    "3g": {
+      offline: false,
+      downloadThroughput: (1.6 * 1024 * 1024) / 8,
+      uploadThroughput: (750 * 1024) / 8,
+      latency: 150,
+    },
+    "4g": {
+      offline: false,
+      downloadThroughput: (4 * 1024 * 1024) / 8,
+      uploadThroughput: (3 * 1024 * 1024) / 8,
+      latency: 20,
+    },
+    offline: {
+      offline: true,
+      downloadThroughput: 0,
+      uploadThroughput: 0,
+      latency: 0,
+    },
+    none: {
+      offline: false,
+      downloadThroughput: -1,
+      uploadThroughput: -1,
+      latency: 0,
+    },
+  };
+
+  server.registerTool(
+    "charlotte:network",
+    {
+      description:
+        "Configure network conditions for the active page. Set throttling presets, block URL patterns, or enable request logging.",
+      inputSchema: {
+        throttle: z
+          .enum(["3g", "4g", "offline", "none"])
+          .optional()
+          .describe(
+            'Network throttling preset. "3g" = slow, "4g" = fast mobile, "offline" = no network, "none" = disable throttling',
+          ),
+        block: z
+          .array(z.string())
+          .optional()
+          .describe(
+            "URL patterns to block (e.g. [\"*.ads.com\", \"tracking.js\"]). Pass empty array to clear.",
+          ),
+      },
+    },
+    async ({ throttle, block }) => {
+      try {
+        await deps.browserManager.ensureConnected();
+        const page = deps.pageManager.getActivePage();
+        const session = await page.createCDPSession();
+
+        const appliedSettings: {
+          throttle?: string;
+          blocked_patterns?: string[];
+        } = {};
+
+        if (throttle !== undefined) {
+          const preset = THROTTLE_PRESETS[throttle];
+          await session.send("Network.emulateNetworkConditions", preset);
+          appliedSettings.throttle = throttle;
+          logger.info("Applied network throttling", { throttle });
+        }
+
+        if (block !== undefined) {
+          await session.send("Network.setBlockedURLs", { urls: block });
+          appliedSettings.blocked_patterns = block;
+          logger.info("Set blocked URL patterns", {
+            patternCount: block.length,
+          });
+        }
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify({
+                success: true,
+                network: appliedSettings,
               }),
             },
           ],

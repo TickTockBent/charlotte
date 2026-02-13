@@ -106,13 +106,13 @@ export class PageManager {
     logger.info(`Closed tab ${tabId}`);
   }
 
-  listTabs(): TabInfo[] {
+  async listTabs(): Promise<TabInfo[]> {
     const tabs: TabInfo[] = [];
     for (const [id, managedPage] of this.pages) {
       tabs.push({
         id,
         url: managedPage.page.url(),
-        title: "", // Would need await page.title(), but this is sync
+        title: await managedPage.page.title(),
         active: id === this.activeTabId,
       });
     }

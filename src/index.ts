@@ -4,6 +4,8 @@ import { PageManager } from "./browser/page-manager.js";
 import { CDPSessionManager } from "./browser/cdp-session.js";
 import { RendererPipeline } from "./renderer/renderer-pipeline.js";
 import { ElementIdGenerator } from "./renderer/element-id-generator.js";
+import { SnapshotStore } from "./state/snapshot-store.js";
+import { createDefaultConfig } from "./types/config.js";
 import { createServer } from "./server.js";
 import { logger } from "./utils/logger.js";
 
@@ -28,12 +30,18 @@ async function main(): Promise<void> {
     elementIdGenerator,
   );
 
+  // Initialize state management
+  const config = createDefaultConfig();
+  const snapshotStore = new SnapshotStore(config.snapshotDepth);
+
   // Create and configure MCP server
   const mcpServer = createServer({
     browserManager,
     pageManager,
     rendererPipeline,
     elementIdGenerator,
+    snapshotStore,
+    config,
   });
 
   // Connect stdio transport

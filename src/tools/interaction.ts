@@ -6,6 +6,7 @@ import { logger } from "../utils/logger.js";
 import type { ToolDependencies } from "./tool-helpers.js";
 import {
   renderActivePage,
+  renderAfterAction,
   resolveElement,
   formatPageResponse,
   handleToolError,
@@ -259,7 +260,7 @@ export function registerInteractionTools(
         // Brief pause to allow DOM updates to settle
         await new Promise((resolve) => setTimeout(resolve, 50));
 
-        const representation = await renderActivePage(deps, "summary");
+        const representation = await renderAfterAction(deps);
         return formatPageResponse(representation);
       } catch (error: unknown) {
         return handleToolError(error);
@@ -308,7 +309,7 @@ export function registerInteractionTools(
           shouldPressEnter,
         );
 
-        const representation = await renderActivePage(deps, "summary");
+        const representation = await renderAfterAction(deps);
         return formatPageResponse(representation);
       } catch (error: unknown) {
         return handleToolError(error);
@@ -336,7 +337,7 @@ export function registerInteractionTools(
 
         await selectOptionByBackendNodeId(page, backendNodeId, value);
 
-        const representation = await renderActivePage(deps, "summary");
+        const representation = await renderAfterAction(deps);
         return formatPageResponse(representation);
       } catch (error: unknown) {
         return handleToolError(error);
@@ -366,7 +367,7 @@ export function registerInteractionTools(
 
         await new Promise((resolve) => setTimeout(resolve, 50));
 
-        const representation = await renderActivePage(deps, "summary");
+        const representation = await renderAfterAction(deps);
         return formatPageResponse(representation);
       } catch (error: unknown) {
         return handleToolError(error);
@@ -389,7 +390,7 @@ export function registerInteractionTools(
         await deps.browserManager.ensureConnected();
 
         // Find the form in the current representation
-        const representation = await renderActivePage(deps, "minimal");
+        const representation = await renderActivePage(deps, { detail: "minimal" });
         const form = representation.forms.find((f) => f.id === form_id);
 
         if (!form) {
@@ -429,7 +430,7 @@ export function registerInteractionTools(
 
         await new Promise((resolve) => setTimeout(resolve, 100));
 
-        const updatedRepresentation = await renderActivePage(deps, "summary");
+        const updatedRepresentation = await renderAfterAction(deps);
         return formatPageResponse(updatedRepresentation);
       } catch (error: unknown) {
         return handleToolError(error);
@@ -544,7 +545,7 @@ export function registerInteractionTools(
 
         await new Promise((resolve) => setTimeout(resolve, 50));
 
-        const representation = await renderActivePage(deps, "summary");
+        const representation = await renderAfterAction(deps);
         return formatPageResponse(representation);
       } catch (error: unknown) {
         return handleToolError(error);
@@ -571,7 +572,7 @@ export function registerInteractionTools(
 
         await hoverElementByBackendNodeId(page, backendNodeId);
 
-        const representation = await renderActivePage(deps, "summary");
+        const representation = await renderAfterAction(deps);
         return formatPageResponse(representation);
       } catch (error: unknown) {
         return handleToolError(error);
@@ -622,7 +623,7 @@ export function registerInteractionTools(
 
         await new Promise((resolve) => setTimeout(resolve, 50));
 
-        const representation = await renderActivePage(deps, "summary");
+        const representation = await renderAfterAction(deps);
         return formatPageResponse(representation);
       } catch (error: unknown) {
         return handleToolError(error);
@@ -695,7 +696,7 @@ export function registerInteractionTools(
         );
 
         if (!satisfied) {
-          const representation = await renderActivePage(deps, "summary");
+          const representation = await renderAfterAction(deps);
           const timeoutError = new CharlotteError(
             CharlotteErrorCode.TIMEOUT,
             `Wait condition not met within ${waitTimeout}ms.`,
@@ -715,7 +716,7 @@ export function registerInteractionTools(
           };
         }
 
-        const representation = await renderActivePage(deps, "summary");
+        const representation = await renderAfterAction(deps);
         return formatPageResponse(representation);
       } catch (error: unknown) {
         return handleToolError(error);
@@ -819,7 +820,7 @@ async function checkElementCondition(
       const backendNodeId = deps.elementIdGenerator.resolveId(elementId);
       if (backendNodeId !== null) {
         // Re-render to check if it's truly still there
-        await renderActivePage(deps, "minimal");
+        await renderActivePage(deps, { detail: "minimal" });
         return deps.elementIdGenerator.resolveId(elementId) === null;
       }
       return true;
@@ -829,7 +830,7 @@ async function checkElementCondition(
     case "enabled":
     case "disabled": {
       // Re-render to get fresh state
-      const representation = await renderActivePage(deps, "minimal");
+      const representation = await renderActivePage(deps, { detail: "minimal" });
       const element = representation.interactive.find(
         (el) => el.id === elementId,
       );

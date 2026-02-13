@@ -5,6 +5,8 @@ import { PageManager } from "../../src/browser/page-manager.js";
 import { CDPSessionManager } from "../../src/browser/cdp-session.js";
 import { RendererPipeline } from "../../src/renderer/renderer-pipeline.js";
 import { ElementIdGenerator } from "../../src/renderer/element-id-generator.js";
+import { SnapshotStore } from "../../src/state/snapshot-store.js";
+import { createDefaultConfig } from "../../src/types/config.js";
 import type { ToolDependencies } from "../../src/tools/tool-helpers.js";
 import {
   renderActivePage,
@@ -33,11 +35,14 @@ describe("Observation integration", () => {
     cdpSessionManager = new CDPSessionManager();
     elementIdGenerator = new ElementIdGenerator();
     rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator);
+    const config = createDefaultConfig();
     deps = {
       browserManager,
       pageManager,
       rendererPipeline,
       elementIdGenerator,
+      snapshotStore: new SnapshotStore(config.snapshotDepth),
+      config,
     };
   });
 
@@ -50,9 +55,9 @@ describe("Observation integration", () => {
       const page = pageManager.getActivePage();
       await page.goto(SIMPLE_FIXTURE, { waitUntil: "load" });
 
-      const minimal = await renderActivePage(deps, "minimal");
-      const summary = await renderActivePage(deps, "summary");
-      const full = await renderActivePage(deps, "full");
+      const minimal = await renderActivePage(deps, { detail: "minimal" });
+      const summary = await renderActivePage(deps, { detail: "summary" });
+      const full = await renderActivePage(deps, { detail: "full" });
 
       // Minimal: no content summary, no full content
       expect(minimal.structure.content_summary).toBe("");
@@ -71,8 +76,8 @@ describe("Observation integration", () => {
       const page = pageManager.getActivePage();
       await page.goto(SIMPLE_FIXTURE, { waitUntil: "load" });
 
-      const minimal = await renderActivePage(deps, "minimal");
-      const summary = await renderActivePage(deps, "summary");
+      const minimal = await renderActivePage(deps, { detail: "minimal" });
+      const summary = await renderActivePage(deps, { detail: "summary" });
 
       // Interactive elements should be present at all levels
       expect(minimal.interactive.length).toBeGreaterThan(0);
@@ -85,7 +90,7 @@ describe("Observation integration", () => {
       const page = pageManager.getActivePage();
       await page.goto(SIMPLE_FIXTURE, { waitUntil: "load" });
 
-      const representation = await renderActivePage(deps, "minimal");
+      const representation = await renderActivePage(deps, { detail: "minimal" });
 
       // Filter by text
       const searchText = "dashboard";
@@ -101,7 +106,7 @@ describe("Observation integration", () => {
     });
 
     it("finds elements by partial text match", async () => {
-      const representation = await renderActivePage(deps, "minimal");
+      const representation = await renderActivePage(deps, { detail: "minimal" });
 
       const searchText = "create";
       const matches = representation.interactive.filter((element) =>
@@ -118,7 +123,7 @@ describe("Observation integration", () => {
       const page = pageManager.getActivePage();
       await page.goto(SIMPLE_FIXTURE, { waitUntil: "load" });
 
-      const representation = await renderActivePage(deps, "minimal");
+      const representation = await renderActivePage(deps, { detail: "minimal" });
       const buttons = representation.interactive.filter(
         (element) => element.type === "button",
       );
@@ -127,7 +132,7 @@ describe("Observation integration", () => {
     });
 
     it("finds all links", async () => {
-      const representation = await renderActivePage(deps, "minimal");
+      const representation = await renderActivePage(deps, { detail: "minimal" });
       const links = representation.interactive.filter(
         (element) => element.type === "link",
       );
@@ -136,7 +141,7 @@ describe("Observation integration", () => {
     });
 
     it("finds text inputs", async () => {
-      const representation = await renderActivePage(deps, "minimal");
+      const representation = await renderActivePage(deps, { detail: "minimal" });
       const textInputs = representation.interactive.filter(
         (element) => element.type === "text_input",
       );
@@ -150,7 +155,7 @@ describe("Observation integration", () => {
       const page = pageManager.getActivePage();
       await page.goto(FORM_FIXTURE, { waitUntil: "load" });
 
-      const representation = await renderActivePage(deps, "minimal");
+      const representation = await renderActivePage(deps, { detail: "minimal" });
 
       const textInputs = representation.interactive.filter(
         (element) => element.type === "text_input",
@@ -179,7 +184,7 @@ describe("Observation integration", () => {
       const page = pageManager.getActivePage();
       await page.goto(FORM_FIXTURE, { waitUntil: "load" });
 
-      const representation = await renderActivePage(deps, "minimal");
+      const representation = await renderActivePage(deps, { detail: "minimal" });
 
       // Should have at least the registration form and search form
       expect(representation.forms.length).toBeGreaterThanOrEqual(1);
@@ -191,7 +196,7 @@ describe("Observation integration", () => {
       const page = pageManager.getActivePage();
       await page.goto(SIMPLE_FIXTURE, { waitUntil: "load" });
 
-      const representation = await renderActivePage(deps, "minimal");
+      const representation = await renderActivePage(deps, { detail: "minimal" });
 
       let resolvedCount = 0;
       for (const element of representation.interactive) {
@@ -209,7 +214,7 @@ describe("Observation integration", () => {
       const page = pageManager.getActivePage();
       await page.goto(SIMPLE_FIXTURE, { waitUntil: "load" });
 
-      const representation = await renderActivePage(deps, "minimal");
+      const representation = await renderActivePage(deps, { detail: "minimal" });
 
       // Pick the first interactive element that has a backend node ID
       const elementWithBackendNode = representation.interactive.find(
@@ -266,7 +271,7 @@ describe("Observation integration", () => {
       const page = pageManager.getActivePage();
       await page.goto(SIMPLE_FIXTURE, { waitUntil: "load" });
 
-      const representation = await renderActivePage(deps, "minimal");
+      const representation = await renderActivePage(deps, { detail: "minimal" });
 
       const elementsWithBounds = representation.interactive.filter(
         (element) =>
@@ -280,7 +285,7 @@ describe("Observation integration", () => {
     });
 
     it("can compute distances between elements", async () => {
-      const representation = await renderActivePage(deps, "minimal");
+      const representation = await renderActivePage(deps, { detail: "minimal" });
 
       const elementsWithBounds = representation.interactive.filter(
         (element): element is InteractiveElement & { bounds: Bounds } =>
@@ -308,7 +313,7 @@ describe("Observation integration", () => {
 
   describe("formatElementsResponse", () => {
     it("formats element arrays as MCP tool response", async () => {
-      const representation = await renderActivePage(deps, "minimal");
+      const representation = await renderActivePage(deps, { detail: "minimal" });
       const buttons = representation.interactive.filter(
         (element) => element.type === "button",
       );
@@ -329,7 +334,7 @@ describe("Observation integration", () => {
       const page = pageManager.getActivePage();
       await page.goto(DYNAMIC_FIXTURE, { waitUntil: "load" });
 
-      const representation = await renderActivePage(deps, "summary");
+      const representation = await renderActivePage(deps, { detail: "summary" });
 
       expect(representation.title).toBe("Dynamic Test Page");
       expect(representation.interactive.length).toBeGreaterThan(0);
@@ -346,7 +351,7 @@ describe("Observation integration", () => {
       await page.goto(DYNAMIC_FIXTURE, { waitUntil: "load" });
 
       // Get initial content
-      const beforeMutation = await renderActivePage(deps, "full");
+      const beforeMutation = await renderActivePage(deps, { detail: "full" });
       const initialFullContent = beforeMutation.structure.full_content ?? "";
 
       // Trigger DOM mutation via evaluate
@@ -355,7 +360,7 @@ describe("Observation integration", () => {
       });
 
       // Re-render and check for new content
-      const afterMutation = await renderActivePage(deps, "full");
+      const afterMutation = await renderActivePage(deps, { detail: "full" });
       const updatedFullContent = afterMutation.structure.full_content ?? "";
 
       // The new item should appear in full content

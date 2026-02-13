@@ -3,6 +3,8 @@ import type { BrowserManager } from "./browser/browser-manager.js";
 import type { PageManager } from "./browser/page-manager.js";
 import type { RendererPipeline } from "./renderer/renderer-pipeline.js";
 import type { ElementIdGenerator } from "./renderer/element-id-generator.js";
+import type { SnapshotStore } from "./state/snapshot-store.js";
+import type { CharlotteConfig } from "./types/config.js";
 import { registerEvaluateTools } from "./tools/evaluate.js";
 import { registerNavigationTools } from "./tools/navigation.js";
 import { registerObservationTools } from "./tools/observation.js";
@@ -14,6 +16,8 @@ export interface ServerDeps {
   pageManager: PageManager;
   rendererPipeline: RendererPipeline;
   elementIdGenerator: ElementIdGenerator;
+  snapshotStore: SnapshotStore;
+  config: CharlotteConfig;
 }
 
 export function createServer(deps: ServerDeps): McpServer {
@@ -35,18 +39,18 @@ export function createServer(deps: ServerDeps): McpServer {
     getActivePage: () => deps.pageManager.getActivePage(),
   });
 
-  // Phase 2: navigation + observation tools
+  // Phase 2–4: all tool modules share the same dependency bundle
   const toolDeps = {
     browserManager: deps.browserManager,
     pageManager: deps.pageManager,
     rendererPipeline: deps.rendererPipeline,
     elementIdGenerator: deps.elementIdGenerator,
+    snapshotStore: deps.snapshotStore,
+    config: deps.config,
   };
 
   registerNavigationTools(server, toolDeps);
   registerObservationTools(server, toolDeps);
-
-  // Phase 3: interaction + session tools
   registerInteractionTools(server, toolDeps);
   registerSessionTools(server, toolDeps);
 

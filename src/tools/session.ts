@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { logger } from "../utils/logger.js";
+import type { AutoSnapshotMode } from "../types/config.js";
 import type { ToolDependencies } from "./tool-helpers.js";
 import { handleToolError } from "./tool-helpers.js";
 
@@ -104,6 +105,58 @@ export function registerSessionTools(
               text: JSON.stringify({
                 success: true,
                 headers_set: Object.keys(headers),
+              }),
+            },
+          ],
+        };
+      } catch (error: unknown) {
+        return handleToolError(error);
+      }
+    },
+  );
+
+  // ─── charlotte:configure ───
+  server.registerTool(
+    "charlotte:configure",
+    {
+      description:
+        "Configure Charlotte runtime settings. Changes take effect immediately.",
+      inputSchema: {
+        snapshot_depth: z
+          .number()
+          .optional()
+          .describe("Ring buffer size for snapshots (default: 50, min: 5, max: 500)"),
+        auto_snapshot: z
+          .enum(["every_action", "observe_only", "manual"])
+          .optional()
+          .describe(
+            '"every_action" (default) — snapshot after every tool, "observe_only" — only on observe, "manual" — only with explicit snapshot: true',
+          ),
+      },
+    },
+    async ({ snapshot_depth, auto_snapshot }) => {
+      try {
+        logger.info("Configuring Charlotte", { snapshot_depth, auto_snapshot });
+
+        if (snapshot_depth !== undefined) {
+          deps.snapshotStore.setDepth(snapshot_depth);
+          deps.config.snapshotDepth = Math.max(5, Math.min(500, snapshot_depth));
+        }
+
+        if (auto_snapshot !== undefined) {
+          deps.config.autoSnapshot = auto_snapshot as AutoSnapshotMode;
+        }
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify({
+                success: true,
+                config: {
+                  snapshot_depth: deps.config.snapshotDepth,
+                  auto_snapshot: deps.config.autoSnapshot,
+                },
               }),
             },
           ],

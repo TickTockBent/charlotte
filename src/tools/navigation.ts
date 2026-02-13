@@ -78,7 +78,7 @@ export function registerNavigationTools(
           );
         }
 
-        const representation = await renderActivePage(deps, "summary");
+        const representation = await renderActivePage(deps, { source: "action" });
         return formatPageResponse(representation);
       } catch (error: unknown) {
         return handleToolError(error);
@@ -109,7 +109,7 @@ export function registerNavigationTools(
           );
         }
 
-        const representation = await renderActivePage(deps, "summary");
+        const representation = await renderActivePage(deps, { source: "action" });
         return formatPageResponse(representation);
       } catch (error: unknown) {
         return handleToolError(error);
@@ -140,7 +140,7 @@ export function registerNavigationTools(
           );
         }
 
-        const representation = await renderActivePage(deps, "summary");
+        const representation = await renderActivePage(deps, { source: "action" });
         return formatPageResponse(representation);
       } catch (error: unknown) {
         return handleToolError(error);
@@ -181,7 +181,7 @@ export function registerNavigationTools(
           await page.reload({ waitUntil: "load" });
         }
 
-        const representation = await renderActivePage(deps, "summary");
+        const representation = await renderActivePage(deps, { source: "action" });
         return formatPageResponse(representation);
       } catch (error: unknown) {
         return handleToolError(error);

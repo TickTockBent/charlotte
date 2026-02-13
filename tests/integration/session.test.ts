@@ -5,6 +5,8 @@ import { PageManager } from "../../src/browser/page-manager.js";
 import { CDPSessionManager } from "../../src/browser/cdp-session.js";
 import { RendererPipeline } from "../../src/renderer/renderer-pipeline.js";
 import { ElementIdGenerator } from "../../src/renderer/element-id-generator.js";
+import { SnapshotStore } from "../../src/state/snapshot-store.js";
+import { createDefaultConfig } from "../../src/types/config.js";
 import type { ToolDependencies } from "../../src/tools/tool-helpers.js";
 
 const INTERACTION_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/interaction.html")}`;
@@ -25,11 +27,14 @@ describe("Session integration", () => {
     cdpSessionManager = new CDPSessionManager();
     elementIdGenerator = new ElementIdGenerator();
     rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator);
+    const config = createDefaultConfig();
     deps = {
       browserManager,
       pageManager,
       rendererPipeline,
       elementIdGenerator,
+      snapshotStore: new SnapshotStore(config.snapshotDepth),
+      config,
     };
   });
 

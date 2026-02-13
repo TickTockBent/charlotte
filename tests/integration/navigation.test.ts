@@ -5,6 +5,8 @@ import { PageManager } from "../../src/browser/page-manager.js";
 import { CDPSessionManager } from "../../src/browser/cdp-session.js";
 import { RendererPipeline } from "../../src/renderer/renderer-pipeline.js";
 import { ElementIdGenerator } from "../../src/renderer/element-id-generator.js";
+import { SnapshotStore } from "../../src/state/snapshot-store.js";
+import { createDefaultConfig } from "../../src/types/config.js";
 import type { ToolDependencies } from "../../src/tools/tool-helpers.js";
 import {
   renderActivePage,
@@ -31,11 +33,14 @@ describe("Navigation integration", () => {
     cdpSessionManager = new CDPSessionManager();
     elementIdGenerator = new ElementIdGenerator();
     rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator);
+    const config = createDefaultConfig();
     deps = {
       browserManager,
       pageManager,
       rendererPipeline,
       elementIdGenerator,
+      snapshotStore: new SnapshotStore(config.snapshotDepth),
+      config,
     };
   });
 
@@ -48,7 +53,7 @@ describe("Navigation integration", () => {
       const page = pageManager.getActivePage();
       await page.goto(SIMPLE_FIXTURE, { waitUntil: "load" });
 
-      const representation = await renderActivePage(deps, "summary");
+      const representation = await renderActivePage(deps, { detail: "summary" });
 
       expect(representation.url).toContain("simple.html");
       expect(representation.title).toBe("Simple Test Page");
@@ -60,7 +65,7 @@ describe("Navigation integration", () => {
       const page = pageManager.getActivePage();
       await page.goto(SPA_FIXTURE, { waitUntil: "load" });
 
-      const representation = await renderActivePage(deps, "summary");
+      const representation = await renderActivePage(deps, { detail: "summary" });
 
       expect(representation.url).toContain("spa.html");
       expect(representation.title).toContain("SPA");
@@ -80,7 +85,7 @@ describe("Navigation integration", () => {
       const backResponse = await page.goBack({ waitUntil: "load" });
       expect(backResponse).not.toBeNull();
 
-      const representation = await renderActivePage(deps, "minimal");
+      const representation = await renderActivePage(deps, { detail: "minimal" });
       expect(representation.url).toContain("simple.html");
       expect(representation.title).toBe("Simple Test Page");
     });
@@ -93,7 +98,7 @@ describe("Navigation integration", () => {
       const forwardResponse = await page.goForward({ waitUntil: "load" });
       expect(forwardResponse).not.toBeNull();
 
-      const representation = await renderActivePage(deps, "minimal");
+      const representation = await renderActivePage(deps, { detail: "minimal" });
       expect(representation.url).toContain("spa.html");
     });
   });
@@ -103,9 +108,9 @@ describe("Navigation integration", () => {
       const page = pageManager.getActivePage();
       await page.goto(SIMPLE_FIXTURE, { waitUntil: "load" });
 
-      const beforeReload = await renderActivePage(deps, "minimal");
+      const beforeReload = await renderActivePage(deps, { detail: "minimal" });
       await page.reload({ waitUntil: "load" });
-      const afterReload = await renderActivePage(deps, "minimal");
+      const afterReload = await renderActivePage(deps, { detail: "minimal" });
 
       // Same page content after reload
       expect(afterReload.url).toBe(beforeReload.url);
@@ -122,7 +127,7 @@ describe("Navigation integration", () => {
       pageManager.clearErrors();
       await page.goto(SIMPLE_FIXTURE, { waitUntil: "load" });
 
-      const representation = await renderActivePage(deps, "minimal");
+      const representation = await renderActivePage(deps, { detail: "minimal" });
 
       // errors should be arrays (possibly empty for a clean local page)
       expect(Array.isArray(representation.errors.console)).toBe(true);
@@ -135,7 +140,7 @@ describe("Navigation integration", () => {
       const page = pageManager.getActivePage();
       await page.goto(SIMPLE_FIXTURE, { waitUntil: "load" });
 
-      const representation = await renderActivePage(deps, "minimal");
+      const representation = await renderActivePage(deps, { detail: "minimal" });
 
       expect(representation.structure.content_summary).toBe("");
       expect(representation.structure.full_content).toBeUndefined();
@@ -143,14 +148,14 @@ describe("Navigation integration", () => {
     });
 
     it("renders summary detail after navigation", async () => {
-      const representation = await renderActivePage(deps, "summary");
+      const representation = await renderActivePage(deps, { detail: "summary" });
 
       expect(representation.structure.content_summary.length).toBeGreaterThan(0);
       expect(representation.structure.full_content).toBeUndefined();
     });
 
     it("renders full detail after navigation", async () => {
-      const representation = await renderActivePage(deps, "full");
+      const representation = await renderActivePage(deps, { detail: "full" });
 
       expect(representation.structure.content_summary.length).toBeGreaterThan(0);
       expect(representation.structure.full_content).toBeDefined();
@@ -160,7 +165,7 @@ describe("Navigation integration", () => {
 
   describe("formatPageResponse", () => {
     it("formats representation as MCP tool response", async () => {
-      const representation = await renderActivePage(deps, "minimal");
+      const representation = await renderActivePage(deps, { detail: "minimal" });
       const response = formatPageResponse(representation);
 
       expect(response.content).toHaveLength(1);

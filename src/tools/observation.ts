@@ -1,6 +1,9 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { logger } from "../utils/logger.js";
+import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
+import { diffRepresentations } from "../state/differ.js";
+import type { DiffScope } from "../state/differ.js";
 import type { ToolDependencies } from "./tool-helpers.js";
 import type {
   InteractiveElement,
@@ -74,12 +77,12 @@ export function registerObservationTools(
         const detailLevel = detail ?? "summary";
         logger.info("Observing page", { detail: detailLevel, selector });
 
-        const representation = await renderActivePage(
-          deps,
-          detailLevel,
+        const representation = await renderActivePage(deps, {
+          detail: detailLevel,
           selector,
-          include_styles,
-        );
+          includeStyles: include_styles,
+          source: "observe",
+        });
         return formatPageResponse(representation);
       } catch (error: unknown) {
         return handleToolError(error);
@@ -124,7 +127,7 @@ export function registerObservationTools(
         logger.info("Finding elements", { text, role, type, near, within });
 
         // Render the page to get current elements
-        const representation = await renderActivePage(deps, "minimal");
+        const representation = await renderActivePage(deps, { detail: "minimal" });
         let matchingElements = [...representation.interactive];
 
         // Filter by text (case-insensitive substring)
@@ -293,6 +296,87 @@ export function registerObservationTools(
               type: "image" as const,
               data: screenshotBuffer,
               mimeType: `image/${screenshotFormat}`,
+            },
+          ],
+        };
+      } catch (error: unknown) {
+        return handleToolError(error);
+      }
+    },
+  );
+
+  // ─── charlotte:diff ───
+  server.registerTool(
+    "charlotte:diff",
+    {
+      description:
+        "Compare current page state to a previous snapshot. Returns structural diff showing added, removed, moved, and changed elements.",
+      inputSchema: {
+        snapshot_id: z
+          .number()
+          .optional()
+          .describe(
+            "Compare against a specific snapshot ID (default: previous snapshot)",
+          ),
+        scope: z
+          .enum(["all", "structure", "interactive", "content"])
+          .optional()
+          .describe(
+            '"all" (default), "structure" (landmarks/headings), "interactive" (elements/forms), "content" (text/url/title)',
+          ),
+      },
+    },
+    async ({ snapshot_id, scope }) => {
+      try {
+        await deps.browserManager.ensureConnected();
+
+        const diffScope = (scope ?? "all") as DiffScope;
+        logger.info("Computing diff", { snapshot_id, scope: diffScope });
+
+        // Get the reference snapshot
+        let referenceSnapshot;
+        if (snapshot_id !== undefined) {
+          referenceSnapshot = deps.snapshotStore.get(snapshot_id);
+          if (!referenceSnapshot) {
+            const oldestId = deps.snapshotStore.getOldestId();
+            throw new CharlotteError(
+              CharlotteErrorCode.SNAPSHOT_EXPIRED,
+              `Snapshot ${snapshot_id} has been evicted from the buffer.`,
+              oldestId !== null
+                ? `Oldest available snapshot is ${oldestId}.`
+                : "No snapshots available. Call charlotte:observe first.",
+            );
+          }
+        } else {
+          // Use previous snapshot (second-most-recent)
+          referenceSnapshot = deps.snapshotStore.getPrevious();
+          if (!referenceSnapshot) {
+            throw new CharlotteError(
+              CharlotteErrorCode.SNAPSHOT_EXPIRED,
+              "No previous snapshot available for comparison.",
+              "Perform at least two observations or actions before calling diff.",
+            );
+          }
+        }
+
+        // Render current state (this also pushes a new snapshot)
+        const currentRepresentation = await renderActivePage(deps, {
+          source: "observe",
+        });
+
+        const diff = diffRepresentations(
+          referenceSnapshot.representation,
+          currentRepresentation,
+          referenceSnapshot.id,
+          currentRepresentation.snapshot_id,
+          diffScope,
+        );
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify(diff, null, 2),
             },
           ],
         };

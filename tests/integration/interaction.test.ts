@@ -5,6 +5,8 @@ import { PageManager } from "../../src/browser/page-manager.js";
 import { CDPSessionManager } from "../../src/browser/cdp-session.js";
 import { RendererPipeline } from "../../src/renderer/renderer-pipeline.js";
 import { ElementIdGenerator } from "../../src/renderer/element-id-generator.js";
+import { SnapshotStore } from "../../src/state/snapshot-store.js";
+import { createDefaultConfig } from "../../src/types/config.js";
 import type { ToolDependencies } from "../../src/tools/tool-helpers.js";
 import {
   renderActivePage,
@@ -30,11 +32,14 @@ describe("Interaction integration", () => {
     cdpSessionManager = new CDPSessionManager();
     elementIdGenerator = new ElementIdGenerator();
     rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator);
+    const config = createDefaultConfig();
     deps = {
       browserManager,
       pageManager,
       rendererPipeline,
       elementIdGenerator,
+      snapshotStore: new SnapshotStore(config.snapshotDepth),
+      config,
     };
   });
 
@@ -155,7 +160,7 @@ describe("Interaction integration", () => {
     });
 
     it("clicks a button and triggers its onclick handler", async () => {
-      const representation = await renderActivePage(deps, "minimal");
+      const representation = await renderActivePage(deps, { detail: "minimal" });
       const clickButton = findElementByLabel(representation, "Click Me");
       expect(clickButton).toBeDefined();
 
@@ -168,7 +173,7 @@ describe("Interaction integration", () => {
     });
 
     it("performs a double click", async () => {
-      const representation = await renderActivePage(deps, "minimal");
+      const representation = await renderActivePage(deps, { detail: "minimal" });
       const dblClickButton = findElementByLabel(representation, "Double Click");
       expect(dblClickButton).toBeDefined();
 
@@ -197,7 +202,7 @@ describe("Interaction integration", () => {
     });
 
     it("performs a right click", async () => {
-      const representation = await renderActivePage(deps, "minimal");
+      const representation = await renderActivePage(deps, { detail: "minimal" });
       const rightClickButton = findElementByLabel(representation, "Right Click");
       expect(rightClickButton).toBeDefined();
 
@@ -225,7 +230,7 @@ describe("Interaction integration", () => {
     });
 
     it("re-renders after click and returns updated representation", async () => {
-      const representation = await renderActivePage(deps, "minimal");
+      const representation = await renderActivePage(deps, { detail: "minimal" });
       const clickButton = findElementByLabel(representation, "Click Me");
       expect(clickButton).toBeDefined();
 
@@ -233,7 +238,7 @@ describe("Interaction integration", () => {
       await clickByBackendNodeId(backendNodeId);
 
       // Re-render to verify state is captured
-      const updatedRepresentation = await renderActivePage(deps, "full");
+      const updatedRepresentation = await renderActivePage(deps, { detail: "full" });
       expect(updatedRepresentation.structure.full_content).toContain(
         "Button clicked",
       );
@@ -247,7 +252,7 @@ describe("Interaction integration", () => {
     });
 
     it("types text into an input field", async () => {
-      const representation = await renderActivePage(deps, "minimal");
+      const representation = await renderActivePage(deps, { detail: "minimal" });
       const emptyInput = findElementByType(representation, "text_input", "Empty Input");
       expect(emptyInput).toBeDefined();
 
@@ -266,7 +271,7 @@ describe("Interaction integration", () => {
     });
 
     it("clears existing value before typing when clear_first is true", async () => {
-      const representation = await renderActivePage(deps, "minimal");
+      const representation = await renderActivePage(deps, { detail: "minimal" });
       const textInput = findElementByType(representation, "text_input", "Text Input");
       expect(textInput).toBeDefined();
 
@@ -288,7 +293,7 @@ describe("Interaction integration", () => {
     });
 
     it("appends to existing text when typing without clearing", async () => {
-      const representation = await renderActivePage(deps, "minimal");
+      const representation = await renderActivePage(deps, { detail: "minimal" });
       const textInput = findElementByType(representation, "text_input", "Text Input");
       expect(textInput).toBeDefined();
 
@@ -307,7 +312,7 @@ describe("Interaction integration", () => {
     });
 
     it("presses Enter after typing when press_enter is true", async () => {
-      const representation = await renderActivePage(deps, "minimal");
+      const representation = await renderActivePage(deps, { detail: "minimal" });
       const searchInput = findElementByType(representation, "text_input", "Search");
       expect(searchInput).toBeDefined();
 
@@ -331,7 +336,7 @@ describe("Interaction integration", () => {
     });
 
     it("selects an option by value", async () => {
-      const representation = await renderActivePage(deps, "minimal");
+      const representation = await renderActivePage(deps, { detail: "minimal" });
       const colorSelect = findElementByType(representation, "select", "Color");
       expect(colorSelect).toBeDefined();
 
@@ -350,7 +355,7 @@ describe("Interaction integration", () => {
     });
 
     it("selects an option by text content", async () => {
-      const representation = await renderActivePage(deps, "minimal");
+      const representation = await renderActivePage(deps, { detail: "minimal" });
       const colorSelect = findElementByType(representation, "select", "Color");
       expect(colorSelect).toBeDefined();
 
@@ -372,7 +377,7 @@ describe("Interaction integration", () => {
     });
 
     it("toggles an unchecked checkbox to checked", async () => {
-      const representation = await renderActivePage(deps, "minimal");
+      const representation = await renderActivePage(deps, { detail: "minimal" });
       const checkbox = findElementByType(representation, "checkbox", "agree");
       expect(checkbox).toBeDefined();
       // Initially unchecked
@@ -382,7 +387,7 @@ describe("Interaction integration", () => {
       await clickByBackendNodeId(backendNodeId);
 
       // Re-render and verify checked state
-      const updatedRepresentation = await renderActivePage(deps, "minimal");
+      const updatedRepresentation = await renderActivePage(deps, { detail: "minimal" });
       const updatedCheckbox = findElementByType(
         updatedRepresentation,
         "checkbox",
@@ -393,7 +398,7 @@ describe("Interaction integration", () => {
     });
 
     it("toggles a checked checkbox to unchecked", async () => {
-      const representation = await renderActivePage(deps, "minimal");
+      const representation = await renderActivePage(deps, { detail: "minimal" });
       const checkbox = findElementByType(
         representation,
         "checkbox",
@@ -405,7 +410,7 @@ describe("Interaction integration", () => {
       const { backendNodeId } = await resolveElement(deps, checkbox!.id);
       await clickByBackendNodeId(backendNodeId);
 
-      const updatedRepresentation = await renderActivePage(deps, "minimal");
+      const updatedRepresentation = await renderActivePage(deps, { detail: "minimal" });
       const updatedCheckbox = findElementByType(
         updatedRepresentation,
         "checkbox",
@@ -423,7 +428,7 @@ describe("Interaction integration", () => {
     });
 
     it("triggers hover state on an element", async () => {
-      const representation = await renderActivePage(deps, "minimal");
+      const representation = await renderActivePage(deps, { detail: "minimal" });
       const hoverButton = findElementByLabel(representation, "Hover Over Me");
       expect(hoverButton).toBeDefined();
 
@@ -460,7 +465,7 @@ describe("Interaction integration", () => {
     });
 
     it("presses a simple key", async () => {
-      const representation = await renderActivePage(deps, "minimal");
+      const representation = await renderActivePage(deps, { detail: "minimal" });
       const keyInput = findElementByType(representation, "text_input", "key");
       // The key input might be found with various labels
       const anyInput = keyInput ?? representation.interactive.find(
@@ -541,7 +546,7 @@ describe("Interaction integration", () => {
       await page.keyboard.type("Test User");
 
       // Find and click the submit button
-      const representation = await renderActivePage(deps, "minimal");
+      const representation = await renderActivePage(deps, { detail: "minimal" });
       const submitButton = findElementByLabel(representation, "Submit");
       expect(submitButton).toBeDefined();
 
@@ -555,7 +560,7 @@ describe("Interaction integration", () => {
     });
 
     it("detects form representations with fields and submit button", async () => {
-      const representation = await renderActivePage(deps, "minimal");
+      const representation = await renderActivePage(deps, { detail: "minimal" });
 
       const submitForm = representation.forms.find((f) =>
         representation.interactive.some(

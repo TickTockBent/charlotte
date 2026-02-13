@@ -90,4 +90,5 @@ export interface PageRepresentation {
     network: Array<{ url: string; status: number; statusText: string }>;
   };
   reload_event?: ReloadEvent;
+  delta?: import("./snapshot.js").SnapshotDiff;
 }

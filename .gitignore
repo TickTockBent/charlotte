@@ -27,7 +27,7 @@ coverage/
 internal/
 
 # Agent Files
-.agents.md
-.claude.md
+agents.md
+*CLAUDE.md
 .claude/
 .mcp.json

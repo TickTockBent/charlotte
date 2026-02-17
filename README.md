@@ -71,7 +71,22 @@ npm start
 
 ### MCP Client Configuration
 
-Add Charlotte to your MCP client configuration. For example, in Claude Desktop's `claude_desktop_config.json`:
+Add Charlotte to your MCP client configuration. For Claude Code, create `.mcp.json` in your project root:
+
+```json
+{
+  "mcpServers": {
+    "charlotte": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["/path/to/charlotte/dist/index.js"],
+      "env": {}
+    }
+  }
+}
+```
+
+For Claude Desktop, add to `claude_desktop_config.json`:
 
 ```json
 {
@@ -84,18 +99,7 @@ Add Charlotte to your MCP client configuration. For example, in Claude Desktop's
 }
 ```
 
-Or run from source during development:
-
-```json
-{
-  "mcpServers": {
-    "charlotte": {
-      "command": "npx",
-      "args": ["tsx", "/path/to/charlotte/src/index.ts"]
-    }
-  }
-}
-```
+See [docs/mcp-setup.md](docs/mcp-setup.md) for the full setup guide, including development mode, generic MCP clients, verification steps, and troubleshooting.
 
 ## Usage Examples
 
@@ -226,6 +230,16 @@ The **Renderer Pipeline** is the core — it calls extractors in order and assem
 4. Element ID generation (hash-based, stable across re-renders)
 
 All tools go through `renderActivePage()` which handles snapshots, reload events, and response formatting.
+
+## Sandbox
+
+Charlotte includes a test website in `tests/sandbox/` that exercises all 30 tools without touching the public internet. Serve it locally with:
+
+```
+dev_serve({ path: "tests/sandbox" })
+```
+
+Four pages cover navigation, forms, interactive elements, delayed content, scroll containers, and more. See [docs/sandbox.md](docs/sandbox.md) for the full page reference and a tool-by-tool exercise checklist.
 
 ## Full Specification
 

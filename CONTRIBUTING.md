@@ -111,6 +111,16 @@ tests/
 - Test fixtures live in `tests/fixtures/pages/`. Add new HTML files there if your feature needs specific page structures.
 - Always clean up after tests (close browsers, stop servers, remove temp files).
 
+### Manual testing with the sandbox
+
+Charlotte ships a multi-page test website in `tests/sandbox/` that exercises all 30 tools. Connect Charlotte as an MCP server, then serve the sandbox locally:
+
+```
+dev_serve({ path: "tests/sandbox" })
+```
+
+This gives you a safe, offline environment to test navigation, forms, interactions, async waits, session management, and dev mode tools. See [docs/sandbox.md](docs/sandbox.md) for the full walkthrough.
+
 ## Adding a New Tool
 
 1. Decide which tool module it belongs to (navigation, observation, interaction, session, dev-mode), or create a new module if it doesn't fit.

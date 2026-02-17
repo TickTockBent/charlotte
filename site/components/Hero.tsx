@@ -31,18 +31,18 @@ function ArchitectureDiagram() {
       <text x="295" y="38" textAnchor="middle" fill={labelColor} fontSize="13" fontFamily="var(--font-geist-mono), monospace">Charlotte</text>
 
       {/* Renderer Pipeline box */}
-      <rect x="245" y="56" width="120" height="44" rx="4" stroke={accentStroke} strokeWidth="1" strokeDasharray="4 2" />
-      <text x="305" y="74" textAnchor="middle" fill={textColor} fontSize="11" fontFamily="var(--font-geist-mono), monospace">Renderer</text>
-      <text x="305" y="89" textAnchor="middle" fill={textColor} fontSize="11" fontFamily="var(--font-geist-mono), monospace">Pipeline</text>
+      <rect x="235" y="56" width="120" height="44" rx="4" stroke={accentStroke} strokeWidth="1" strokeDasharray="4 2" />
+      <text x="295" y="74" textAnchor="middle" fill={textColor} fontSize="11" fontFamily="var(--font-geist-mono), monospace">Renderer</text>
+      <text x="295" y="89" textAnchor="middle" fill={textColor} fontSize="11" fontFamily="var(--font-geist-mono), monospace">Pipeline</text>
 
       {/* Arrow down */}
-      <line x1="305" y1="100" x2="305" y2="130" stroke={accentStroke} strokeWidth="1.5" />
-      <polygon points="300,128 305,138 310,128" fill={accentStroke} />
+      <line x1="295" y1="100" x2="295" y2="130" stroke={accentStroke} strokeWidth="1.5" />
+      <polygon points="290,128 295,138 300,128" fill={accentStroke} />
 
       {/* Headless Chromium box */}
-      <rect x="245" y="140" width="120" height="44" rx="4" stroke={accentStroke} strokeWidth="1" strokeDasharray="4 2" />
-      <text x="305" y="158" textAnchor="middle" fill={textColor} fontSize="11" fontFamily="var(--font-geist-mono), monospace">Headless</text>
-      <text x="305" y="173" textAnchor="middle" fill={textColor} fontSize="11" fontFamily="var(--font-geist-mono), monospace">Chromium</text>
+      <rect x="235" y="140" width="120" height="44" rx="4" stroke={accentStroke} strokeWidth="1" strokeDasharray="4 2" />
+      <text x="295" y="158" textAnchor="middle" fill={textColor} fontSize="11" fontFamily="var(--font-geist-mono), monospace">Headless</text>
+      <text x="295" y="173" textAnchor="middle" fill={textColor} fontSize="11" fontFamily="var(--font-geist-mono), monospace">Chromium</text>
     </svg>
   );
 }

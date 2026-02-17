@@ -64,34 +64,49 @@ async function clickElementByBackendNodeId(
 /**
  * Wait for any navigation triggered by an action, or fall back to a brief settle pause.
  *
- * Sets up a navigation listener BEFORE the action runs. If a frame navigation fires
- * within `detectionWindowMs` after the action, waits for the page load event before
- * returning. If no navigation fires, returns after `settleMs` (the existing behavior).
+ * Listens for the `framenavigated` CDP event to detect if a click caused navigation.
+ * If navigation is detected within `detectionWindowMs`, waits for the page load event
+ * (up to `loadTimeoutMs`). If no navigation fires, returns after `settleMs`.
  */
 async function waitForPossibleNavigation(
   page: Page,
   action: () => Promise<void>,
-  { detectionWindowMs = 500, settleMs = 50 } = {},
+  { detectionWindowMs = 500, loadTimeoutMs = 10000, settleMs = 50 } = {},
 ): Promise<void> {
   let navigationDetected = false;
 
-  // Set up the navigation promise BEFORE the action so we don't miss fast navigations
-  const navigationPromise = page
-    .waitForNavigation({ waitUntil: "load", timeout: detectionWindowMs })
-    .then(() => {
+  // Listen for navigation start via page event (fires on any navigation)
+  const navigationStartPromise = new Promise<void>((resolve) => {
+    const handler = () => {
       navigationDetected = true;
-    })
-    .catch(() => {
-      // Timeout or no navigation — expected for in-page clicks
-    });
+      page.off("framenavigated", handler);
+      resolve();
+    };
+    page.on("framenavigated", handler);
+
+    // Clean up listener if no navigation fires within detection window
+    setTimeout(() => {
+      page.off("framenavigated", handler);
+      resolve();
+    }, detectionWindowMs);
+  });
 
   // Dispatch the action
   await action();
 
-  // Race: either navigation completes or detection window expires
-  await navigationPromise;
+  // Wait for either navigation detection or detection window to expire
+  await navigationStartPromise;
 
-  if (!navigationDetected) {
+  if (navigationDetected) {
+    // Navigation occurred — wait for the page to finish loading
+    try {
+      await page.waitForNavigation({ waitUntil: "load", timeout: loadTimeoutMs });
+    } catch {
+      // Page may have already finished loading before we called waitForNavigation,
+      // or the load timed out. Either way, render what we have.
+      logger.debug("Post-navigation load wait ended (page may already be loaded)");
+    }
+  } else {
     // No navigation — brief settle for in-page DOM updates
     await new Promise((resolve) => setTimeout(resolve, settleMs));
   }

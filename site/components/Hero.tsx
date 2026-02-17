@@ -69,9 +69,9 @@ export default function Hero() {
             <div className="flex items-center gap-3 mb-6">
               <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-surface border border-surface-border font-mono text-sm flex-1 max-w-sm">
                 <span className="text-muted select-none">$</span>
-                <span className="text-foreground">npm install charlotte</span>
+                <span className="text-foreground">npm install charlotte-web</span>
                 <span className="ml-auto">
-                  <CopyButton text="npm install charlotte" />
+                  <CopyButton text="npm install charlotte-web" />
                 </span>
               </div>
             </div>
@@ -96,7 +96,7 @@ export default function Hero() {
                 GitHub
               </a>
               <a
-                href="https://www.npmjs.com/package/charlotte"
+                href="https://www.npmjs.com/package/charlotte-web"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-surface-border font-medium text-sm hover:bg-surface-hover transition-colors"

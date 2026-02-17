@@ -13,7 +13,7 @@ export default function Footer() {
           </a>
           <span className="text-surface-border">|</span>
           <a
-            href="https://www.npmjs.com/package/charlotte"
+            href="https://www.npmjs.com/package/charlotte-web"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-foreground transition-colors"

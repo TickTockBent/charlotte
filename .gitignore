@@ -25,3 +25,9 @@ coverage/
 
 # Internal Docs
 internal/
+
+# Agent Files
+.agents.md
+.claude.md
+.claude/
+.mcp.json

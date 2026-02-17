@@ -62,6 +62,42 @@ async function clickElementByBackendNodeId(
 }
 
 /**
+ * Wait for any navigation triggered by an action, or fall back to a brief settle pause.
+ *
+ * Sets up a navigation listener BEFORE the action runs. If a frame navigation fires
+ * within `detectionWindowMs` after the action, waits for the page load event before
+ * returning. If no navigation fires, returns after `settleMs` (the existing behavior).
+ */
+async function waitForPossibleNavigation(
+  page: Page,
+  action: () => Promise<void>,
+  { detectionWindowMs = 500, settleMs = 50 } = {},
+): Promise<void> {
+  let navigationDetected = false;
+
+  // Set up the navigation promise BEFORE the action so we don't miss fast navigations
+  const navigationPromise = page
+    .waitForNavigation({ waitUntil: "load", timeout: detectionWindowMs })
+    .then(() => {
+      navigationDetected = true;
+    })
+    .catch(() => {
+      // Timeout or no navigation — expected for in-page clicks
+    });
+
+  // Dispatch the action
+  await action();
+
+  // Race: either navigation completes or detection window expires
+  await navigationPromise;
+
+  if (!navigationDetected) {
+    // No navigation — brief settle for in-page DOM updates
+    await new Promise((resolve) => setTimeout(resolve, settleMs));
+  }
+}
+
+/**
  * Focus an element by backend node ID using CDP.
  */
 async function focusElementByBackendNodeId(
@@ -255,10 +291,9 @@ export function registerInteractionTools(
 
         logger.info("Clicking element", { element_id, clickType: clickVariant });
 
-        await clickElementByBackendNodeId(page, backendNodeId, clickVariant);
-
-        // Brief pause to allow DOM updates to settle
-        await new Promise((resolve) => setTimeout(resolve, 50));
+        await waitForPossibleNavigation(page, () =>
+          clickElementByBackendNodeId(page, backendNodeId, clickVariant),
+        );
 
         const representation = await renderAfterAction(deps);
         return formatPageResponse(representation);
@@ -410,10 +445,12 @@ export function registerInteractionTools(
             form_id,
             submitButton: form.submit,
           });
-          await clickElementByBackendNodeId(
-            page,
-            submitResolved.backendNodeId,
-            "left",
+          await waitForPossibleNavigation(page, () =>
+            clickElementByBackendNodeId(
+              page,
+              submitResolved.backendNodeId,
+              "left",
+            ),
           );
         } else {
           // Fall back to dispatching submit event on the form itself
@@ -425,10 +462,10 @@ export function registerInteractionTools(
             );
           }
           logger.info("Submitting form via submit event", { form_id });
-          await submitFormByBackendNodeId(page, formBackendNodeId);
+          await waitForPossibleNavigation(page, () =>
+            submitFormByBackendNodeId(page, formBackendNodeId),
+          );
         }
-
-        await new Promise((resolve) => setTimeout(resolve, 100));
 
         const updatedRepresentation = await renderAfterAction(deps);
         return formatPageResponse(updatedRepresentation);

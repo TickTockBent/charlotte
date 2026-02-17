@@ -1,18 +1,51 @@
 import CopyButton from "./CopyButton";
 
-const architectureDiagram = `┌─────────────┐     MCP Protocol     ┌──────────────────┐
-│   AI Agent  │ <───────────────────> │    Charlotte     │
-└─────────────┘                      │                  │
-                                     │  ┌────────────┐  │
-                                     │  │  Renderer  │  │
-                                     │  │  Pipeline  │  │
-                                     │  └─────┬──────┘  │
-                                     │        │         │
-                                     │  ┌─────▼──────┐  │
-                                     │  │  Headless  │  │
-                                     │  │  Chromium  │  │
-                                     │  └────────────┘  │
-                                     └──────────────────┘`;
+function ArchitectureDiagram() {
+  const boxStroke = "var(--surface-border)";
+  const accentStroke = "var(--accent)";
+  const textColor = "var(--muted)";
+  const labelColor = "var(--foreground)";
+
+  return (
+    <svg
+      width="380"
+      height="240"
+      viewBox="0 0 380 240"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-label="Architecture diagram: AI Agent communicates with Charlotte via MCP Protocol. Charlotte contains a Renderer Pipeline which drives Headless Chromium."
+      role="img"
+    >
+      {/* AI Agent box */}
+      <rect x="10" y="40" width="110" height="44" rx="4" stroke={boxStroke} strokeWidth="1.5" />
+      <text x="65" y="66" textAnchor="middle" fill={labelColor} fontSize="13" fontFamily="var(--font-geist-mono), monospace">AI Agent</text>
+
+      {/* MCP Protocol arrow */}
+      <line x1="120" y1="62" x2="220" y2="62" stroke={accentStroke} strokeWidth="1.5" />
+      <polygon points="218,57 228,62 218,67" fill={accentStroke} />
+      <polygon points="122,57 112,62 122,67" fill={accentStroke} />
+      <text x="170" y="50" textAnchor="middle" fill={textColor} fontSize="11" fontFamily="var(--font-geist-mono), monospace">MCP Protocol</text>
+
+      {/* Charlotte outer box */}
+      <rect x="220" y="10" width="150" height="220" rx="4" stroke={boxStroke} strokeWidth="1.5" />
+      <text x="295" y="38" textAnchor="middle" fill={labelColor} fontSize="13" fontFamily="var(--font-geist-mono), monospace">Charlotte</text>
+
+      {/* Renderer Pipeline box */}
+      <rect x="245" y="56" width="120" height="44" rx="4" stroke={accentStroke} strokeWidth="1" strokeDasharray="4 2" />
+      <text x="305" y="74" textAnchor="middle" fill={textColor} fontSize="11" fontFamily="var(--font-geist-mono), monospace">Renderer</text>
+      <text x="305" y="89" textAnchor="middle" fill={textColor} fontSize="11" fontFamily="var(--font-geist-mono), monospace">Pipeline</text>
+
+      {/* Arrow down */}
+      <line x1="305" y1="100" x2="305" y2="130" stroke={accentStroke} strokeWidth="1.5" />
+      <polygon points="300,128 305,138 310,128" fill={accentStroke} />
+
+      {/* Headless Chromium box */}
+      <rect x="245" y="140" width="120" height="44" rx="4" stroke={accentStroke} strokeWidth="1" strokeDasharray="4 2" />
+      <text x="305" y="158" textAnchor="middle" fill={textColor} fontSize="11" fontFamily="var(--font-geist-mono), monospace">Headless</text>
+      <text x="305" y="173" textAnchor="middle" fill={textColor} fontSize="11" fontFamily="var(--font-geist-mono), monospace">Chromium</text>
+    </svg>
+  );
+}
 
 export default function Hero() {
   return (
@@ -85,9 +118,7 @@ export default function Hero() {
           {/* Right: Architecture diagram */}
           <div className="hidden lg:block flex-shrink-0">
             <div className="rounded-lg border border-surface-border bg-surface p-6">
-              <pre className="font-mono text-xs text-muted leading-relaxed whitespace-pre">
-                {architectureDiagram}
-              </pre>
+              <ArchitectureDiagram />
             </div>
           </div>
         </div>

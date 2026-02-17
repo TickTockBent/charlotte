@@ -100,9 +100,39 @@ export class AccessibilityExtractor {
     const nodeMap = new Map<string, ParsedAXNode>();
     const childToParent = new Map<string, string>();
 
+    // Track which raw nodes are ignored, so we can reparent their children
+    const rawNodeMap = new Map<string, RawAXNode>();
+    for (const raw of rawNodes) {
+      rawNodeMap.set(raw.nodeId, raw);
+    }
+
+    // For ignored nodes, find the nearest non-ignored ancestor
+    function findNonIgnoredParent(nodeId: string): string | undefined {
+      let currentId = nodeId;
+      while (true) {
+        const rawNode = rawNodeMap.get(currentId);
+        if (!rawNode?.parentId) return undefined;
+        const parentRaw = rawNodeMap.get(rawNode.parentId);
+        if (!parentRaw) return undefined;
+        if (!parentRaw.ignored) return parentRaw.nodeId;
+        currentId = rawNode.parentId;
+      }
+    }
+
     // First pass: create ParsedAXNode for each non-ignored node
     for (const raw of rawNodes) {
-      if (raw.ignored) continue;
+      if (raw.ignored) {
+        // Reparent children of ignored nodes to the nearest non-ignored ancestor
+        if (raw.childIds) {
+          const nonIgnoredParentId = findNonIgnoredParent(raw.nodeId);
+          for (const childId of raw.childIds) {
+            if (nonIgnoredParentId) {
+              childToParent.set(childId, nonIgnoredParentId);
+            }
+          }
+        }
+        continue;
+      }
 
       const role = raw.role?.value ?? "none";
       const name = raw.name?.value ?? "";

@@ -102,28 +102,27 @@ export class ContentExtractor {
     const landmarkSummaries: string[] = [];
     const topLevelCounts = createEmptyCounts("page", "page");
 
-    const processNode = (node: ParsedAXNode, isTopLevel: boolean) => {
+    const findLandmarks = (node: ParsedAXNode): void => {
       if (isLandmarkRole(node.role)) {
         const counts = createEmptyCounts(node.role, node.name || node.role);
         countElements(node, counts);
         landmarkSummaries.push(formatCounts(counts));
-        return; // Don't count landmark children at top level
+        // Don't recurse into landmark children here — countElements
+        // already skips nested landmarks, which get found by continued traversal
       }
 
-      if (isTopLevel) {
-        countElements(node, topLevelCounts);
+      // Always recurse into children to find landmarks at any depth
+      for (const child of node.children) {
+        findLandmarks(child);
       }
     };
 
     for (const root of rootNodes) {
-      if (isLandmarkRole(root.role)) {
-        processNode(root, false);
-      } else {
-        // Process children looking for landmarks
-        processNode(root, true);
-        for (const child of root.children) {
-          processNode(child, true);
-        }
+      findLandmarks(root);
+
+      // Count non-landmark content at root level (for fallback summary)
+      if (!isLandmarkRole(root.role)) {
+        countElements(root, topLevelCounts);
       }
     }
 

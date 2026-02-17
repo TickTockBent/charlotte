@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Interactive testing page for Charlotte MCP">
+  <title>Interactive - Charlotte Test Sandbox</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; line-height: 1.6; color: #333; }
+    header { background: #2563eb; color: white; padding: 1rem 2rem; }
+    nav { background: #1e40af; padding: 0.5rem 2rem; }
+    nav a { color: #93c5fd; margin-right: 1.5rem; text-decoration: none; }
+    main { padding: 2rem; max-width: 900px; }
+    h2 { margin-top: 1.5rem; margin-bottom: 0.75rem; }
+    section { margin-bottom: 2rem; padding: 1rem; border: 1px solid #e5e7eb; border-radius: 8px; }
+    button { padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer; font-size: 0.9rem; margin-right: 0.5rem; margin-bottom: 0.5rem; }
+    button:hover { background: #f3f4f6; }
+    .btn-primary { background: #2563eb; color: white; border-color: #2563eb; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-danger { background: #dc2626; color: white; border-color: #dc2626; }
+    .btn-danger:hover { background: #b91c1c; }
+
+    /* Counter */
+    #counter-value { font-size: 2rem; font-weight: bold; margin: 0.5rem 0; display: inline-block; min-width: 3rem; text-align: center; }
+
+    /* Hover zone */
+    .hover-zone { padding: 1rem; background: #f9fafb; border: 2px dashed #d1d5db; border-radius: 8px; position: relative; transition: all 0.2s; }
+    .hover-zone:hover { background: #eff6ff; border-color: #2563eb; }
+    .hover-tooltip { display: none; position: absolute; top: -2.5rem; left: 50%; transform: translateX(-50%); background: #1f2937; color: white; padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.85rem; white-space: nowrap; }
+    .hover-zone:hover .hover-tooltip { display: block; }
+
+    /* Scroll container */
+    .scroll-container { height: 200px; overflow-y: auto; border: 1px solid #d1d5db; padding: 1rem; border-radius: 4px; }
+    .scroll-item { padding: 0.75rem; border-bottom: 1px solid #f3f4f6; }
+    .scroll-item:last-child { border-bottom: none; }
+
+    /* Dynamic content */
+    #dynamic-content { min-height: 2rem; padding: 0.5rem; }
+    .dynamic-item { background: #f0fdf4; border: 1px solid #86efac; padding: 0.5rem; margin-bottom: 0.5rem; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
+    .dynamic-item button { margin: 0; }
+
+    /* Delayed content */
+    #delayed-content { min-height: 2rem; }
+    .loading-indicator { color: #6b7280; font-style: italic; }
+    .loaded-content { background: #eff6ff; border: 1px solid #93c5fd; padding: 1rem; border-radius: 4px; }
+
+    /* Keyboard section */
+    #key-display { font-family: monospace; font-size: 1.25rem; background: #1f2937; color: #10b981; padding: 1rem; border-radius: 4px; min-height: 2.5rem; }
+
+    /* Double-click */
+    #double-click-target { padding: 1.5rem; background: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; text-align: center; cursor: pointer; user-select: none; }
+    #double-click-target.activated { background: #d1fae5; border-color: #10b981; }
+
+    /* Status messages */
+    .status { margin-top: 0.5rem; font-size: 0.9rem; color: #6b7280; }
+    .status.success { color: #059669; }
+
+    footer { background: #f3f4f6; padding: 1rem 2rem; margin-top: 2rem; border-top: 1px solid #e5e7eb; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Interactive Testing</h1>
+  </header>
+
+  <nav aria-label="Main navigation">
+    <a href="index.html">Home</a>
+    <a href="forms.html">Forms</a>
+    <a href="interactive.html">Interactive</a>
+    <a href="about.html">About</a>
+  </nav>
+
+  <main>
+    <!-- Counter: tests click -->
+    <h2>Counter</h2>
+    <section aria-label="Counter section">
+      <button id="decrement-btn" class="btn-danger" aria-label="Decrement counter">-</button>
+      <span id="counter-value" aria-live="polite">0</span>
+      <button id="increment-btn" class="btn-primary" aria-label="Increment counter">+</button>
+      <p class="status" id="counter-status">Click the buttons to change the counter value.</p>
+    </section>
+
+    <!-- Dynamic content: tests click + diff -->
+    <h2>Dynamic Content</h2>
+    <section aria-label="Dynamic content section">
+      <button id="add-item-btn" class="btn-primary">Add Item</button>
+      <button id="clear-items-btn" class="btn-danger">Clear All</button>
+      <div id="dynamic-content" aria-live="polite"></div>
+      <p class="status" id="item-count">0 items</p>
+    </section>
+
+    <!-- Hover: tests hover -->
+    <h2>Hover Effects</h2>
+    <section aria-label="Hover effects section">
+      <div class="hover-zone" id="hover-target" role="button" tabindex="0" aria-label="Hover over me">
+        <span class="hover-tooltip" role="tooltip">You found the tooltip!</span>
+        <p>Hover over this area to reveal a tooltip.</p>
+      </div>
+      <p class="status" id="hover-status">Tooltip hidden. Hover to reveal.</p>
+    </section>
+
+    <!-- Double-click: tests click with click_type -->
+    <h2>Double Click</h2>
+    <section aria-label="Double click section">
+      <div id="double-click-target" role="button" tabindex="0" aria-label="Double-click to activate">
+        Double-click me to activate
+      </div>
+      <p class="status" id="dblclick-status">Not activated.</p>
+    </section>
+
+    <!-- Keyboard: tests key -->
+    <h2>Keyboard Input</h2>
+    <section aria-label="Keyboard input section">
+      <p>Press any key to see it displayed below. Try Escape, Enter, arrow keys, or Ctrl+K.</p>
+      <div id="key-display" tabindex="0" role="textbox" aria-label="Key press display">Waiting for key press...</div>
+      <p class="status" id="key-status">No keys pressed yet.</p>
+    </section>
+
+    <!-- Delayed content: tests wait_for -->
+    <h2>Delayed Content</h2>
+    <section aria-label="Delayed content section">
+      <button id="load-delayed-btn" class="btn-primary">Load Content (2s delay)</button>
+      <button id="load-delayed-element-btn">Show Hidden Element (1s delay)</button>
+      <div id="delayed-content"></div>
+      <div id="hidden-element" style="display: none;">
+        <p>This element was hidden and is now visible!</p>
+      </div>
+    </section>
+
+    <!-- Scroll container: tests scroll -->
+    <h2>Scroll Container</h2>
+    <section aria-label="Scroll container section">
+      <p>The container below has 50 scrollable items.</p>
+      <div class="scroll-container" id="scroll-box" role="region" aria-label="Scrollable item list" tabindex="0">
+      </div>
+      <p class="status" id="scroll-status">Scroll position: top</p>
+    </section>
+
+    <!-- Title changer: tests evaluate -->
+    <h2>Page State</h2>
+    <section aria-label="Page state section">
+      <button id="change-title-btn">Change Page Title</button>
+      <button id="add-meta-btn">Add Meta Tag</button>
+      <p class="status" id="page-state-status">Title: <span id="current-title">Interactive - Charlotte Test Sandbox</span></p>
+    </section>
+  </main>
+
+  <footer>
+    <p>Charlotte Test Sandbox - Interactive Page</p>
+  </footer>
+
+  <script>
+    // --- Counter ---
+    let counterValue = 0;
+    const counterDisplay = document.getElementById('counter-value');
+    const counterStatus = document.getElementById('counter-status');
+
+    document.getElementById('increment-btn').addEventListener('click', function() {
+      counterValue++;
+      counterDisplay.textContent = counterValue;
+      counterStatus.textContent = 'Counter incremented to ' + counterValue;
+      counterStatus.className = 'status success';
+    });
+
+    document.getElementById('decrement-btn').addEventListener('click', function() {
+      counterValue--;
+      counterDisplay.textContent = counterValue;
+      counterStatus.textContent = 'Counter decremented to ' + counterValue;
+      counterStatus.className = 'status success';
+    });
+
+    // --- Dynamic Content ---
+    let itemCounter = 0;
+    const dynamicContent = document.getElementById('dynamic-content');
+    const itemCountDisplay = document.getElementById('item-count');
+
+    document.getElementById('add-item-btn').addEventListener('click', function() {
+      itemCounter++;
+      const item = document.createElement('div');
+      item.className = 'dynamic-item';
+      item.id = 'item-' + itemCounter;
+      item.innerHTML = '<span>Item #' + itemCounter + ' - Added dynamically</span>' +
+        '<button onclick="removeItem(\'' + item.id + '\')" aria-label="Remove item ' + itemCounter + '">Remove</button>';
+      dynamicContent.appendChild(item);
+      updateItemCount();
+    });
+
+    document.getElementById('clear-items-btn').addEventListener('click', function() {
+      dynamicContent.innerHTML = '';
+      updateItemCount();
+    });
+
+    function removeItem(itemId) {
+      const item = document.getElementById(itemId);
+      if (item) item.remove();
+      updateItemCount();
+    }
+
+    function updateItemCount() {
+      const count = dynamicContent.children.length;
+      itemCountDisplay.textContent = count + ' item' + (count !== 1 ? 's' : '');
+    }
+
+    // --- Hover ---
+    const hoverTarget = document.getElementById('hover-target');
+    const hoverStatus = document.getElementById('hover-status');
+
+    hoverTarget.addEventListener('mouseenter', function() {
+      hoverStatus.textContent = 'Tooltip visible!';
+      hoverStatus.className = 'status success';
+    });
+    hoverTarget.addEventListener('mouseleave', function() {
+      hoverStatus.textContent = 'Tooltip hidden. Hover to reveal.';
+      hoverStatus.className = 'status';
+    });
+
+    // --- Double Click ---
+    const dblTarget = document.getElementById('double-click-target');
+    const dblStatus = document.getElementById('dblclick-status');
+
+    dblTarget.addEventListener('dblclick', function() {
+      dblTarget.classList.toggle('activated');
+      const isActive = dblTarget.classList.contains('activated');
+      dblTarget.textContent = isActive ? 'Activated! Double-click to deactivate.' : 'Double-click me to activate';
+      dblStatus.textContent = isActive ? 'Activated!' : 'Deactivated.';
+      dblStatus.className = isActive ? 'status success' : 'status';
+    });
+
+    // --- Keyboard ---
+    const keyDisplay = document.getElementById('key-display');
+    const keyStatus = document.getElementById('key-status');
+    let keyPressCount = 0;
+
+    document.addEventListener('keydown', function(event) {
+      keyPressCount++;
+      const parts = [];
+      if (event.ctrlKey) parts.push('Ctrl');
+      if (event.altKey) parts.push('Alt');
+      if (event.shiftKey) parts.push('Shift');
+      if (event.metaKey) parts.push('Meta');
+      parts.push(event.key);
+      keyDisplay.textContent = parts.join(' + ');
+      keyStatus.textContent = keyPressCount + ' key(s) pressed. Last: ' + parts.join('+');
+      keyStatus.className = 'status success';
+    });
+
+    // --- Delayed Content ---
+    document.getElementById('load-delayed-btn').addEventListener('click', function() {
+      const container = document.getElementById('delayed-content');
+      container.innerHTML = '<p class="loading-indicator">Loading content...</p>';
+      setTimeout(function() {
+        container.innerHTML = '<div class="loaded-content">' +
+          '<h3>Loaded Content</h3>' +
+          '<p>This content appeared after a 2-second delay. Charlotte should detect it with wait_for.</p>' +
+          '<ul><li>Item Alpha</li><li>Item Beta</li><li>Item Gamma</li></ul>' +
+          '</div>';
+      }, 2000);
+    });
+
+    document.getElementById('load-delayed-element-btn').addEventListener('click', function() {
+      setTimeout(function() {
+        document.getElementById('hidden-element').style.display = 'block';
+      }, 1000);
+    });
+
+    // --- Scroll Container ---
+    const scrollBox = document.getElementById('scroll-box');
+    const scrollStatus = document.getElementById('scroll-status');
+
+    for (let scrollItemIndex = 1; scrollItemIndex <= 50; scrollItemIndex++) {
+      const scrollItem = document.createElement('div');
+      scrollItem.className = 'scroll-item';
+      scrollItem.textContent = 'Scroll Item #' + scrollItemIndex + ' — Sample content for scrolling test';
+      if (scrollItemIndex === 50) {
+        scrollItem.id = 'last-scroll-item';
+        scrollItem.textContent = 'Scroll Item #50 — You reached the bottom!';
+      }
+      scrollBox.appendChild(scrollItem);
+    }
+
+    scrollBox.addEventListener('scroll', function() {
+      const scrollPercentage = Math.round((scrollBox.scrollTop / (scrollBox.scrollHeight - scrollBox.clientHeight)) * 100);
+      if (scrollPercentage === 0) {
+        scrollStatus.textContent = 'Scroll position: top';
+      } else if (scrollPercentage >= 99) {
+        scrollStatus.textContent = 'Scroll position: bottom';
+      } else {
+        scrollStatus.textContent = 'Scroll position: ' + scrollPercentage + '%';
+      }
+    });
+
+    // --- Page State ---
+    document.getElementById('change-title-btn').addEventListener('click', function() {
+      document.title = 'Title Changed by Button Click';
+      document.getElementById('current-title').textContent = document.title;
+      document.getElementById('page-state-status').innerHTML = 'Title: <span id="current-title">' + document.title + '</span>';
+    });
+
+    document.getElementById('add-meta-btn').addEventListener('click', function() {
+      const meta = document.createElement('meta');
+      meta.name = 'test-meta';
+      meta.content = 'added-by-button';
+      document.head.appendChild(meta);
+      document.getElementById('page-state-status').innerHTML += ' | Meta tag added.';
+    });
+  </script>
+</body>
+</html>

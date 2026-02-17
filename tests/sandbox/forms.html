@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Form testing page for Charlotte MCP">
+  <title>Forms - Charlotte Test Sandbox</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; line-height: 1.6; color: #333; }
+    header { background: #2563eb; color: white; padding: 1rem 2rem; }
+    nav { background: #1e40af; padding: 0.5rem 2rem; }
+    nav a { color: #93c5fd; margin-right: 1.5rem; text-decoration: none; }
+    main { padding: 2rem; max-width: 700px; }
+    h2 { margin-top: 1.5rem; margin-bottom: 0.75rem; }
+    form { margin-bottom: 2rem; }
+    fieldset { border: 1px solid #d1d5db; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+    legend { font-weight: bold; padding: 0 0.5rem; }
+    label { display: block; margin-bottom: 0.25rem; font-weight: 500; }
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="search"],
+    input[type="number"],
+    textarea,
+    select { width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 4px; margin-bottom: 0.75rem; font-size: 1rem; }
+    textarea { height: 80px; resize: vertical; }
+    .checkbox-group, .radio-group { margin-bottom: 0.75rem; }
+    .checkbox-group label, .radio-group label { display: flex; align-items: center; gap: 0.5rem; font-weight: normal; margin-bottom: 0.25rem; }
+    button[type="submit"] { background: #2563eb; color: white; padding: 0.5rem 1.5rem; border: none; border-radius: 4px; font-size: 1rem; cursor: pointer; }
+    button[type="submit"]:hover { background: #1d4ed8; }
+    button[type="reset"] { background: #6b7280; color: white; padding: 0.5rem 1.5rem; border: none; border-radius: 4px; font-size: 1rem; cursor: pointer; margin-left: 0.5rem; }
+    #form-output { background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 1rem; margin-top: 1rem; display: none; }
+    #form-output.visible { display: block; }
+    footer { background: #f3f4f6; padding: 1rem 2rem; margin-top: 2rem; border-top: 1px solid #e5e7eb; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Form Testing</h1>
+  </header>
+
+  <nav aria-label="Main navigation">
+    <a href="index.html">Home</a>
+    <a href="forms.html">Forms</a>
+    <a href="interactive.html">Interactive</a>
+    <a href="about.html">About</a>
+  </nav>
+
+  <main>
+    <h2>Contact Form</h2>
+    <form id="contact-form" aria-label="Contact form">
+      <fieldset>
+        <legend>Personal Information</legend>
+        <label for="full-name">Full Name</label>
+        <input type="text" id="full-name" name="fullName" placeholder="Enter your name" required>
+
+        <label for="email">Email Address</label>
+        <input type="email" id="email" name="email" placeholder="you@example.com" required>
+
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" placeholder="Choose a password">
+      </fieldset>
+
+      <fieldset>
+        <legend>Preferences</legend>
+        <label for="country">Country</label>
+        <select id="country" name="country">
+          <option value="">-- Select --</option>
+          <option value="us">United States</option>
+          <option value="uk">United Kingdom</option>
+          <option value="ca">Canada</option>
+          <option value="au">Australia</option>
+          <option value="de">Germany</option>
+        </select>
+
+        <label for="role">Role</label>
+        <select id="role" name="role">
+          <option value="developer">Developer</option>
+          <option value="designer">Designer</option>
+          <option value="manager">Manager</option>
+          <option value="other">Other</option>
+        </select>
+      </fieldset>
+
+      <fieldset>
+        <legend>Interests</legend>
+        <div class="checkbox-group">
+          <label><input type="checkbox" name="interests" value="ai"> Artificial Intelligence</label>
+          <label><input type="checkbox" name="interests" value="web"> Web Development</label>
+          <label><input type="checkbox" name="interests" value="mobile"> Mobile Development</label>
+          <label><input type="checkbox" name="interests" value="devops"> DevOps</label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Experience Level</legend>
+        <div class="radio-group">
+          <label><input type="radio" name="experience" value="beginner"> Beginner</label>
+          <label><input type="radio" name="experience" value="intermediate"> Intermediate</label>
+          <label><input type="radio" name="experience" value="expert"> Expert</label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Additional Details</legend>
+        <label for="bio">Bio</label>
+        <textarea id="bio" name="bio" placeholder="Tell us about yourself..."></textarea>
+
+        <label for="search-field">Search (test searchbox role)</label>
+        <input type="search" id="search-field" name="search" placeholder="Search...">
+
+        <label for="quantity">Quantity (number input)</label>
+        <input type="number" id="quantity" name="quantity" min="1" max="100" value="1">
+      </fieldset>
+
+      <button type="submit">Submit Form</button>
+      <button type="reset">Reset</button>
+    </form>
+
+    <div id="form-output">
+      <h3>Form Submitted!</h3>
+      <p>The form was submitted with the following data:</p>
+      <pre id="form-data"></pre>
+    </div>
+
+    <h2>Disabled Form</h2>
+    <form id="disabled-form" aria-label="Disabled form example">
+      <fieldset disabled>
+        <legend>Disabled Fields</legend>
+        <label for="disabled-input">Disabled Input</label>
+        <input type="text" id="disabled-input" name="disabledInput" value="Cannot edit this">
+        <label for="disabled-select">Disabled Select</label>
+        <select id="disabled-select" name="disabledSelect">
+          <option value="locked">Locked Option</option>
+        </select>
+        <button type="submit">Cannot Submit</button>
+      </fieldset>
+    </form>
+  </main>
+
+  <footer>
+    <p>Charlotte Test Sandbox - Forms Page</p>
+  </footer>
+
+  <script>
+    document.getElementById('contact-form').addEventListener('submit', function(event) {
+      event.preventDefault();
+      const formData = new FormData(this);
+      const data = {};
+      formData.forEach(function(value, key) {
+        if (data[key]) {
+          if (Array.isArray(data[key])) {
+            data[key].push(value);
+          } else {
+            data[key] = [data[key], value];
+          }
+        } else {
+          data[key] = value;
+        }
+      });
+      const output = document.getElementById('form-output');
+      const dataDisplay = document.getElementById('form-data');
+      dataDisplay.textContent = JSON.stringify(data, null, 2);
+      output.classList.add('visible');
+    });
+  </script>
+</body>
+</html>

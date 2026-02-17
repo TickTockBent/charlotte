@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="About page for Charlotte MCP test sandbox">
+  <title>About - Charlotte Test Sandbox</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; line-height: 1.6; color: #333; }
+    header { background: #2563eb; color: white; padding: 1rem 2rem; }
+    nav { background: #1e40af; padding: 0.5rem 2rem; }
+    nav a { color: #93c5fd; margin-right: 1.5rem; text-decoration: none; }
+    main { padding: 2rem; max-width: 700px; }
+    h2 { margin-top: 1.5rem; margin-bottom: 0.75rem; }
+    p { margin-bottom: 1rem; }
+    .cookie-display { background: #fef3c7; border: 1px solid #f59e0b; padding: 1rem; border-radius: 8px; margin: 1rem 0; font-family: monospace; white-space: pre-wrap; }
+    .header-display { background: #ede9fe; border: 1px solid #8b5cf6; padding: 1rem; border-radius: 8px; margin: 1rem 0; font-family: monospace; white-space: pre-wrap; }
+    footer { background: #f3f4f6; padding: 1rem 2rem; margin-top: 2rem; border-top: 1px solid #e5e7eb; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>About This Sandbox</h1>
+  </header>
+
+  <nav aria-label="Main navigation">
+    <a href="index.html">Home</a>
+    <a href="forms.html">Forms</a>
+    <a href="interactive.html">Interactive</a>
+    <a href="about.html">About</a>
+  </nav>
+
+  <main>
+    <h2>About Charlotte</h2>
+    <p>Charlotte is an MCP server that renders web pages into structured, agent-readable representations using headless Chromium and Puppeteer.</p>
+    <p>It exposes the browser's semantic understanding — the accessibility tree, layout geometry, and interactive elements — to AI agents via the Model Context Protocol.</p>
+    <p>This allows agents to navigate, observe, and interact with web pages without needing vision models or brittle CSS selectors.</p>
+
+    <h2>Navigation Test</h2>
+    <p>This page exists primarily for testing back/forward navigation. Navigate here from the home page, then use the back button to return.</p>
+    <p><a href="index.html">Go back to Home</a></p>
+    <p><a href="forms.html">Go to Forms</a></p>
+
+    <h2>Cookie Display</h2>
+    <p>Any cookies set for this page will appear below. Use <code>charlotte:set_cookies</code> to set a cookie, then reload this page to see it.</p>
+    <div class="cookie-display" id="cookie-display">No cookies detected.</div>
+
+    <h2>Custom Headers</h2>
+    <p>If custom headers were set via <code>charlotte:set_headers</code>, the server would need to echo them. For client-side testing, we display what JavaScript can detect:</p>
+    <div class="header-display" id="header-display">Checking headers...</div>
+
+    <h2>Viewport Info</h2>
+    <p>Current viewport: <span id="viewport-info"></span></p>
+    <p>Resize the viewport with <code>charlotte:viewport</code> and reload to see changes.</p>
+  </main>
+
+  <footer>
+    <p>Charlotte Test Sandbox - About Page</p>
+  </footer>
+
+  <script>
+    // Display cookies
+    const cookieDisplay = document.getElementById('cookie-display');
+    if (document.cookie) {
+      cookieDisplay.textContent = 'Cookies:\n' + document.cookie.split('; ').join('\n');
+    } else {
+      cookieDisplay.textContent = 'No cookies detected.';
+    }
+
+    // Display viewport info
+    document.getElementById('viewport-info').textContent =
+      window.innerWidth + 'x' + window.innerHeight +
+      ' (device pixel ratio: ' + window.devicePixelRatio + ')';
+
+    // Header display
+    document.getElementById('header-display').textContent =
+      'User-Agent: ' + navigator.userAgent + '\n' +
+      'Language: ' + navigator.language;
+  </script>
+</body>
+</html>

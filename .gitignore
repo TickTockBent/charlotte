@@ -22,3 +22,6 @@ Thumbs.db
 
 # Coverage
 coverage/
+
+# Internal Docs
+internal/

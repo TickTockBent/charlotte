@@ -5,6 +5,27 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "license": "MIT",
+  "author": "ticktockbent",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ticktockbent/charlotte.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ticktockbent/charlotte/issues"
+  },
+  "homepage": "https://github.com/ticktockbent/charlotte#readme",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "web",
+    "accessibility",
+    "headless-browser",
+    "puppeteer",
+    "ai-agent",
+    "web-scraping",
+    "browser-automation"
+  ],
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.build.json",

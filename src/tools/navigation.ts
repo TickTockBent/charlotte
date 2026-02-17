@@ -101,8 +101,11 @@ export function registerNavigationTools(
         logger.info("Navigating back");
         deps.pageManager.clearErrors();
 
-        const response = await page.goBack({ waitUntil: "load" });
-        if (!response) {
+        const urlBeforeNavigation = page.url();
+        await page.goBack({ waitUntil: "load" });
+        const urlAfterNavigation = page.url();
+
+        if (urlAfterNavigation === urlBeforeNavigation) {
           throw new CharlotteError(
             CharlotteErrorCode.NAVIGATION_FAILED,
             "No previous page in history.",
@@ -132,8 +135,11 @@ export function registerNavigationTools(
         logger.info("Navigating forward");
         deps.pageManager.clearErrors();
 
-        const response = await page.goForward({ waitUntil: "load" });
-        if (!response) {
+        const urlBeforeNavigation = page.url();
+        await page.goForward({ waitUntil: "load" });
+        const urlAfterNavigation = page.url();
+
+        if (urlAfterNavigation === urlBeforeNavigation) {
           throw new CharlotteError(
             CharlotteErrorCode.NAVIGATION_FAILED,
             "No forward page in history.",

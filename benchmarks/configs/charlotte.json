@@ -1,0 +1,6 @@
+{
+  "name": "Charlotte",
+  "command": "node",
+  "args": ["dist/index.js"],
+  "cwd": "../.."
+}

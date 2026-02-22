@@ -1,0 +1,56 @@
+{
+  "testName": "Content-Heavy (Wikipedia AI)",
+  "serverName": "Charlotte",
+  "calls": [
+    {
+      "toolName": "charlotte:navigate",
+      "arguments": {
+        "url": "https://en.wikipedia.org/wiki/Artificial_intelligence"
+      },
+      "responseChars": 1277389,
+      "estimatedTokens": 319348,
+      "wallTimeMs": 3896.6374610000003,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "minimal"
+      },
+      "responseChars": 1276739,
+      "estimatedTokens": 319185,
+      "wallTimeMs": 1027.0347259999999,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "summary"
+      },
+      "responseChars": 1277389,
+      "estimatedTokens": 319348,
+      "wallTimeMs": 963.2620719999995,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "full"
+      },
+      "responseChars": 1500637,
+      "estimatedTokens": 375160,
+      "wallTimeMs": 968.5322030000007,
+      "isError": false
+    }
+  ],
+  "cumulative": {
+    "totalChars": 5332154,
+    "totalEstimatedTokens": 1333041,
+    "totalWallTimeMs": 6855.466462,
+    "totalCalls": 4
+  },
+  "success": true,
+  "successCriteria": "Server identifies the article title, table of contents structure, and sidebar elements.",
+  "notes": "Minimal: 1276739 chars; Summary: 1277389 chars; Full: 1500637 chars; Title found: true",
+  "timestamp": 1771770053727
+}

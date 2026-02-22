@@ -1,0 +1,6 @@
+{
+  "name": "Playwright MCP",
+  "command": "node",
+  "args": ["node_modules/@playwright/mcp/cli.js", "--headless", "--browser", "chromium"],
+  "cwd": "../.."
+}

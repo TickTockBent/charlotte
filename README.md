@@ -10,7 +10,7 @@ Charlotte maintains a persistent headless Chromium session and acts as a transla
 
 ```
 ┌─────────────┐     MCP Protocol     ┌──────────────────┐
-│   AI Agent  │ <───────────────────> │    Charlotte     │
+│   AI Agent  │<───────────────────> │    Charlotte     │
 └─────────────┘                      │                  │
                                      │  ┌────────────┐  │
                                      │  │  Renderer  │  │
@@ -34,7 +34,7 @@ Agents receive landmarks, headings, interactive elements with typed metadata, bo
 
 **Interaction** — `click`, `type`, `select`, `toggle`, `submit`, `scroll`, `hover`, `key`, `wait_for` (async condition polling)
 
-**Session Management** — `tabs`, `tab_open`, `tab_switch`, `tab_close`, `viewport` (device presets), `network` (throttling, URL blocking), `set_cookies`, `set_headers`, `configure`
+**Session Management** — `tabs`, `tab_open`, `tab_switch`, `tab_close`, `viewport` (device presets), `network` (throttling, URL blocking), `set_cookies`, `set_headers`, `configure`, `get_cookies` (in progress), `clear_cookies` (in progress)
 
 **Development Mode** — `dev_serve` (static server + file watching with auto-reload), `dev_inject` (CSS/JS injection), `dev_audit` (a11y, performance, SEO, contrast, broken links)
 
@@ -49,15 +49,18 @@ Agents receive landmarks, headings, interactive elements with typed metadata, bo
 
 ### Installation
 
+Charlotte is published on npm as [`@ticktockbent/charlotte`](https://www.npmjs.com/package/@ticktockbent/charlotte):
+
+```bash
+npm install -g @ticktockbent/charlotte
+```
+
+Or install from source:
+
 ```bash
 git clone https://github.com/ticktockbent/charlotte.git
 cd charlotte
 npm install
-```
-
-### Build
-
-```bash
 npm run build
 ```
 
@@ -66,6 +69,10 @@ npm run build
 Charlotte communicates over stdio using the MCP protocol:
 
 ```bash
+# If installed globally
+charlotte
+
+# If installed from source
 npm start
 ```
 
@@ -78,8 +85,8 @@ Add Charlotte to your MCP client configuration. For Claude Code, create `.mcp.js
   "mcpServers": {
     "charlotte": {
       "type": "stdio",
-      "command": "node",
-      "args": ["/path/to/charlotte/dist/index.js"],
+      "command": "npx",
+      "args": ["@ticktockbent/charlotte"],
       "env": {}
     }
   }
@@ -92,8 +99,8 @@ For Claude Desktop, add to `claude_desktop_config.json`:
 {
   "mcpServers": {
     "charlotte": {
-      "command": "node",
-      "args": ["/path/to/charlotte/dist/index.js"]
+      "command": "npx",
+      "args": ["@ticktockbent/charlotte"]
     }
   }
 }
@@ -240,6 +247,14 @@ dev_serve({ path: "tests/sandbox" })
 ```
 
 Four pages cover navigation, forms, interactive elements, delayed content, scroll containers, and more. See [docs/sandbox.md](docs/sandbox.md) for the full page reference and a tool-by-tool exercise checklist.
+
+## Roadmap
+
+**Cookie Management** — `get_cookies` and `clear_cookies` tools are in progress, addressing a feature gap in cookie management. Currently Charlotte can set cookies via `set_cookies`, but agents have no way to inspect existing cookies or selectively clear them. The new tools will complete the cookie lifecycle.
+
+**Screenshot Artifacts** — Save screenshots as persistent file artifacts rather than only returning inline data, enabling agents to reference and manage captured images across sessions.
+
+**Video Recording** — Record interactions as video, capturing the full sequence of agent-driven navigation and manipulation for debugging, documentation, and review.
 
 ## Full Specification
 

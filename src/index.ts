@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { BrowserManager } from "./browser/browser-manager.js";
 import { PageManager } from "./browser/page-manager.js";

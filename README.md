@@ -49,7 +49,7 @@ Agents receive landmarks, headings, interactive elements with typed metadata, bo
 
 ### Installation
 
-Charlotte is published on npm as [`@ticktockbent/charlotte`](https://www.npmjs.com/package/@ticktockbent/charlotte):
+Charlotte is listed on the [MCP Registry](https://registry.modelcontextprotocol.io) as `io.github.TickTockBent/charlotte` and published on npm as [`@ticktockbent/charlotte`](https://www.npmjs.com/package/@ticktockbent/charlotte):
 
 ```bash
 npm install -g @ticktockbent/charlotte

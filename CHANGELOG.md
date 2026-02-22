@@ -2,6 +2,12 @@
 
 All notable changes to Charlotte will be documented in this file.
 
+## [0.1.2] - 2026-02-22
+
+### Changed
+
+- Added `mcpName` field for MCP registry publishing.
+
 ## [0.1.1] - 2026-02-22
 
 ### Added

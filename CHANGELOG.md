@@ -2,6 +2,17 @@
 
 All notable changes to Charlotte will be documented in this file.
 
+## [0.1.1] - 2026-02-22
+
+### Added
+
+- **`get_cookies`** — Retrieve cookies for the active page with optional URL filtering. Returns cookie name, value, domain, path, and security flags.
+- **`clear_cookies`** — Clear cookies from the browser with optional name filtering. Supports clearing all cookies or specific cookies by name.
+
+### Fixed
+
+- Session integration tests now use HTTP URLs for cookie operations (CDP requires http/https for `Network.deleteCookies`).
+
 ## [0.1.0] - 2026-02-13
 
 Initial release. All six implementation phases complete.

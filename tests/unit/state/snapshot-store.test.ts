@@ -18,7 +18,6 @@ function createMockRepresentation(
     },
     interactive: [],
     forms: [],
-    alerts: [],
     errors: { console: [], network: [] },
     ...overrides,
   };

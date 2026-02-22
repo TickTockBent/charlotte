@@ -60,7 +60,7 @@ describe("Observation integration", () => {
       const full = await renderActivePage(deps, { detail: "full" });
 
       // Minimal: no content summary, no full content
-      expect(minimal.structure.content_summary).toBe("");
+      expect(minimal.structure.content_summary).toBeUndefined();
       expect(minimal.structure.full_content).toBeUndefined();
 
       // Summary: has content summary, no full content

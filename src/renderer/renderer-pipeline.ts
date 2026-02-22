@@ -1,14 +1,15 @@
 import type { Page } from "puppeteer";
 import type { CDPSessionManager } from "../browser/cdp-session.js";
-import { AccessibilityExtractor, isLandmarkRole, isHeadingRole } from "./accessibility-extractor.js";
+import { AccessibilityExtractor, isLandmarkRole, isHeadingRole, isInteractiveRole } from "./accessibility-extractor.js";
 import type { ParsedAXNode } from "./accessibility-extractor.js";
 import { LayoutExtractor, ZERO_BOUNDS } from "./layout-extractor.js";
-import { InteractiveExtractor } from "./interactive-extractor.js";
+import { InteractiveExtractor, ROLE_TO_ELEMENT_TYPE } from "./interactive-extractor.js";
 import { ContentExtractor } from "./content-extractor.js";
 import { ElementIdGenerator } from "./element-id-generator.js";
 import { computeDOMPathSignature } from "./dom-path.js";
 import type {
   PageRepresentation,
+  InteractiveSummary,
   Landmark,
   Heading,
   Bounds,
@@ -76,7 +77,7 @@ export class RendererPipeline {
       );
 
     // Step 8: Extract content based on detail level
-    let contentSummary = "";
+    let contentSummary: string | undefined;
     let fullContent: string | undefined;
 
     if (options.detail !== "minimal") {
@@ -85,6 +86,12 @@ export class RendererPipeline {
 
     if (options.detail === "full") {
       fullContent = this.contentExtractor.extractFullContent(rootNodes);
+    }
+
+    // Step 8.5: Generate interactive summary for minimal detail
+    let interactiveSummary: InteractiveSummary | undefined;
+    if (options.detail === "minimal") {
+      interactiveSummary = this.buildInteractiveSummary(rootNodes);
     }
 
     // Step 9: Atomically replace the shared ID generator
@@ -104,12 +111,12 @@ export class RendererPipeline {
       structure: {
         landmarks,
         headings,
-        content_summary: contentSummary,
+        ...(contentSummary !== undefined ? { content_summary: contentSummary } : {}),
         ...(fullContent !== undefined ? { full_content: fullContent } : {}),
       },
       interactive: elements,
       forms,
-      alerts: [],
+      ...(interactiveSummary ? { interactive_summary: interactiveSummary } : {}),
       errors: {
         console: [],
         network: [],
@@ -229,6 +236,40 @@ export class RendererPipeline {
     }
 
     return headings;
+  }
+
+  private buildInteractiveSummary(rootNodes: ParsedAXNode[]): InteractiveSummary {
+    const PAGE_ROOT_KEY = "(page root)";
+    const landmarkCounts: Record<string, Record<string, number>> = {};
+    let total = 0;
+
+    const traverse = (node: ParsedAXNode, currentLandmarkKey: string) => {
+      let landmarkKey = currentLandmarkKey;
+
+      if (isLandmarkRole(node.role)) {
+        const label = node.name || node.role;
+        landmarkKey = label !== node.role ? `${node.role} (${label})` : node.role;
+      }
+
+      if (isInteractiveRole(node.role)) {
+        const elementType = ROLE_TO_ELEMENT_TYPE[node.role] ?? "button";
+        if (!landmarkCounts[landmarkKey]) {
+          landmarkCounts[landmarkKey] = {};
+        }
+        landmarkCounts[landmarkKey][elementType] = (landmarkCounts[landmarkKey][elementType] ?? 0) + 1;
+        total++;
+      }
+
+      for (const child of node.children) {
+        traverse(child, landmarkKey);
+      }
+    };
+
+    for (const root of rootNodes) {
+      traverse(root, PAGE_ROOT_KEY);
+    }
+
+    return { total, by_landmark: landmarkCounts };
   }
 
   private getHeadingLevel(node: ParsedAXNode): 1 | 2 | 3 | 4 | 5 | 6 {

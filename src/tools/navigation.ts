@@ -2,12 +2,20 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 import { logger } from "../utils/logger.js";
+import type { DetailLevel } from "../renderer/renderer-pipeline.js";
 import type { ToolDependencies } from "./tool-helpers.js";
 import {
   renderActivePage,
   formatPageResponse,
   handleToolError,
 } from "./tool-helpers.js";
+
+const detailSchema = z
+  .enum(["minimal", "summary", "full"])
+  .optional()
+  .describe(
+    '"minimal" (default), "summary" (includes content context), "full" (includes all text content)',
+  );
 
 export function registerNavigationTools(
   server: McpServer,
@@ -17,7 +25,7 @@ export function registerNavigationTools(
     "charlotte:navigate",
     {
       description:
-        "Load a URL in the active page. Returns full page representation after navigation.",
+        "Load a URL in the active page. Returns page representation after navigation. Default minimal detail includes landmarks, headings, and interactive element counts — use charlotte:find to locate specific elements, or pass detail: 'summary' to get the full element list.",
       inputSchema: {
         url: z.string().describe("URL to navigate to"),
         wait_for: z
@@ -30,9 +38,10 @@ export function registerNavigationTools(
           .number()
           .optional()
           .describe("Max wait in ms (default: 30000)"),
+        detail: detailSchema,
       },
     },
-    async ({ url, wait_for, timeout }) => {
+    async ({ url, wait_for, timeout, detail }) => {
       try {
         await deps.browserManager.ensureConnected();
         const page = deps.pageManager.getActivePage();
@@ -78,7 +87,8 @@ export function registerNavigationTools(
           );
         }
 
-        const representation = await renderActivePage(deps, { source: "action" });
+        const detailLevel: DetailLevel = detail ?? "minimal";
+        const representation = await renderActivePage(deps, { detail: detailLevel, source: "action" });
         return formatPageResponse(representation);
       } catch (error: unknown) {
         return handleToolError(error);
@@ -91,9 +101,11 @@ export function registerNavigationTools(
     {
       description:
         "Navigate back in browser history. Returns page representation after navigation.",
-      inputSchema: {},
+      inputSchema: {
+        detail: detailSchema,
+      },
     },
-    async () => {
+    async ({ detail }) => {
       try {
         await deps.browserManager.ensureConnected();
         const page = deps.pageManager.getActivePage();
@@ -112,7 +124,8 @@ export function registerNavigationTools(
           );
         }
 
-        const representation = await renderActivePage(deps, { source: "action" });
+        const detailLevel: DetailLevel = detail ?? "minimal";
+        const representation = await renderActivePage(deps, { detail: detailLevel, source: "action" });
         return formatPageResponse(representation);
       } catch (error: unknown) {
         return handleToolError(error);
@@ -125,9 +138,11 @@ export function registerNavigationTools(
     {
       description:
         "Navigate forward in browser history. Returns page representation after navigation.",
-      inputSchema: {},
+      inputSchema: {
+        detail: detailSchema,
+      },
     },
-    async () => {
+    async ({ detail }) => {
       try {
         await deps.browserManager.ensureConnected();
         const page = deps.pageManager.getActivePage();
@@ -146,7 +161,8 @@ export function registerNavigationTools(
           );
         }
 
-        const representation = await renderActivePage(deps, { source: "action" });
+        const detailLevel: DetailLevel = detail ?? "minimal";
+        const representation = await renderActivePage(deps, { detail: detailLevel, source: "action" });
         return formatPageResponse(representation);
       } catch (error: unknown) {
         return handleToolError(error);
@@ -164,9 +180,10 @@ export function registerNavigationTools(
           .boolean()
           .optional()
           .describe("Bypass cache (default: false)"),
+        detail: detailSchema,
       },
     },
-    async ({ hard }) => {
+    async ({ hard, detail }) => {
       try {
         await deps.browserManager.ensureConnected();
         const page = deps.pageManager.getActivePage();
@@ -187,7 +204,8 @@ export function registerNavigationTools(
           await page.reload({ waitUntil: "load" });
         }
 
-        const representation = await renderActivePage(deps, { source: "action" });
+        const detailLevel: DetailLevel = detail ?? "minimal";
+        const representation = await renderActivePage(deps, { detail: detailLevel, source: "action" });
         return formatPageResponse(representation);
       } catch (error: unknown) {
         return handleToolError(error);

@@ -152,16 +152,70 @@ export async function renderAfterAction(
 }
 
 /**
+ * Strip empty/default fields from a PageRepresentation to reduce response size.
+ * Returns a cleaned copy — does not mutate the original.
+ */
+function stripEmptyFields(representation: PageRepresentation): Record<string, unknown> {
+  const cleaned: Record<string, unknown> = { ...representation };
+
+  // When interactive_summary is present (minimal detail), strip the full
+  // interactive array and forms from the serialized output. The internal
+  // representation keeps them for find/wait_for/differ.
+  if (representation.interactive_summary) {
+    delete cleaned.interactive;
+    delete cleaned.forms;
+  } else {
+    // Strip empty interactive array
+    if (representation.interactive.length === 0) {
+      delete cleaned.interactive;
+    }
+    // Strip empty forms array
+    if (representation.forms.length === 0) {
+      delete cleaned.forms;
+    }
+  }
+
+  // Strip empty errors
+  const hasConsoleErrors = representation.errors.console.length > 0;
+  const hasNetworkErrors = representation.errors.network.length > 0;
+  if (!hasConsoleErrors && !hasNetworkErrors) {
+    delete cleaned.errors;
+  }
+
+  // Strip empty structure fields
+  if (cleaned.structure) {
+    const structure = { ...(cleaned.structure as Record<string, unknown>) };
+    const originalStructure = representation.structure;
+
+    if (originalStructure.landmarks.length === 0) {
+      delete structure.landmarks;
+    }
+    if (originalStructure.headings.length === 0) {
+      delete structure.headings;
+    }
+    if (!originalStructure.content_summary) {
+      delete structure.content_summary;
+    }
+
+    cleaned.structure = structure;
+  }
+
+  return cleaned;
+}
+
+/**
  * Format a PageRepresentation as an MCP tool response.
+ * Uses compact JSON (no indentation) with empty fields stripped.
  */
 export function formatPageResponse(representation: PageRepresentation): {
   content: Array<{ type: "text"; text: string }>;
 } {
+  const cleaned = stripEmptyFields(representation);
   return {
     content: [
       {
         type: "text" as const,
-        text: JSON.stringify(representation, null, 2),
+        text: JSON.stringify(cleaned),
       },
     ],
   };
@@ -177,7 +231,7 @@ export function formatElementsResponse(elements: InteractiveElement[]): {
     content: [
       {
         type: "text" as const,
-        text: JSON.stringify(elements, null, 2),
+        text: JSON.stringify(elements),
       },
     ],
   };

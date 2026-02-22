@@ -50,7 +50,7 @@ export function registerObservationTools(
     "charlotte:observe",
     {
       description:
-        'Get current page state without performing any action. Use detail levels to control verbosity: "minimal" for landmarks + interactive only, "summary" (default) for content summaries, "full" for all text content.',
+        'Get current page state without performing any action. Use detail levels to control verbosity: "minimal" for landmarks, headings, and interactive element counts by landmark (use charlotte:find to get specific elements with actionable IDs, or observe({ detail: "summary" }) to see all elements), "summary" (default) for content summaries and full element list, "full" for all text content.',
       inputSchema: {
         detail: z
           .enum(["minimal", "summary", "full"])
@@ -376,7 +376,7 @@ export function registerObservationTools(
           content: [
             {
               type: "text" as const,
-              text: JSON.stringify(diff, null, 2),
+              text: JSON.stringify(diff),
             },
           ],
         };

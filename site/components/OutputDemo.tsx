@@ -1,10 +1,29 @@
+"use client";
+
+import { useState } from "react";
 import CodeBlock from "./CodeBlock";
 
-const pageRepresentation = `{
+const minimalRepresentation = `{
+  "url": "https://news.ycombinator.com",
+  "title": "Hacker News",
+  "viewport": { "width": 1280, "height": 720 },
+  "structure": {
+    "headings": [
+      { "level": 1, "text": "Hacker News", "id": "h-a1b2" }
+    ]
+  },
+  "interactive_summary": {
+    "total": 93,
+    "by_landmark": {
+      "(page root)": { "link": 91, "text_input": 1, "button": 1 }
+    }
+  }
+}`;
+
+const summaryRepresentation = `{
   "url": "https://example.com/dashboard",
   "title": "Dashboard",
   "viewport": { "width": 1280, "height": 720 },
-  "snapshot_id": 1,
   "structure": {
     "landmarks": [
       { "role": "banner", "label": "Site header",
@@ -13,7 +32,7 @@ const pageRepresentation = `{
         "bounds": { "x": 240, "y": 64, "w": 1040, "h": 656 } }
     ],
     "headings": [
-      { "level": 1, "text": "Dashboard", "id": "h-1" }
+      { "level": 1, "text": "Dashboard", "id": "h-1a2b" }
     ],
     "content_summary": "main: 2 headings, 5 links, 1 form"
   },
@@ -23,29 +42,28 @@ const pageRepresentation = `{
       "type": "button",
       "label": "Create Project",
       "bounds": { "x": 960, "y": 80, "w": 160, "h": 40 },
-      "state": { "enabled": true, "visible": true }
+      "state": {}
     }
-  ],
-  "forms": [],
-  "alerts": [],
-  "errors": { "console": [], "network": [] }
+  ]
 }`;
+
+type DetailTab = "minimal" | "summary";
 
 const detailLevels = [
   {
     name: "minimal",
-    tokens: "~200-500",
-    description: "Landmarks + interactive elements only",
+    tokens: "~50-200",
+    description: "Landmarks, headings, interactive counts by region",
   },
   {
     name: "summary",
-    tokens: "~500-1500",
-    description: "Adds content summaries, forms, errors",
+    tokens: "~500-5000",
+    description: "Full element list, forms, content summaries",
   },
   {
     name: "full",
     tokens: "variable",
-    description: "Includes all visible text content",
+    description: "Everything in summary, plus all visible text",
   },
 ];
 
@@ -59,6 +77,8 @@ const elementIdExamples = [
 ];
 
 export default function OutputDemo() {
+  const [activeDetail, setActiveDetail] = useState<DetailTab>("minimal");
+
   return (
     <section id="output" className="py-20 px-6 sm:px-8 lg:px-12">
       <div className="max-w-5xl mx-auto">
@@ -66,15 +86,42 @@ export default function OutputDemo() {
           What Charlotte Returns
         </h2>
         <p className="text-muted text-lg mb-10 max-w-2xl">
-          Every page is decomposed into a structured representation optimized
-          for token efficiency. Agents receive landmarks, headings, interactive
-          elements, bounding boxes, and form structures.
+          Agents control how much context they receive. Navigate returns a compact
+          orientation; observe returns the full element list when needed.
         </p>
 
         <div className="grid lg:grid-cols-5 gap-8">
-          {/* JSON output */}
+          {/* JSON output with detail toggle */}
           <div className="lg:col-span-3 min-w-0">
-            <CodeBlock code={pageRepresentation} language="PageRepresentation" />
+            {/* Detail toggle */}
+            <div className="flex gap-1 p-1 rounded-lg bg-surface border border-surface-border mb-4 w-fit">
+              <button
+                onClick={() => setActiveDetail("minimal")}
+                className={`px-3 py-1.5 rounded-md text-xs font-mono font-medium transition-colors ${
+                  activeDetail === "minimal"
+                    ? "bg-accent/10 text-accent"
+                    : "text-muted hover:text-foreground"
+                }`}
+              >
+                minimal
+                <span className="ml-1.5 text-muted">336 chars</span>
+              </button>
+              <button
+                onClick={() => setActiveDetail("summary")}
+                className={`px-3 py-1.5 rounded-md text-xs font-mono font-medium transition-colors ${
+                  activeDetail === "summary"
+                    ? "bg-accent/10 text-accent"
+                    : "text-muted hover:text-foreground"
+                }`}
+              >
+                summary
+                <span className="ml-1.5 text-muted">full list</span>
+              </button>
+            </div>
+            <CodeBlock
+              code={activeDetail === "minimal" ? minimalRepresentation : summaryRepresentation}
+              language="PageRepresentation"
+            />
           </div>
 
           {/* Sidebar: detail levels + element IDs */}

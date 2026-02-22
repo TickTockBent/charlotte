@@ -1,16 +1,13 @@
 import CodeBlock from "./CodeBlock";
 
-const installCode = `git clone https://github.com/TickTockBent/charlotte.git
-cd charlotte
-npm install
-npm run build`;
+const installCode = `npm install -g @ticktockbent/charlotte`;
 
 const claudeCodeConfig = `{
   "mcpServers": {
     "charlotte": {
       "type": "stdio",
-      "command": "node",
-      "args": ["/path/to/charlotte/dist/index.js"],
+      "command": "npx",
+      "args": ["@ticktockbent/charlotte"],
       "env": {}
     }
   }
@@ -19,8 +16,8 @@ const claudeCodeConfig = `{
 const claudeDesktopConfig = `{
   "mcpServers": {
     "charlotte": {
-      "command": "node",
-      "args": ["/path/to/charlotte/dist/index.js"]
+      "command": "npx",
+      "args": ["@ticktockbent/charlotte"]
     }
   }
 }`;
@@ -45,7 +42,7 @@ export default function QuickStart() {
               <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-accent/10 text-accent text-sm font-mono font-bold">
                 1
               </span>
-              Install &amp; Build
+              Install
             </h3>
             <CodeBlock code={installCode} language="bash" />
           </div>
@@ -96,10 +93,10 @@ export default function QuickStart() {
             </h3>
             <CodeBlock
               code={`navigate({ url: "https://example.com" })
-// Returns: title "Example Domain", landmarks, headings, 1 link
+// Returns: 612 chars — title, landmarks, headings, interactive counts
 
-observe({ detail: "minimal" })
-// Returns: landmarks + interactive elements only`}
+find({ type: "link" })
+// Returns: matching elements with IDs ready for interaction`}
               language="verification"
             />
           </div>

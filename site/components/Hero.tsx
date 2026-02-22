@@ -60,18 +60,19 @@ export default function Hero() {
             </h1>
             <p className="text-lg text-muted leading-relaxed mb-8">
               Charlotte is an MCP server that renders web pages into structured,
-              agent-readable representations using headless Chromium. Navigation,
-              observation, and interaction — without vision models or brittle
-              selectors.
+              agent-readable representations using headless Chromium. Agents
+              control how much context they receive — from a 336-character
+              orientation to the full page — so they never pay for what they
+              don&apos;t need.
             </p>
 
             {/* Install command */}
             <div className="flex items-center gap-3 mb-6">
               <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-surface border border-surface-border font-mono text-sm flex-1 max-w-sm">
                 <span className="text-muted select-none">$</span>
-                <span className="text-foreground">npm install charlotte-web</span>
+                <span className="text-foreground">npx @ticktockbent/charlotte</span>
                 <span className="ml-auto">
-                  <CopyButton text="npm install charlotte-web" />
+                  <CopyButton text="npx @ticktockbent/charlotte" />
                 </span>
               </div>
             </div>
@@ -96,7 +97,7 @@ export default function Hero() {
                 GitHub
               </a>
               <a
-                href="https://www.npmjs.com/package/charlotte-web"
+                href="https://www.npmjs.com/package/@ticktockbent/charlotte"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-surface-border font-medium text-sm hover:bg-surface-hover transition-colors"
@@ -126,16 +127,16 @@ export default function Hero() {
         {/* Stats bar */}
         <div className="mt-16 flex flex-wrap gap-8 sm:gap-12 text-sm">
           <div>
+            <span className="font-mono text-2xl font-bold text-accent">136x</span>
+            <span className="ml-2 text-muted">smaller than Playwright</span>
+          </div>
+          <div>
             <span className="font-mono text-2xl font-bold text-accent">30</span>
             <span className="ml-2 text-muted">MCP tools</span>
           </div>
           <div>
-            <span className="font-mono text-2xl font-bold text-accent">6</span>
-            <span className="ml-2 text-muted">categories</span>
-          </div>
-          <div>
-            <span className="font-mono text-2xl font-bold text-accent">222</span>
-            <span className="ml-2 text-muted">tests passing</span>
+            <span className="font-mono text-2xl font-bold text-accent">3</span>
+            <span className="ml-2 text-muted">detail levels</span>
           </div>
           <div>
             <span className="font-mono text-lg font-bold text-foreground">MIT</span>

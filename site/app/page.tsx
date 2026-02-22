@@ -1,4 +1,5 @@
 import Hero from "../components/Hero";
+import Benchmarks from "../components/Benchmarks";
 import OutputDemo from "../components/OutputDemo";
 import ToolGrid from "../components/ToolGrid";
 import UsageExamples from "../components/UsageExamples";
@@ -16,6 +17,9 @@ export default function Home() {
             charlotte
           </a>
           <div className="hidden sm:flex items-center gap-6 text-sm text-muted">
+            <a href="#benchmarks" className="hover:text-foreground transition-colors">
+              Benchmarks
+            </a>
             <a href="#output" className="hover:text-foreground transition-colors">
               Output
             </a>
@@ -52,6 +56,7 @@ export default function Home() {
       {/* Main content */}
       <main>
         <Hero />
+        <Benchmarks />
         <OutputDemo />
         <ToolGrid />
         <UsageExamples />

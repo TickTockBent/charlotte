@@ -1,0 +1,34 @@
+{
+  "testName": "Multi-Page Nav (Hacker News)",
+  "serverName": "Playwright MCP",
+  "calls": [
+    {
+      "toolName": "browser_navigate",
+      "arguments": {
+        "url": "https://news.ycombinator.com"
+      },
+      "responseChars": 61218,
+      "estimatedTokens": 15305,
+      "wallTimeMs": 604.5692490000001,
+      "isError": false
+    },
+    {
+      "toolName": "browser_snapshot",
+      "arguments": {},
+      "responseChars": 61131,
+      "estimatedTokens": 15283,
+      "wallTimeMs": 55.634871999995084,
+      "isError": false
+    }
+  ],
+  "cumulative": {
+    "totalChars": 122349,
+    "totalEstimatedTokens": 30588,
+    "totalWallTimeMs": 660.2041209999952,
+    "totalCalls": 2
+  },
+  "success": true,
+  "successCriteria": "Successfully observe the front page content.",
+  "notes": "Snapshot: 61131 chars",
+  "timestamp": 1771770077550
+}

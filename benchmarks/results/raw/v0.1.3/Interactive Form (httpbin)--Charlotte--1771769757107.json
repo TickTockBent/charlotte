@@ -1,0 +1,67 @@
+{
+  "testName": "Interactive Form (httpbin)",
+  "serverName": "Charlotte",
+  "calls": [
+    {
+      "toolName": "charlotte:navigate",
+      "arguments": {
+        "url": "https://httpbin.org/forms/post"
+      },
+      "responseChars": 6247,
+      "estimatedTokens": 1562,
+      "wallTimeMs": 1738.071358000001,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "summary"
+      },
+      "responseChars": 6247,
+      "estimatedTokens": 1562,
+      "wallTimeMs": 7.195370000001276,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:find",
+      "arguments": {
+        "type": "text_input"
+      },
+      "responseChars": 1371,
+      "estimatedTokens": 343,
+      "wallTimeMs": 10.881946999998036,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:type",
+      "arguments": {
+        "element_id": "inp-82f6",
+        "text": "benchmark-test"
+      },
+      "responseChars": 6764,
+      "estimatedTokens": 1691,
+      "wallTimeMs": 73.06848199999877,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "minimal"
+      },
+      "responseChars": 6219,
+      "estimatedTokens": 1555,
+      "wallTimeMs": 6.256049999999959,
+      "isError": false
+    }
+  ],
+  "cumulative": {
+    "totalChars": 26848,
+    "totalEstimatedTokens": 6713,
+    "totalWallTimeMs": 1835.473206999999,
+    "totalCalls": 5
+  },
+  "success": true,
+  "successCriteria": "Form fields filled and form submitted without errors.",
+  "notes": "Found 4 inputs, 0 forms. Filled: true, Submitted: false",
+  "timestamp": 1771769757107
+}

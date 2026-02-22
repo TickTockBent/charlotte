@@ -105,6 +105,87 @@ describe("Session integration", () => {
     });
   });
 
+  describe("get_cookies", () => {
+    it("returns cookies for the current page", async () => {
+      const page = pageManager.getActivePage();
+      await page.goto(INTERACTION_FIXTURE, { waitUntil: "load" });
+
+      // Clear any leftover cookies from previous tests
+      const existing = await page.cookies();
+      if (existing.length) await page.deleteCookie(...existing);
+
+      // Set some cookies via direct Puppeteer API
+      await page.setCookie(
+        { name: "session_id", value: "s123", url: INTERACTION_FIXTURE },
+        { name: "pref_lang", value: "en", url: INTERACTION_FIXTURE },
+      );
+
+      // Retrieve via page.cookies()
+      const cookies = await page.cookies();
+      expect(cookies.length).toBeGreaterThanOrEqual(2);
+      const sessionCookie = cookies.find((c) => c.name === "session_id");
+      expect(sessionCookie).toBeDefined();
+      expect(sessionCookie!.value).toBe("s123");
+    });
+
+    it("returns an empty list when no cookies are set", async () => {
+      const page = pageManager.getActivePage();
+      await page.goto(INTERACTION_FIXTURE, { waitUntil: "load" });
+
+      // Clear all cookies
+      const existing = await page.cookies();
+      if (existing.length) await page.deleteCookie(...existing);
+
+      const cookies = await page.cookies();
+      expect(cookies.length).toBe(0);
+    });
+  });
+
+  describe("clear_cookies", () => {
+    it("clears all cookies for the page", async () => {
+      const page = pageManager.getActivePage();
+      await page.goto(INTERACTION_FIXTURE, { waitUntil: "load" });
+
+      await page.setCookie(
+        { name: "to_clear_a", value: "val_a", url: INTERACTION_FIXTURE },
+        { name: "to_clear_b", value: "val_b", url: INTERACTION_FIXTURE },
+      );
+
+      // Verify cookies exist
+      let cookies = await page.cookies();
+      expect(cookies.some((c) => c.name === "to_clear_a")).toBe(true);
+
+      // Delete all
+      await page.deleteCookie(...cookies);
+
+      cookies = await page.cookies();
+      expect(cookies.length).toBe(0);
+    });
+
+    it("clears specific cookies by name", async () => {
+      const page = pageManager.getActivePage();
+      await page.goto(INTERACTION_FIXTURE, { waitUntil: "load" });
+
+      // Clear any existing first
+      const existing = await page.cookies();
+      if (existing.length) await page.deleteCookie(...existing);
+
+      await page.setCookie(
+        { name: "keep_me", value: "keep", url: INTERACTION_FIXTURE },
+        { name: "delete_me", value: "delete", url: INTERACTION_FIXTURE },
+      );
+
+      // Delete only "delete_me"
+      const allCookies = await page.cookies();
+      const toDelete = allCookies.filter((c) => c.name === "delete_me");
+      await page.deleteCookie(...toDelete);
+
+      const remaining = await page.cookies();
+      expect(remaining.some((c) => c.name === "keep_me")).toBe(true);
+      expect(remaining.some((c) => c.name === "delete_me")).toBe(false);
+    });
+  });
+
   describe("set_headers", () => {
     it("sets extra HTTP headers on the page", async () => {
       const page = pageManager.getActivePage();

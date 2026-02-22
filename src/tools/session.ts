@@ -26,6 +26,105 @@ export function registerSessionTools(
   server: McpServer,
   deps: ToolDependencies,
 ): void {
+  // ─── charlotte:get_cookies ───
+  server.registerTool(
+    "charlotte:get_cookies",
+    {
+      description:
+        "Get cookies for the active page. Optionally filter by URL(s). Returns cookie name, value, domain, path, and flags.",
+      inputSchema: {
+        urls: z
+          .array(z.string())
+          .optional()
+          .describe(
+            "URLs to filter cookies by. If omitted, returns cookies for the current page URL.",
+          ),
+      },
+    },
+    async ({ urls }) => {
+      try {
+        await deps.browserManager.ensureConnected();
+        const page = deps.pageManager.getActivePage();
+
+        logger.info("Getting cookies", { urls });
+
+        const cookies = urls?.length
+          ? await page.cookies(...urls)
+          : await page.cookies();
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify({
+                cookies: cookies.map((c) => ({
+                  name: c.name,
+                  value: c.value,
+                  domain: c.domain,
+                  path: c.path,
+                  expires: c.expires,
+                  httpOnly: c.httpOnly,
+                  secure: c.secure,
+                  sameSite: c.sameSite,
+                })),
+                count: cookies.length,
+              }),
+            },
+          ],
+        };
+      } catch (error: unknown) {
+        return handleToolError(error);
+      }
+    },
+  );
+
+  // ─── charlotte:clear_cookies ───
+  server.registerTool(
+    "charlotte:clear_cookies",
+    {
+      description:
+        "Clear cookies from the browser. Optionally filter by name(s) to remove specific cookies. Without a filter, clears all cookies for the current page.",
+      inputSchema: {
+        names: z
+          .array(z.string())
+          .optional()
+          .describe(
+            "Cookie names to delete. If omitted, clears all cookies for the current page.",
+          ),
+      },
+    },
+    async ({ names }) => {
+      try {
+        await deps.browserManager.ensureConnected();
+        const page = deps.pageManager.getActivePage();
+
+        logger.info("Clearing cookies", { names });
+
+        const currentCookies = await page.cookies();
+        const cookiesToDelete = names
+          ? currentCookies.filter((c) => names.includes(c.name))
+          : currentCookies;
+
+        await page.deleteCookie(...cookiesToDelete);
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify({
+                success: true,
+                cleared: cookiesToDelete.length,
+                names: cookiesToDelete.map((c) => c.name),
+              }),
+            },
+          ],
+        };
+      } catch (error: unknown) {
+        return handleToolError(error);
+      }
+    },
+  );
+
   // ─── charlotte:set_cookies ───
   server.registerTool(
     "charlotte:set_cookies",

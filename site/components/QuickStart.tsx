@@ -1,7 +1,5 @@
 import CodeBlock from "./CodeBlock";
 
-const installCode = `npm install -g @ticktockbent/charlotte`;
-
 const claudeCodeConfig = `{
   "mcpServers": {
     "charlotte": {
@@ -31,29 +29,19 @@ export default function QuickStart() {
       <div className="max-w-5xl mx-auto">
         <h2 className="text-3xl font-bold tracking-tight mb-4">Quick Start</h2>
         <p className="text-muted text-lg mb-10 max-w-2xl">
-          Get Charlotte running in under a minute. Requires Node.js &gt;= 22
-          and npm.
+          Get Charlotte running in under a minute. No install required —{" "}
+          <code className="font-mono text-accent text-xs">npx</code> handles
+          everything. Just add the config and go.
         </p>
 
         <div className="space-y-10">
-          {/* Install */}
+          {/* Configure */}
           <div>
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-accent/10 text-accent text-sm font-mono font-bold">
                 1
               </span>
-              Install
-            </h3>
-            <CodeBlock code={installCode} language="bash" />
-          </div>
-
-          {/* Configure */}
-          <div>
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-accent/10 text-accent text-sm font-mono font-bold">
-                2
-              </span>
-              Configure Your MCP Client
+              Add to Your MCP Client
             </h3>
 
             <div className="grid md:grid-cols-2 gap-4">
@@ -87,7 +75,7 @@ export default function QuickStart() {
           <div>
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-accent/10 text-accent text-sm font-mono font-bold">
-                3
+                2
               </span>
               Verify It Works
             </h3>
@@ -99,6 +87,24 @@ find({ type: "link" })
 // Returns: matching elements with IDs ready for interaction`}
               language="verification"
             />
+          </div>
+
+          {/* Optional global install */}
+          <div className="p-4 rounded-lg border border-surface-border bg-surface">
+            <p className="text-sm text-muted">
+              <strong className="text-foreground">Optional:</strong> For faster
+              startup (skips npx resolution), install globally:
+            </p>
+            <code className="block mt-2 font-mono text-sm text-accent">
+              npm install -g @ticktockbent/charlotte
+            </code>
+            <p className="text-xs text-muted mt-2">
+              Then replace{" "}
+              <code className="font-mono text-accent">{`"command": "npx"`}</code>{" "}
+              with{" "}
+              <code className="font-mono text-accent">{`"command": "charlotte"`}</code>{" "}
+              in your config.
+            </p>
           </div>
 
           {/* Links */}

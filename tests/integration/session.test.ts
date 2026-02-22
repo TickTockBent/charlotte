@@ -105,6 +105,89 @@ describe("Session integration", () => {
     });
   });
 
+  describe("get_cookies", () => {
+    it("returns cookies for the current page", async () => {
+      const page = pageManager.getActivePage();
+      await page.goto(INTERACTION_FIXTURE, { waitUntil: "load" });
+
+      // Clear any leftover cookies from previous tests
+      const existing = await page.cookies("http://localhost");
+      if (existing.length) await page.deleteCookie(...existing);
+
+      // Set cookies with http URL (CDP requires http/https for cookie operations)
+      await page.setCookie(
+        { name: "session_id", value: "s123", url: "http://localhost" },
+        { name: "pref_lang", value: "en", url: "http://localhost" },
+      );
+
+      // Retrieve via page.cookies() with matching URL
+      const cookies = await page.cookies("http://localhost");
+      expect(cookies.length).toBeGreaterThanOrEqual(2);
+      const sessionCookie = cookies.find((c) => c.name === "session_id");
+      expect(sessionCookie).toBeDefined();
+      expect(sessionCookie!.value).toBe("s123");
+    });
+
+    it("returns an empty list when no cookies are set", async () => {
+      const page = pageManager.getActivePage();
+      await page.goto(INTERACTION_FIXTURE, { waitUntil: "load" });
+
+      // Clear all cookies
+      const existing = await page.cookies("http://localhost");
+      if (existing.length) await page.deleteCookie(...existing);
+
+      const cookies = await page.cookies("http://localhost");
+      expect(cookies.length).toBe(0);
+    });
+  });
+
+  describe("clear_cookies", () => {
+    it("clears all cookies for the page", async () => {
+      const page = pageManager.getActivePage();
+      await page.goto(INTERACTION_FIXTURE, { waitUntil: "load" });
+
+      // CDP requires http/https URLs for cookie operations
+      await page.setCookie(
+        { name: "to_clear_a", value: "val_a", url: "http://localhost" },
+        { name: "to_clear_b", value: "val_b", url: "http://localhost" },
+      );
+
+      // Verify cookies exist
+      let cookies = await page.cookies("http://localhost");
+      expect(cookies.some((c) => c.name === "to_clear_a")).toBe(true);
+
+      // Delete all
+      await page.deleteCookie(...cookies);
+
+      cookies = await page.cookies("http://localhost");
+      expect(cookies.length).toBe(0);
+    });
+
+    it("clears specific cookies by name", async () => {
+      const page = pageManager.getActivePage();
+      await page.goto(INTERACTION_FIXTURE, { waitUntil: "load" });
+
+      // Clear any existing first
+      const existing = await page.cookies("http://localhost");
+      if (existing.length) await page.deleteCookie(...existing);
+
+      // CDP requires http/https URLs for cookie operations
+      await page.setCookie(
+        { name: "keep_me", value: "keep", url: "http://localhost" },
+        { name: "delete_me", value: "delete", url: "http://localhost" },
+      );
+
+      // Delete only "delete_me"
+      const allCookies = await page.cookies("http://localhost");
+      const toDelete = allCookies.filter((c) => c.name === "delete_me");
+      await page.deleteCookie(...toDelete);
+
+      const remaining = await page.cookies("http://localhost");
+      expect(remaining.some((c) => c.name === "keep_me")).toBe(true);
+      expect(remaining.some((c) => c.name === "delete_me")).toBe(false);
+    });
+  });
+
   describe("set_headers", () => {
     it("sets extra HTTP headers on the page", async () => {
       const page = pageManager.getActivePage();

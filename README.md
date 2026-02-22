@@ -34,7 +34,7 @@ Agents receive landmarks, headings, interactive elements with typed metadata, bo
 
 **Interaction** — `click`, `type`, `select`, `toggle`, `submit`, `scroll`, `hover`, `key`, `wait_for` (async condition polling)
 
-**Session Management** — `tabs`, `tab_open`, `tab_switch`, `tab_close`, `viewport` (device presets), `network` (throttling, URL blocking), `set_cookies`, `set_headers`, `configure`, `get_cookies` (in progress), `clear_cookies` (in progress)
+**Session Management** — `tabs`, `tab_open`, `tab_switch`, `tab_close`, `viewport` (device presets), `network` (throttling, URL blocking), `set_cookies`, `get_cookies`, `clear_cookies`, `set_headers`, `configure`
 
 **Development Mode** — `dev_serve` (static server + file watching with auto-reload), `dev_inject` (CSS/JS injection), `dev_audit` (a11y, performance, SEO, contrast, broken links)
 
@@ -249,8 +249,6 @@ dev_serve({ path: "tests/sandbox" })
 Four pages cover navigation, forms, interactive elements, delayed content, scroll containers, and more. See [docs/sandbox.md](docs/sandbox.md) for the full page reference and a tool-by-tool exercise checklist.
 
 ## Roadmap
-
-**Cookie Management** — `get_cookies` and `clear_cookies` tools are in progress, addressing a feature gap in cookie management. Currently Charlotte can set cookies via `set_cookies`, but agents have no way to inspect existing cookies or selectively clear them. The new tools will complete the cookie lifecycle.
 
 **Screenshot Artifacts** — Save screenshots as persistent file artifacts rather than only returning inline data, enabling agents to reference and manage captured images across sessions.
 

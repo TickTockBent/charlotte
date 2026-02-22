@@ -142,7 +142,7 @@ describe("Navigation integration", () => {
 
       const representation = await renderActivePage(deps, { detail: "minimal" });
 
-      expect(representation.structure.content_summary).toBe("");
+      expect(representation.structure.content_summary).toBeUndefined();
       expect(representation.structure.full_content).toBeUndefined();
       expect(representation.interactive.length).toBeGreaterThan(0);
     });
@@ -174,7 +174,9 @@ describe("Navigation integration", () => {
       const parsed = JSON.parse(response.content[0].text);
       expect(parsed.url).toBeDefined();
       expect(parsed.title).toBeDefined();
-      expect(parsed.interactive).toBeDefined();
+      // Minimal detail returns interactive_summary instead of interactive array
+      expect(parsed.interactive_summary).toBeDefined();
+      expect(parsed.interactive_summary.total).toBeGreaterThan(0);
     });
   });
 });

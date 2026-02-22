@@ -58,8 +58,8 @@ describe("RendererPipeline integration", () => {
       // Interactive elements
       expect(result.interactive.length).toBeGreaterThan(0);
 
-      // Content summary should be empty for minimal
-      expect(result.structure.content_summary).toBe("");
+      // Content summary should be omitted for minimal
+      expect(result.structure.content_summary).toBeUndefined();
     });
   });
 
@@ -94,7 +94,8 @@ describe("RendererPipeline integration", () => {
         b.label.includes("Create New Project"),
       );
       expect(createButton).toBeDefined();
-      expect(createButton!.state.enabled).toBe(true);
+      // enabled defaults to undefined (meaning enabled); only set when false
+      expect(createButton!.state.enabled).toBeUndefined();
 
       const exportButton = buttons.find((b) =>
         b.label.includes("Export Data"),
@@ -206,8 +207,9 @@ describe("RendererPipeline integration", () => {
     it("provides bounds for interactive elements", async () => {
       const result = await pipeline.render(page, { detail: "minimal" });
 
+      // visible defaults to undefined (meaning visible); only set to false when hidden
       const visibleElements = result.interactive.filter(
-        (el) => el.state.visible,
+        (el) => el.state.visible !== false,
       );
       expect(visibleElements.length).toBeGreaterThan(0);
 

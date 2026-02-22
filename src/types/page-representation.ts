@@ -65,8 +65,16 @@ export interface FormRepresentation {
 export interface PageStructure {
   landmarks: Landmark[];
   headings: Heading[];
-  content_summary: string;
+  content_summary?: string;
   full_content?: string;
+}
+
+export interface InteractiveSummary {
+  total: number;
+  /** Counts of interactive element types grouped by containing landmark.
+   *  Keys match structure.landmarks format: "role (label)" or just "role".
+   *  "(page root)" for elements not inside any landmark. */
+  by_landmark: Record<string, Record<string, number>>;
 }
 
 export interface ReloadEvent {
@@ -84,11 +92,11 @@ export interface PageRepresentation {
   structure: PageStructure;
   interactive: InteractiveElement[];
   forms: FormRepresentation[];
-  alerts: string[];
   errors: {
     console: Array<{ level: string; text: string }>;
     network: Array<{ url: string; status: number; statusText: string }>;
   };
+  interactive_summary?: InteractiveSummary;
   reload_event?: ReloadEvent;
   delta?: import("./snapshot.js").SnapshotDiff;
 }

@@ -2,6 +2,27 @@
 
 All notable changes to Charlotte will be documented in this file.
 
+## [0.2.0] - 2026-02-22
+
+### Changed
+
+- **Compact response format** — Responses are now dramatically smaller, reducing context window consumption by 50-99% depending on the page. Charlotte's `navigate` returns 336 characters for Hacker News vs Playwright MCP's 61,230.
+- **Interactive summary for minimal detail** — Navigation tools now return interactive element counts grouped by landmark region instead of listing every element individually. Wikipedia's minimal response dropped from 711K to 7.7K characters.
+- **Default state stripping** — Interactive elements no longer include redundant default state fields (`enabled: true`, `visible: true`, `focused: false`). Only non-default values are serialized.
+- **Compact JSON serialization** — All tool responses use compact JSON with empty fields stripped.
+- **Navigation defaults to minimal** — `navigate`, `back`, `forward`, and `reload` now return minimal detail by default. Pass `detail: "summary"` or `detail: "full"` for more context.
+- **Updated tool descriptions** — `navigate` and `observe` descriptions now guide agents through the minimal-then-find workflow.
+
+### Removed
+
+- Removed unused `alerts` field from page representation.
+
+## [0.1.3] - 2026-02-22
+
+### Added
+
+- Benchmark suite for comparing Charlotte against Playwright MCP across real websites.
+
 ## [0.1.2] - 2026-02-22
 
 ### Changed

@@ -1,6 +1,6 @@
 {
   "name": "@ticktockbent/charlotte",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "MCP server that renders web pages into structured, agent-readable representations",
   "type": "module",
   "main": "dist/index.js",

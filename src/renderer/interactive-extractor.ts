@@ -11,7 +11,7 @@ import type {
   FormRepresentation,
 } from "../types/page-representation.js";
 
-const ROLE_TO_ELEMENT_TYPE: Record<string, InteractiveElementType> = {
+export const ROLE_TO_ELEMENT_TYPE: Record<string, InteractiveElementType> = {
   button: "button",
   link: "link",
   textbox: "text_input",
@@ -36,30 +36,34 @@ function mapRoleToElementType(role: string): InteractiveElementType {
 
 function extractElementState(node: ParsedAXNode): ElementState {
   const props = node.properties;
-  return {
-    enabled: props["disabled"] !== true,
-    visible: true, // will be overridden by layout extractor if bounds are zero
-    focused: props["focused"] === true,
-    checked:
-      props["checked"] === "true" || props["checked"] === true
-        ? true
-        : props["checked"] === "mixed"
-          ? true
-          : undefined,
-    expanded:
-      props["expanded"] !== undefined
-        ? props["expanded"] === true
-        : undefined,
-    selected:
-      props["selected"] !== undefined
-        ? props["selected"] === true
-        : undefined,
-    required: props["required"] === true ? true : undefined,
-    invalid:
-      props["invalid"] !== undefined && props["invalid"] !== "false"
-        ? true
-        : undefined,
-  };
+  const state: ElementState = {};
+
+  // Only include non-default values to reduce serialization size.
+  // Defaults: enabled=true (omit), visible=true (omit), focused=false (omit)
+  if (props["disabled"] === true) {
+    state.enabled = false;
+  }
+  // visible defaults to true; overridden to false by bounds check downstream
+  if (props["focused"] === true) {
+    state.focused = true;
+  }
+  if (props["checked"] === "true" || props["checked"] === true || props["checked"] === "mixed") {
+    state.checked = true;
+  }
+  if (props["expanded"] !== undefined) {
+    state.expanded = props["expanded"] === true;
+  }
+  if (props["selected"] !== undefined) {
+    state.selected = props["selected"] === true;
+  }
+  if (props["required"] === true) {
+    state.required = true;
+  }
+  if (props["invalid"] !== undefined && props["invalid"] !== "false") {
+    state.invalid = true;
+  }
+
+  return state;
 }
 
 interface ExtractionResult {
@@ -99,16 +103,17 @@ export class InteractiveExtractor {
 
         const state = extractElementState(node);
 
-        // If no bounds available, mark as not visible
+        // If no bounds available or zero-sized, mark as not visible and null out bounds
         if (!bounds || (bounds.w === 0 && bounds.h === 0)) {
           state.visible = false;
+          bounds = null;
         }
 
         const element: InteractiveElement = {
           id: elementId,
           type: elementType,
           label: node.name || node.description || "",
-          bounds: bounds ?? ZERO_BOUNDS,
+          bounds,
           state,
         };
 

@@ -1,0 +1,35 @@
+services:
+  charlotte:
+    build:
+      context: .
+      dockerfile: Dockerfile.alpine
+    image: charlotte:latest
+    container_name: charlotte-mcp
+    # MCP servers communicate via stdio
+    stdin_open: true
+    # Shared memory size for Chromium
+    shm_size: '2gb'
+    # Security options for Chromium in container
+    security_opt:
+      - seccomp=unconfined
+    # Environment variables (optional overrides)
+    environment:
+      - NODE_ENV=production
+      # Uncomment to use a specific Chromium path
+      # - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+  # Alternative: Debian-based build (larger but more reliable)
+  charlotte-debian:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: charlotte:debian
+    container_name: charlotte-mcp-debian
+    stdin_open: true
+    shm_size: '2gb'
+    security_opt:
+      - seccomp=unconfined
+    environment:
+      - NODE_ENV=production
+    profiles:
+      - debian  # Only starts with: docker compose --profile debian up

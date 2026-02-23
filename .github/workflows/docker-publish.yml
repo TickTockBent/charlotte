@@ -1,0 +1,88 @@
+name: Publish Docker Images
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  GHCR_IMAGE: ghcr.io/ticktockbent/charlotte
+  DOCKERHUB_IMAGE: docker.io/ticktockbent/charlotte
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push Alpine image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.alpine
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.GHCR_IMAGE }}:latest
+            ${{ env.GHCR_IMAGE }}:alpine
+            ${{ env.GHCR_IMAGE }}:${{ steps.version.outputs.version }}
+            ${{ env.GHCR_IMAGE }}:${{ steps.version.outputs.version }}-alpine
+            ${{ env.DOCKERHUB_IMAGE }}:latest
+            ${{ env.DOCKERHUB_IMAGE }}:alpine
+            ${{ env.DOCKERHUB_IMAGE }}:${{ steps.version.outputs.version }}
+            ${{ env.DOCKERHUB_IMAGE }}:${{ steps.version.outputs.version }}-alpine
+          cache-from: type=gha,scope=alpine
+          cache-to: type=gha,mode=max,scope=alpine
+
+      - name: Build and push Debian image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.GHCR_IMAGE }}:debian
+            ${{ env.GHCR_IMAGE }}:${{ steps.version.outputs.version }}-debian
+            ${{ env.DOCKERHUB_IMAGE }}:debian
+            ${{ env.DOCKERHUB_IMAGE }}:${{ steps.version.outputs.version }}-debian
+          cache-from: type=gha,scope=debian
+          cache-to: type=gha,mode=max,scope=debian
+
+      - name: Verify published images
+        run: |
+          echo "Verifying Alpine image..."
+          docker pull ${{ env.GHCR_IMAGE }}:${{ steps.version.outputs.version }}
+          docker inspect ${{ env.GHCR_IMAGE }}:${{ steps.version.outputs.version }} --format '{{.Os}}/{{.Architecture}} {{.Size}}'
+
+          echo "Verifying Debian image..."
+          docker pull ${{ env.GHCR_IMAGE }}:${{ steps.version.outputs.version }}-debian
+          docker inspect ${{ env.GHCR_IMAGE }}:${{ steps.version.outputs.version }}-debian --format '{{.Os}}/{{.Architecture}} {{.Size}}'
+
+          echo "All images published and verified."

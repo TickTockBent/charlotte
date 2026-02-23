@@ -319,6 +319,10 @@ Four pages cover navigation, forms, interactive elements, delayed content, scrol
 
 **Tool naming convention** — Charlotte uses `:` as a namespace separator in tool names (e.g., `charlotte:navigate`, `charlotte:observe`). MCP SDK v1.26.0+ logs validation warnings for this character, as the emerging [SEP standard](https://github.com/modelcontextprotocol/modelcontextprotocol/issues/986) restricts tool names to `[A-Za-z0-9_.-]`. This does not affect functionality — all tools work correctly — but produces stderr warnings on server startup. Will be addressed in a future release to comply with the SEP standard.
 
+**Iframe content not captured** — Charlotte reads the main frame's accessibility tree only. Content inside iframes (same-origin or cross-origin) is not included in the page representation. See the Roadmap for planned iframe support.
+
+**Shadow DOM** — Open shadow DOM works transparently. Chromium's accessibility tree pierces open shadow boundaries, so web components (e.g., GitHub's `<relative-time>`, `<tool-tip>`) render their content into Charlotte's representation without special handling. Closed shadow roots are opaque to the accessibility tree and will not be captured.
+
 ## Roadmap
 
 **Screenshot Artifacts** — Save screenshots as persistent file artifacts rather than only returning inline data, enabling agents to reference and manage captured images across sessions.

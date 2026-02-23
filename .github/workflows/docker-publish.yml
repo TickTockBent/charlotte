@@ -86,3 +86,10 @@ jobs:
           docker inspect ${{ env.GHCR_IMAGE }}:${{ steps.version.outputs.version }}-debian --format '{{.Os}}/{{.Architecture}} {{.Size}}'
 
           echo "All images published and verified."
+
+      - name: Update Docker Hub description
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ticktockbent/charlotte

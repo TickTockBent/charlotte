@@ -89,6 +89,19 @@ Charlotte is listed on the [MCP Registry](https://registry.modelcontextprotocol.
 npm install -g @ticktockbent/charlotte
 ```
 
+Docker images are available on [Docker Hub](https://hub.docker.com/r/ticktockbent/charlotte) and [GitHub Container Registry](https://github.com/ticktockbent/charlotte/pkgs/container/charlotte):
+
+```bash
+# Alpine (default, smaller)
+docker pull ticktockbent/charlotte:alpine
+
+# Debian (if you need glibc compatibility)
+docker pull ticktockbent/charlotte:debian
+
+# Or from GHCR
+docker pull ghcr.io/ticktockbent/charlotte:latest
+```
+
 Or install from source:
 
 ```bash

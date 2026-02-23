@@ -327,6 +327,8 @@ Four pages cover navigation, forms, interactive elements, delayed content, scrol
 
 **ARM64 Docker Images** — Add `linux/arm64` platform support to the Docker publish workflow for native performance on Apple Silicon Macs and ARM servers.
 
+**Iframe Content Extraction** — Traverse child frames via CDP to include iframe content in the page representation. Currently, Charlotte only reads the main frame's accessibility tree; same-origin and cross-origin iframe content is invisible.
+
 ## Full Specification
 
 See [docs/CHARLOTTE_SPEC.md](docs/CHARLOTTE_SPEC.md) for the complete specification including all tool parameters, the page representation format, element identity strategy, and architecture details.

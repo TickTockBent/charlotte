@@ -325,6 +325,8 @@ Four pages cover navigation, forms, interactive elements, delayed content, scrol
 
 **Video Recording** — Record interactions as video, capturing the full sequence of agent-driven navigation and manipulation for debugging, documentation, and review.
 
+**ARM64 Docker Images** — Add `linux/arm64` platform support to the Docker publish workflow for native performance on Apple Silicon Macs and ARM servers.
+
 ## Full Specification
 
 See [docs/CHARLOTTE_SPEC.md](docs/CHARLOTTE_SPEC.md) for the complete specification including all tool parameters, the page representation format, element identity strategy, and architecture details.

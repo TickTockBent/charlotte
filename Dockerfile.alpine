@@ -1,0 +1,46 @@
+# Charlotte MCP Server Docker Image (Alpine)
+# Uses system Chromium (currently ~1.2GB due to transitive dependencies)
+
+FROM node:22-alpine
+
+# Install Chromium and dependencies
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    dumb-init
+
+# Tell Puppeteer to use system Chromium instead of downloading its own
+ENV PUPPETEER_SKIP_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+# Create non-root user
+RUN addgroup -S charlotte && adduser -S -G charlotte charlotte \
+    && mkdir -p /home/charlotte/Downloads \
+    && chown -R charlotte:charlotte /home/charlotte
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies (skips bundled Chromium download due to PUPPETEER_SKIP_DOWNLOAD)
+RUN npm ci
+
+# Copy source and build
+COPY tsconfig*.json ./
+COPY src/ ./src/
+
+RUN npm run build
+
+# Fix permissions for node_modules (needed for some edge cases)
+RUN chown -R charlotte:charlotte /app
+
+# Switch to non-root user
+USER charlotte
+
+# Charlotte MCP uses stdio transport
+CMD ["dumb-init", "node", "dist/index.js"]

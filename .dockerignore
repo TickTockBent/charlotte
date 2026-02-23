@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Build output (we build inside container)
+dist/
+
+# Development files
+.git/
+.gitignore
+.github/
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Tests and benchmarks
+tests/
+benchmarks/
+vitest.config.ts
+coverage/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker files (don't include in context recursively)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Site demo
+site/

@@ -232,7 +232,7 @@ export function registerObservationTools(
     "charlotte:screenshot",
     {
       description:
-        "Capture a visual screenshot. Fallback for when structured representation isn't sufficient (complex visualizations, canvas elements, images).",
+        "Capture a visual screenshot. Fallback for when structured representation isn't sufficient (complex visualizations, canvas elements, images). Use save: true to persist as a file artifact that can be referenced later.",
       inputSchema: {
         selector: z
           .string()
@@ -246,9 +246,15 @@ export function registerObservationTools(
           .number()
           .optional()
           .describe("1-100 for jpeg/webp quality"),
+        save: z
+          .boolean()
+          .optional()
+          .describe(
+            "Save as a persistent file artifact (default: false). When true, the screenshot is written to disk and artifact metadata is returned alongside the image.",
+          ),
       },
     },
-    async ({ selector, format, quality }) => {
+    async ({ selector, format, quality, save }) => {
       try {
         await deps.browserManager.ensureConnected();
         const page = deps.pageManager.getActivePage();
@@ -258,30 +264,31 @@ export function registerObservationTools(
           selector,
           format: screenshotFormat,
           quality,
+          save,
         });
 
-        let screenshotBuffer: string;
+        let screenshotBase64: string;
 
         if (selector) {
           const element = await page.$(selector);
           if (!element) {
             return handleToolError(
-              new (await import("../types/errors.js")).CharlotteError(
-                (await import("../types/errors.js")).CharlotteErrorCode.ELEMENT_NOT_FOUND,
+              new CharlotteError(
+                CharlotteErrorCode.ELEMENT_NOT_FOUND,
                 `No element found matching selector '${selector}'.`,
                 "Check the selector syntax or use charlotte:observe to see available elements.",
               ),
             );
           }
 
-          screenshotBuffer = (await element.screenshot({
+          screenshotBase64 = (await element.screenshot({
             type: screenshotFormat,
             quality:
               screenshotFormat !== "png" ? quality : undefined,
             encoding: "base64",
           })) as string;
         } else {
-          screenshotBuffer = (await page.screenshot({
+          screenshotBase64 = (await page.screenshot({
             type: screenshotFormat,
             quality:
               screenshotFormat !== "png" ? quality : undefined,
@@ -290,12 +297,188 @@ export function registerObservationTools(
           })) as string;
         }
 
+        const content: Array<
+          | { type: "image"; data: string; mimeType: string }
+          | { type: "text"; text: string }
+        > = [
+          {
+            type: "image" as const,
+            data: screenshotBase64,
+            mimeType: `image/${screenshotFormat}`,
+          },
+        ];
+
+        // Persist as artifact when requested
+        if (save) {
+          const pageUrl = page.url();
+          const pageTitle = await page.title();
+          const buffer = Buffer.from(screenshotBase64, "base64");
+
+          const artifact = await deps.artifactStore.save(buffer, {
+            format: screenshotFormat,
+            selector,
+            url: pageUrl,
+            title: pageTitle,
+          });
+
+          content.push({
+            type: "text" as const,
+            text: JSON.stringify({
+              artifact: {
+                id: artifact.id,
+                filename: artifact.filename,
+                path: artifact.path,
+                size: artifact.size,
+                format: artifact.format,
+                timestamp: artifact.timestamp,
+              },
+            }),
+          });
+        }
+
+        return { content };
+      } catch (error: unknown) {
+        return handleToolError(error);
+      }
+    },
+  );
+
+  // ─── charlotte:screenshots ───
+  server.registerTool(
+    "charlotte:screenshots",
+    {
+      description:
+        "List all saved screenshot artifacts. Returns metadata for each saved screenshot including ID, filename, page URL, and timestamp.",
+      inputSchema: {},
+    },
+    async () => {
+      try {
+        const artifacts = deps.artifactStore.list();
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify({
+                screenshots: artifacts.map((a) => ({
+                  id: a.id,
+                  filename: a.filename,
+                  format: a.format,
+                  size: a.size,
+                  url: a.url,
+                  title: a.title,
+                  selector: a.selector,
+                  timestamp: a.timestamp,
+                })),
+                count: artifacts.length,
+                directory: deps.artifactStore.screenshotDir,
+              }),
+            },
+          ],
+        };
+      } catch (error: unknown) {
+        return handleToolError(error);
+      }
+    },
+  );
+
+  // ─── charlotte:screenshot_get ───
+  server.registerTool(
+    "charlotte:screenshot_get",
+    {
+      description:
+        "Retrieve a previously saved screenshot artifact by its ID. Returns the image data and metadata.",
+      inputSchema: {
+        id: z.string().describe("Screenshot artifact ID (e.g. ss-20260224103000-a1b2c3)"),
+      },
+    },
+    async ({ id }) => {
+      try {
+        const artifact = deps.artifactStore.get(id);
+        if (!artifact) {
+          return handleToolError(
+            new CharlotteError(
+              CharlotteErrorCode.ELEMENT_NOT_FOUND,
+              `Screenshot artifact '${id}' not found.`,
+              "Use charlotte:screenshots to list available artifacts.",
+            ),
+          );
+        }
+
+        const fileData = await deps.artifactStore.readFile(id);
+        if (!fileData) {
+          return handleToolError(
+            new CharlotteError(
+              CharlotteErrorCode.SESSION_ERROR,
+              `Screenshot file for '${id}' is missing from disk.`,
+              "The file may have been deleted externally. Use charlotte:screenshots to see current artifacts.",
+            ),
+          );
+        }
+
         return {
           content: [
             {
               type: "image" as const,
-              data: screenshotBuffer,
-              mimeType: `image/${screenshotFormat}`,
+              data: fileData.toString("base64"),
+              mimeType: artifact.mimeType,
+            },
+            {
+              type: "text" as const,
+              text: JSON.stringify({
+                artifact: {
+                  id: artifact.id,
+                  filename: artifact.filename,
+                  path: artifact.path,
+                  format: artifact.format,
+                  size: artifact.size,
+                  url: artifact.url,
+                  title: artifact.title,
+                  selector: artifact.selector,
+                  timestamp: artifact.timestamp,
+                },
+              }),
+            },
+          ],
+        };
+      } catch (error: unknown) {
+        return handleToolError(error);
+      }
+    },
+  );
+
+  // ─── charlotte:screenshot_delete ───
+  server.registerTool(
+    "charlotte:screenshot_delete",
+    {
+      description:
+        "Delete a saved screenshot artifact by its ID. Removes the file from disk.",
+      inputSchema: {
+        id: z.string().describe("Screenshot artifact ID to delete"),
+      },
+    },
+    async ({ id }) => {
+      try {
+        const deleted = await deps.artifactStore.delete(id);
+        if (!deleted) {
+          return handleToolError(
+            new CharlotteError(
+              CharlotteErrorCode.ELEMENT_NOT_FOUND,
+              `Screenshot artifact '${id}' not found.`,
+              "Use charlotte:screenshots to list available artifacts.",
+            ),
+          );
+        }
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify({
+                success: true,
+                deleted: id,
+                remaining: deps.artifactStore.count,
+              }),
             },
           ],
         };

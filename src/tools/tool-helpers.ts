@@ -4,6 +4,7 @@ import type { BrowserManager } from "../browser/browser-manager.js";
 import type { RendererPipeline } from "../renderer/renderer-pipeline.js";
 import type { ElementIdGenerator } from "../renderer/element-id-generator.js";
 import type { SnapshotStore } from "../state/snapshot-store.js";
+import type { ArtifactStore } from "../state/artifact-store.js";
 import type { CharlotteConfig } from "../types/config.js";
 import type { DevModeState } from "../dev/dev-mode-state.js";
 import type {
@@ -20,6 +21,7 @@ export interface ToolDependencies {
   rendererPipeline: RendererPipeline;
   elementIdGenerator: ElementIdGenerator;
   snapshotStore: SnapshotStore;
+  artifactStore: ArtifactStore;
   config: CharlotteConfig;
   devModeState?: DevModeState;
 }

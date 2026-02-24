@@ -1,11 +1,13 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import * as path from "node:path";
+import * as os from "node:os";
 import { BrowserManager } from "../../src/browser/browser-manager.js";
 import { PageManager } from "../../src/browser/page-manager.js";
 import { CDPSessionManager } from "../../src/browser/cdp-session.js";
 import { RendererPipeline } from "../../src/renderer/renderer-pipeline.js";
 import { ElementIdGenerator } from "../../src/renderer/element-id-generator.js";
 import { SnapshotStore } from "../../src/state/snapshot-store.js";
+import { ArtifactStore } from "../../src/state/artifact-store.js";
 import { createDefaultConfig } from "../../src/types/config.js";
 import type { ToolDependencies } from "../../src/tools/tool-helpers.js";
 import {
@@ -36,12 +38,17 @@ describe("Observation integration", () => {
     elementIdGenerator = new ElementIdGenerator();
     rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator);
     const config = createDefaultConfig();
+    const artifactStore = new ArtifactStore(
+      path.join(os.tmpdir(), "charlotte-obs-test-artifacts"),
+    );
+    await artifactStore.initialize();
     deps = {
       browserManager,
       pageManager,
       rendererPipeline,
       elementIdGenerator,
       snapshotStore: new SnapshotStore(config.snapshotDepth),
+      artifactStore,
       config,
     };
   });

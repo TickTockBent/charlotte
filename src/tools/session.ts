@@ -235,11 +235,17 @@ export function registerSessionTools(
           .describe(
             '"every_action" (default) — snapshot after every tool, "observe_only" — only on observe, "manual" — only with explicit snapshot: true',
           ),
+        screenshot_dir: z
+          .string()
+          .optional()
+          .describe(
+            "Directory for persistent screenshot artifacts. Changes take effect immediately; existing artifacts remain in the previous directory.",
+          ),
       },
     },
-    async ({ snapshot_depth, auto_snapshot }) => {
+    async ({ snapshot_depth, auto_snapshot, screenshot_dir }) => {
       try {
-        logger.info("Configuring Charlotte", { snapshot_depth, auto_snapshot });
+        logger.info("Configuring Charlotte", { snapshot_depth, auto_snapshot, screenshot_dir });
 
         if (snapshot_depth !== undefined) {
           deps.snapshotStore.setDepth(snapshot_depth);
@@ -248,6 +254,11 @@ export function registerSessionTools(
 
         if (auto_snapshot !== undefined) {
           deps.config.autoSnapshot = auto_snapshot as AutoSnapshotMode;
+        }
+
+        if (screenshot_dir !== undefined) {
+          deps.config.screenshotDir = screenshot_dir;
+          await deps.artifactStore.setScreenshotDir(screenshot_dir);
         }
 
         return {
@@ -259,6 +270,7 @@ export function registerSessionTools(
                 config: {
                   snapshot_depth: deps.config.snapshotDepth,
                   auto_snapshot: deps.config.autoSnapshot,
+                  screenshot_dir: deps.artifactStore.screenshotDir,
                 },
               }),
             },

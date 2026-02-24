@@ -68,6 +68,8 @@ Agents receive landmarks, headings, interactive elements with typed metadata, bo
 
 **Interaction** — `click`, `type`, `select`, `toggle`, `submit`, `scroll`, `hover`, `key`, `wait_for` (async condition polling), `dialog` (accept/dismiss JS dialogs)
 
+**Monitoring** — `console` (all severity levels, filtering, timestamps), `requests` (full HTTP history, method/status/resource type filtering)
+
 **Session Management** — `tabs`, `tab_open`, `tab_switch`, `tab_close`, `viewport` (device presets), `network` (throttling, URL blocking), `set_cookies`, `get_cookies`, `clear_cookies`, `set_headers`, `configure`
 
 **Development Mode** — `dev_serve` (static server + file watching with auto-reload), `dev_inject` (CSS/JS injection), `dev_audit` (a11y, performance, SEO, contrast, broken links)
@@ -320,7 +322,7 @@ All tools go through `renderActivePage()` which handles snapshots, reload events
 
 ## Sandbox
 
-Charlotte includes a test website in `tests/sandbox/` that exercises all 33 tools without touching the public internet. Serve it locally with:
+Charlotte includes a test website in `tests/sandbox/` that exercises all 35 tools without touching the public internet. Serve it locally with:
 
 ```
 dev_serve({ path: "tests/sandbox" })
@@ -340,8 +342,6 @@ Four pages cover navigation, forms, interactive elements, delayed content, scrol
 
 **No drag-and-drop support** — There is no tool for drag-and-drop interactions. Kanban boards, sortable lists, slider handles, and file drop zones cannot be automated.
 
-**Console and network monitoring are error-only** — Charlotte captures console errors and failed network requests in the page representation, but does not expose a dedicated tool for retrieving all console messages or all network requests. Agents debugging JavaScript or API issues have limited visibility.
-
 ## Roadmap
 
 ### Interaction Gaps
@@ -355,12 +355,6 @@ Four pages cover navigation, forms, interactive elements, delayed content, scrol
 **Slow Typing** — Add a `slowly` or `character_delay` parameter to `charlotte:type` for character-by-character input. Required for sites with key-by-key event handlers (autocomplete, search-as-you-type, input validation).
 
 **Click Modifiers** — Add a `modifiers` parameter (`ctrl`, `shift`, `alt`, `meta`) to `charlotte:click` for Ctrl+Click (open in new tab), Shift+Click (range select), and similar patterns.
-
-### Monitoring
-
-**Console Message Retrieval** — Add a `charlotte:console` tool to retrieve all console messages (not just errors) with level filtering. Charlotte already listens to console events internally but only surfaces errors in the page representation.
-
-**Network Request Monitoring** — Add a `charlotte:requests` tool to retrieve all network requests (not just failures) with filtering options. Enables agents to debug API calls and resource loading.
 
 ### Session & Configuration
 

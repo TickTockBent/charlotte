@@ -2,6 +2,17 @@
 
 All notable changes to Charlotte will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- **`charlotte:console`** — Retrieve console messages from the active page at all severity levels (log, info, warn, error, debug) with timestamps. Supports level filtering and buffer clearing. Closes GAP-21 from the Playwright MCP gap analysis.
+- **`charlotte:requests`** — Retrieve network request history from the active page with method, status, resource type, and timestamps. Supports filtering by URL pattern, resource type, and minimum status code. Closes GAP-22 from the Playwright MCP gap analysis.
+
+### Changed
+
+- PageManager now captures all console messages and all network responses (not just errors). Ring buffers capped at 1000 entries each. Backward-compatible: `getConsoleErrors()` and `getNetworkErrors()` still return only errors for `PageRepresentation.errors`.
+
 ## [0.3.0] - 2026-02-24
 
 ### Added

@@ -282,6 +282,8 @@ Playwright MCP's entire `testing` capability group (5 tools) has no Charlotte eq
 
 ### GAP-21: Dedicated Console Message Retrieval
 
+> **Remediated in Charlotte v0.4.0** — `charlotte:console` captures all console levels with timestamps, supports level filtering and buffer clearing.
+
 | Attribute | Detail |
 |-----------|--------|
 | **Playwright Tool** | `browser_console_messages` with `level` filter and `filename` save |
@@ -291,6 +293,8 @@ Playwright MCP's entire `testing` capability group (5 tools) has no Charlotte eq
 | **Implementation Notes** | Charlotte already listens to console events in PageManager. Needs: (1) capture all levels (not just errors), (2) expose as a dedicated tool, (3) add level filtering. |
 
 ### GAP-22: Dedicated Network Request Monitoring
+
+> **Remediated in Charlotte v0.4.0** — `charlotte:requests` captures all HTTP responses with method, status, resource type, and timestamps. Supports URL pattern, resource type, and status code filtering.
 
 | Attribute | Detail |
 |-----------|--------|
@@ -532,8 +536,8 @@ Features Charlotte provides that Playwright MCP **does not** have as dedicated t
 | GAP-03 | `charlotte:dialog` | Unhandled dialogs freeze all automation — *remediated in v0.3.0* |
 | GAP-02 | `charlotte:upload` | File upload is a fundamental web interaction |
 | GAP-01 | `charlotte:drag` | Drag-and-drop is common in modern web apps |
-| GAP-21 | `charlotte:console` | Console access is essential for debugging |
-| GAP-22 | `charlotte:requests` | Network request visibility essential for API debugging |
+| GAP-21 | `charlotte:console` | Console access is essential for debugging — *remediated in v0.4.0* |
+| GAP-22 | `charlotte:requests` | Network request visibility essential for API debugging — *remediated in v0.4.0* |
 
 ### Priority 2 — High Value (significant UX improvement)
 
@@ -597,8 +601,8 @@ Features Charlotte provides that Playwright MCP **does not** have as dedicated t
 | GAP-18 | Testing | Generate locator | `browser_generate_locator` | Missing | Low-Med |
 | GAP-19 | Tracing | Trace recording | `browser_start/stop_tracing` | Missing | Medium |
 | GAP-20 | Tracing | Video recording | `--save-video` | Missing (roadmap) | Medium |
-| GAP-21 | Monitoring | Console messages | `browser_console_messages` | Partial | Medium |
-| GAP-22 | Monitoring | Network requests | `browser_network_requests` | Partial | Medium |
+| GAP-21 | Monitoring | Console messages | `browser_console_messages` | ~~Partial~~ *Remediated v0.4.0* | Medium |
+| GAP-22 | Monitoring | Network requests | `browser_network_requests` | ~~Partial~~ *Remediated v0.4.0* | Medium |
 | GAP-23 | Code Exec | Run Puppeteer code | `browser_run_code` | Missing | Medium |
 | GAP-24 | Session | Browser close | `browser_close` | Missing | Low |
 | GAP-25 | Session | Browser install | `browser_install` | Missing | Low |

@@ -1,6 +1,6 @@
 # Charlotte Technical Specification
 
-**Version:** 0.1.0
+**Version:** 0.3.0
 
 Charlotte is an MCP server that renders web pages into structured, agent-readable `PageRepresentation` objects using headless Chromium and Puppeteer. It communicates over stdio using the Model Context Protocol.
 
@@ -16,6 +16,8 @@ Charlotte is an MCP server that renders web pages into structured, agent-readabl
    - [Navigation](#navigation-tools)
    - [Observation](#observation-tools)
    - [Interaction](#interaction-tools)
+   - [Dialog Handling](#dialog-handling-tools)
+   - [Monitoring](#monitoring-tools)
    - [Session Management](#session-management-tools)
    - [Development Mode](#development-mode-tools)
    - [Utilities](#utility-tools)
@@ -69,7 +71,7 @@ Each render executes these stages in order:
 | `source` | `"observe" \| "action" \| "internal"` | `"action"` | Controls auto-snapshot behavior |
 | `forceSnapshot` | `boolean` | `false` | Override auto-snapshot decision |
 
-After rendering, it attaches console/network errors, optionally pushes a snapshot, and consumes any pending reload event from `DevModeState`.
+After rendering, it attaches console/network errors, optionally pushes a snapshot, and consumes any pending reload event from `DevModeState`. When a JavaScript dialog is blocking the page, returns a stub representation with `pending_dialog` instead of attempting to render (since CDP calls like `page.title()` hang while dialogs are open).
 
 **`renderAfterAction(deps)`** — Used by interaction tools. Captures a pre-action snapshot, calls `renderActivePage` with `source: "action"`, computes a structural diff, and attaches the `delta` field to the response.
 
@@ -89,12 +91,13 @@ interface PageRepresentation {
   structure: PageStructure;
   interactive: InteractiveElement[];
   forms: FormRepresentation[];
-  alerts: string[];
   errors: {
     console: Array<{ level: string; text: string }>;
     network: Array<{ url: string; status: number; statusText: string }>;
   };
+  interactive_summary?: InteractiveSummary;  // Present at minimal detail level
   reload_event?: ReloadEvent;                // Present when dev_serve detects file changes
+  pending_dialog?: PendingDialog;            // Present when a JS dialog is blocking
   delta?: SnapshotDiff;                      // Present after interaction tools
 }
 ```
@@ -195,6 +198,30 @@ interface ReloadEvent {
 }
 ```
 
+### PendingDialog
+
+```typescript
+interface PendingDialog {
+  type: "alert" | "confirm" | "prompt" | "beforeunload";
+  message: string;
+  default_value?: string;  // Only present for "prompt" dialogs
+  timestamp: string;       // ISO 8601
+}
+```
+
+Present in every tool response while a JavaScript dialog is blocking the page. Cleared only when the dialog is handled via `charlotte:dialog`.
+
+### InteractiveSummary
+
+```typescript
+interface InteractiveSummary {
+  total: number;
+  by_landmark: Record<string, Record<string, number>>;
+}
+```
+
+Present at minimal detail level. `by_landmark` keys match landmark format: `"role (label)"`, `"role"` for unlabeled, or `"(page root)"` for elements outside any landmark.
+
 ---
 
 ## Element Identity
@@ -281,11 +308,10 @@ When an element ID is not found in the current generator:
 |-----------|-----------|-----------|--------|
 | Landmarks | Yes | Yes | Yes |
 | Headings | Yes | Yes | Yes |
-| Interactive elements | Yes | Yes | Yes |
-| Forms | Yes | Yes | Yes |
-| Content summary | Empty string | Structured counts | Structured counts |
+| Interactive elements | Counts only (`interactive_summary`) | Full list | Full list |
+| Forms | No | Yes | Yes |
+| Content summary | No | Structured counts | Structured counts |
 | Full text content | No | No | Yes |
-| Alerts | Yes | Yes | Yes |
 | Console/network errors | Yes | Yes | Yes |
 
 **Approximate token counts:** minimal ~200-500, summary ~500-1500, full varies with page content.
@@ -456,6 +482,76 @@ Wait for a condition to be met on the page. At least one condition parameter is 
 
 Polls every 100ms until the condition is met or timeout is reached.
 
+### Dialog Handling Tools
+
+#### `charlotte:dialog`
+
+Handle a pending JavaScript dialog (alert, confirm, prompt, beforeunload).
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `accept` | `boolean` | Yes | — | `true` to accept/OK, `false` to dismiss/Cancel |
+| `prompt_text` | `string` | No | — | Text to enter for prompt dialogs before accepting |
+
+**Returns:** `{ dialog_handled: { type, message, action }, page: PageRepresentation }`. The `dialog_handled` field confirms what was resolved.
+
+**Error:** If no dialog is pending, returns `SESSION_ERROR` with suggestion to call `charlotte:observe`.
+
+**Dialog lifecycle:**
+1. A dialog appears (e.g., from a `click` that triggers `alert()`)
+2. The action tool returns immediately with `pending_dialog` in the response
+3. Agent calls `charlotte:dialog` to accept or dismiss
+4. Response includes both `dialog_handled` metadata and the page state after resolution
+
+### Monitoring Tools
+
+#### `charlotte:console`
+
+Retrieve console messages from the active page.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `level` | `"all" \| "log" \| "info" \| "warn" \| "error" \| "debug"` | No | `"all"` | Filter by log level |
+| `clear` | `boolean` | No | `false` | Clear the message buffer after retrieval |
+
+**Returns:** `{ messages, count, level, cleared }` where `messages` is an array of:
+
+```typescript
+interface ConsoleMessage {
+  level: string;      // "log", "info", "warn", "error", "debug", etc.
+  text: string;       // Message text
+  timestamp: string;  // ISO 8601
+}
+```
+
+Messages are captured from all console levels (not just errors). Buffer is capped at 1000 entries with FIFO eviction.
+
+#### `charlotte:requests`
+
+Retrieve network request history from the active page.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `url_pattern` | `string` | No | — | Case-insensitive URL substring filter |
+| `resource_type` | `string` | No | — | Filter by resource type (e.g., `"fetch"`, `"xhr"`, `"document"`, `"script"`) |
+| `status_min` | `number` | No | — | Minimum HTTP status code (e.g., 400 for errors only) |
+| `clear` | `boolean` | No | `false` | Clear the request buffer after retrieval |
+
+**Returns:** `{ requests, count, cleared }` where `requests` is an array of:
+
+```typescript
+interface NetworkRequest {
+  url: string;
+  method: string;         // "GET", "POST", etc.
+  status: number;         // HTTP status code
+  statusText: string;
+  resourceType: string;   // "document", "fetch", "xhr", "script", "stylesheet", etc.
+  timestamp: string;      // ISO 8601
+}
+```
+
+All HTTP responses are captured (not just errors). Buffer is capped at 1000 entries with FIFO eviction.
+
 ### Session Management Tools
 
 #### `charlotte:tabs`
@@ -552,6 +648,8 @@ Headers persist for all subsequent requests on the active page.
 |-----------|------|----------|---------|-------------|
 | `snapshot_depth` | `number` | No | `50` | Ring buffer size (5-500) |
 | `auto_snapshot` | `"every_action" \| "observe_only" \| "manual"` | No | `"every_action"` | Auto-snapshot mode |
+| `screenshot_dir` | `string` | No | *(OS temp dir)* | Directory for persistent screenshot artifacts |
+| `dialog_auto_dismiss` | `"none" \| "accept_alerts" \| "accept_all" \| "dismiss_all"` | No | `"none"` | Auto-dismiss behavior for JS dialogs |
 
 See [Configuration](#configuration) for details.
 
@@ -690,11 +788,14 @@ interface DiffChange {
 
 ```typescript
 interface CharlotteConfig {
-  snapshotDepth: number;           // Default: 50, range: 5-500
-  autoSnapshot: AutoSnapshotMode;  // Default: "every_action"
+  snapshotDepth: number;                    // Default: 50, range: 5-500
+  autoSnapshot: AutoSnapshotMode;           // Default: "every_action"
+  dialogAutoDismiss: DialogAutoDismiss;     // Default: "none"
+  screenshotDir?: string;                   // Default: OS temp dir
 }
 
 type AutoSnapshotMode = "every_action" | "observe_only" | "manual";
+type DialogAutoDismiss = "none" | "accept_alerts" | "accept_all" | "dismiss_all";
 ```
 
 Runtime configuration is modified via the `charlotte:configure` tool. Changes take effect immediately.
@@ -746,4 +847,6 @@ Charlotte automatically collects errors from the page and includes them in every
 - **Console errors:** `console.error()` and `console.warn()` messages
 - **Network errors:** HTTP responses with status >= 400
 
-Errors are cleared after each render.
+These error summaries are a subset of the full monitoring data. Use `charlotte:console` to retrieve all console messages (including log, info, debug) and `charlotte:requests` to retrieve all HTTP responses (including successful ones). Both tools support filtering and buffer clearing.
+
+Errors accumulate across renders and are not automatically cleared.

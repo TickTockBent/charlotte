@@ -207,6 +207,72 @@ async function hoverElementByBackendNodeId(
 }
 
 /**
+ * Get the center coordinates of an element by backend node ID.
+ * Scrolls the element into view first.
+ */
+async function getElementCenter(
+  page: Page,
+  backendNodeId: number,
+): Promise<{ x: number; y: number }> {
+  const cdpSession = await page.createCDPSession();
+  try {
+    await cdpSession.send("DOM.scrollIntoViewIfNeeded", { backendNodeId });
+    const { model } = await cdpSession.send("DOM.getBoxModel", {
+      backendNodeId,
+    });
+
+    if (!model) {
+      throw new CharlotteError(
+        CharlotteErrorCode.ELEMENT_NOT_FOUND,
+        "Element has no visible box model — it may be hidden or zero-sized.",
+        "Call charlotte:observe to check the element's state.",
+      );
+    }
+
+    const contentQuad = model.content;
+    return {
+      x: (contentQuad[0] + contentQuad[2] + contentQuad[4] + contentQuad[6]) / 4,
+      y: (contentQuad[1] + contentQuad[3] + contentQuad[5] + contentQuad[7]) / 4,
+    };
+  } finally {
+    await cdpSession.detach();
+  }
+}
+
+/**
+ * Drag one element to another using mouse primitives.
+ * Sequence: move to source → mousedown → move to target → mouseup
+ * Includes intermediate move steps and delays to ensure drag events fire reliably.
+ */
+async function dragElementToElement(
+  page: Page,
+  sourceBackendNodeId: number,
+  targetBackendNodeId: number,
+): Promise<void> {
+  const sourceCenter = await getElementCenter(page, sourceBackendNodeId);
+  const targetCenter = await getElementCenter(page, targetBackendNodeId);
+
+  // Move to source and press down
+  await page.mouse.move(sourceCenter.x, sourceCenter.y);
+  await page.mouse.down();
+
+  // Intermediate move to trigger dragstart (some browsers need movement to begin a drag)
+  await page.mouse.move(
+    sourceCenter.x + (targetCenter.x - sourceCenter.x) * 0.25,
+    sourceCenter.y + (targetCenter.y - sourceCenter.y) * 0.25,
+    { steps: 5 },
+  );
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  // Move to target
+  await page.mouse.move(targetCenter.x, targetCenter.y, { steps: 10 });
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  // Release
+  await page.mouse.up();
+}
+
+/**
  * Type text into an input element. Uses CDP to focus, optionally clears, then types via keyboard.
  */
 async function typeIntoElement(
@@ -654,6 +720,44 @@ export function registerInteractionTools(
         logger.info("Hovering element", { element_id });
 
         await hoverElementByBackendNodeId(page, backendNodeId);
+
+        const representation = await renderAfterAction(deps);
+        return formatPageResponse(representation);
+      } catch (error: unknown) {
+        return handleToolError(error);
+      }
+    },
+  );
+
+  // ─── charlotte:drag ───
+  server.registerTool(
+    "charlotte:drag",
+    {
+      description:
+        "Drag an element to another element. Uses mouse primitives to simulate drag-and-drop. Returns full page representation after the drag.",
+      inputSchema: {
+        source_id: z.string().describe("Element ID of the drag source"),
+        target_id: z.string().describe("Element ID of the drop target"),
+      },
+    },
+    async ({ source_id, target_id }) => {
+      try {
+        await deps.browserManager.ensureConnected();
+        const { page, backendNodeId: sourceNodeId } = await resolveElement(
+          deps,
+          source_id,
+        );
+        const { backendNodeId: targetNodeId } = await resolveElement(
+          deps,
+          target_id,
+        );
+
+        logger.info("Dragging element", { source_id, target_id });
+
+        await dragElementToElement(page, sourceNodeId, targetNodeId);
+
+        // Brief settle for DOM updates after drop
+        await new Promise((resolve) => setTimeout(resolve, 100));
 
         const representation = await renderAfterAction(deps);
         return formatPageResponse(representation);

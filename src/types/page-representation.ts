@@ -6,6 +6,7 @@ export interface Bounds {
 }
 
 export interface Landmark {
+  id: string;
   role: string;
   label: string;
   bounds: Bounds;

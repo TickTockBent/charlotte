@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Drag and Drop Test Page</title>
+  <style>
+    .container {
+      display: flex;
+      gap: 20px;
+      margin: 20px;
+    }
+    .dropzone {
+      width: 200px;
+      min-height: 150px;
+      border: 2px dashed #999;
+      padding: 10px;
+      border-radius: 8px;
+    }
+    .dropzone.over {
+      border-color: #4CAF50;
+      background: #e8f5e9;
+    }
+    .draggable {
+      padding: 10px;
+      margin: 5px 0;
+      background: #2196F3;
+      color: white;
+      border-radius: 4px;
+      cursor: grab;
+    }
+    #result { margin: 20px; font-family: monospace; }
+  </style>
+</head>
+<body>
+  <h1>Drag and Drop Tests</h1>
+
+  <div class="container">
+    <div class="dropzone" id="zone-a" role="region" aria-label="Zone A">
+      <h2>Zone A</h2>
+      <div class="draggable" id="item-1" role="button" aria-label="Item 1">Item 1</div>
+      <div class="draggable" id="item-2" role="button" aria-label="Item 2">Item 2</div>
+    </div>
+    <div class="dropzone" id="zone-b" role="region" aria-label="Zone B">
+      <h2>Zone B</h2>
+    </div>
+  </div>
+
+  <div id="result"></div>
+
+  <script>
+    const result = document.getElementById('result');
+    const zones = document.querySelectorAll('.dropzone');
+    const draggables = document.querySelectorAll('.draggable');
+
+    // Track drag events via mousedown/mouseup simulation (no HTML5 drag API needed)
+    let draggedElement = null;
+
+    draggables.forEach(item => {
+      item.addEventListener('mousedown', (e) => {
+        e.preventDefault(); // Prevent text selection drag from capturing the mouse
+        draggedElement = item;
+        result.textContent = `drag-start: ${item.id}`;
+      });
+    });
+
+    zones.forEach(zone => {
+      zone.addEventListener('mouseup', (e) => {
+        if (draggedElement && zone !== draggedElement.parentElement) {
+          zone.appendChild(draggedElement);
+          result.textContent = `dropped: ${draggedElement.id} into ${zone.id}`;
+        }
+        draggedElement = null;
+      });
+
+      zone.addEventListener('mouseenter', () => {
+        if (draggedElement) {
+          zone.classList.add('over');
+        }
+      });
+
+      zone.addEventListener('mouseleave', () => {
+        zone.classList.remove('over');
+      });
+    });
+
+    document.addEventListener('mouseup', () => {
+      draggedElement = null;
+      zones.forEach(z => z.classList.remove('over'));
+    });
+  </script>
+</body>
+</html>

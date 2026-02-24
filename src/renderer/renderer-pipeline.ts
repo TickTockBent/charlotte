@@ -171,7 +171,7 @@ export class RendererPipeline {
   private extractLandmarks(
     rootNodes: ParsedAXNode[],
     boundsMap: Map<number, Bounds>,
-    _idGenerator: ElementIdGenerator,
+    idGenerator: ElementIdGenerator,
   ): Landmark[] {
     const landmarks: Landmark[] = [];
 
@@ -182,7 +182,17 @@ export class RendererPipeline {
           bounds = boundsMap.get(node.backendDOMNodeId) ?? ZERO_BOUNDS;
         }
 
+        const domPath = computeDOMPathSignature(node);
+        const landmarkId = idGenerator.generateId(
+          "region",
+          node.role,
+          node.name,
+          domPath,
+          node.backendDOMNodeId,
+        );
+
         landmarks.push({
+          id: landmarkId,
           role: node.role,
           label: node.name || node.role,
           bounds,

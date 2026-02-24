@@ -8,6 +8,7 @@ import { CDPSessionManager } from "../../src/browser/cdp-session.js";
 import { RendererPipeline } from "../../src/renderer/renderer-pipeline.js";
 import { ElementIdGenerator } from "../../src/renderer/element-id-generator.js";
 import { SnapshotStore } from "../../src/state/snapshot-store.js";
+import { ArtifactStore } from "../../src/state/artifact-store.js";
 import { createDefaultConfig } from "../../src/types/config.js";
 import { DevModeState } from "../../src/dev/dev-mode-state.js";
 import { Auditor } from "../../src/dev/auditor.js";
@@ -45,12 +46,17 @@ describe("Dev mode integration", () => {
     );
     const config = createDefaultConfig();
     devModeState = new DevModeState();
+    const artifactStore = new ArtifactStore(
+      path.join(os.tmpdir(), "charlotte-devmode-test-artifacts"),
+    );
+    await artifactStore.initialize();
     deps = {
       browserManager,
       pageManager,
       rendererPipeline,
       elementIdGenerator,
       snapshotStore: new SnapshotStore(config.snapshotDepth),
+      artifactStore,
       config,
       devModeState,
     };

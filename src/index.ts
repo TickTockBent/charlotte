@@ -6,6 +6,7 @@ import { CDPSessionManager } from "./browser/cdp-session.js";
 import { RendererPipeline } from "./renderer/renderer-pipeline.js";
 import { ElementIdGenerator } from "./renderer/element-id-generator.js";
 import { SnapshotStore } from "./state/snapshot-store.js";
+import { ArtifactStore } from "./state/artifact-store.js";
 import { createDefaultConfig } from "./types/config.js";
 import { createServer } from "./server.js";
 import { DevModeState } from "./dev/dev-mode-state.js";
@@ -36,6 +37,10 @@ async function main(): Promise<void> {
   const config = createDefaultConfig();
   const snapshotStore = new SnapshotStore(config.snapshotDepth);
 
+  // Initialize screenshot artifact store
+  const artifactStore = new ArtifactStore(config.screenshotDir);
+  await artifactStore.initialize();
+
   // Initialize dev mode state
   const devModeState = new DevModeState();
 
@@ -46,6 +51,7 @@ async function main(): Promise<void> {
     rendererPipeline,
     elementIdGenerator,
     snapshotStore,
+    artifactStore,
     config,
     devModeState,
   });

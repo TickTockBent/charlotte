@@ -4,6 +4,7 @@ import type { PageManager } from "./browser/page-manager.js";
 import type { RendererPipeline } from "./renderer/renderer-pipeline.js";
 import type { ElementIdGenerator } from "./renderer/element-id-generator.js";
 import type { SnapshotStore } from "./state/snapshot-store.js";
+import type { ArtifactStore } from "./state/artifact-store.js";
 import type { CharlotteConfig } from "./types/config.js";
 import { registerEvaluateTools } from "./tools/evaluate.js";
 import { registerNavigationTools } from "./tools/navigation.js";
@@ -19,6 +20,7 @@ export interface ServerDeps {
   rendererPipeline: RendererPipeline;
   elementIdGenerator: ElementIdGenerator;
   snapshotStore: SnapshotStore;
+  artifactStore: ArtifactStore;
   config: CharlotteConfig;
   devModeState?: DevModeState;
 }
@@ -49,6 +51,7 @@ export function createServer(deps: ServerDeps): McpServer {
     rendererPipeline: deps.rendererPipeline,
     elementIdGenerator: deps.elementIdGenerator,
     snapshotStore: deps.snapshotStore,
+    artifactStore: deps.artifactStore,
     config: deps.config,
     devModeState: deps.devModeState,
   };

@@ -13,11 +13,29 @@ export interface TabInfo {
   active: boolean;
 }
 
+export interface ConsoleMessage {
+  level: string;
+  text: string;
+  timestamp: string;
+}
+
+export interface NetworkRequest {
+  url: string;
+  method: string;
+  status: number;
+  statusText: string;
+  resourceType: string;
+  timestamp: string;
+}
+
+const MAX_CONSOLE_MESSAGES = 1000;
+const MAX_NETWORK_REQUESTS = 1000;
+
 interface ManagedPage {
   id: string;
   page: Page;
-  consoleErrors: Array<{ level: string; text: string }>;
-  networkErrors: Array<{ url: string; status: number; statusText: string }>;
+  consoleMessages: ConsoleMessage[];
+  networkRequests: NetworkRequest[];
   pendingDialog: Dialog | null;
   pendingDialogInfo: PendingDialog | null;
 }
@@ -45,32 +63,37 @@ export class PageManager {
     const managedPage: ManagedPage = {
       id: tabId,
       page,
-      consoleErrors: [],
-      networkErrors: [],
+      consoleMessages: [],
+      networkRequests: [],
       pendingDialog: null,
       pendingDialogInfo: null,
     };
 
-    // Collect console errors
+    // Collect all console messages
     page.on("console", (msg) => {
-      const level = msg.type();
-      if (level === "error" || level === "warn") {
-        managedPage.consoleErrors.push({
-          level,
-          text: msg.text(),
-        });
+      if (managedPage.consoleMessages.length >= MAX_CONSOLE_MESSAGES) {
+        managedPage.consoleMessages.shift();
       }
+      managedPage.consoleMessages.push({
+        level: msg.type(),
+        text: msg.text(),
+        timestamp: new Date().toISOString(),
+      });
     });
 
-    // Collect network errors
+    // Collect all network responses
     page.on("response", (response) => {
-      if (response.status() >= 400) {
-        managedPage.networkErrors.push({
-          url: response.url(),
-          status: response.status(),
-          statusText: response.statusText(),
-        });
+      if (managedPage.networkRequests.length >= MAX_NETWORK_REQUESTS) {
+        managedPage.networkRequests.shift();
       }
+      managedPage.networkRequests.push({
+        url: response.url(),
+        method: response.request().method(),
+        status: response.status(),
+        statusText: response.statusText(),
+        resourceType: response.request().resourceType(),
+        timestamp: new Date().toISOString(),
+      });
     });
 
     // Handle JavaScript dialogs (alert, confirm, prompt, beforeunload)
@@ -194,12 +217,17 @@ export class PageManager {
     return this.activeTabId;
   }
 
+  /** Return only error/warn console messages (for PageRepresentation.errors). */
   getConsoleErrors(): Array<{ level: string; text: string }> {
     if (!this.activeTabId) return [];
     const managedPage = this.pages.get(this.activeTabId);
-    return managedPage?.consoleErrors ?? [];
+    if (!managedPage) return [];
+    return managedPage.consoleMessages
+      .filter((m) => m.level === "error" || m.level === "warn")
+      .map(({ level, text }) => ({ level, text }));
   }
 
+  /** Return only HTTP error responses (status >= 400, for PageRepresentation.errors). */
   getNetworkErrors(): Array<{
     url: string;
     status: number;
@@ -207,15 +235,53 @@ export class PageManager {
   }> {
     if (!this.activeTabId) return [];
     const managedPage = this.pages.get(this.activeTabId);
-    return managedPage?.networkErrors ?? [];
+    if (!managedPage) return [];
+    return managedPage.networkRequests
+      .filter((r) => r.status >= 400)
+      .map(({ url, status, statusText }) => ({ url, status, statusText }));
+  }
+
+  /** Return all console messages, optionally filtered by level. */
+  getConsoleMessages(level?: string): ConsoleMessage[] {
+    if (!this.activeTabId) return [];
+    const managedPage = this.pages.get(this.activeTabId);
+    if (!managedPage) return [];
+    if (level && level !== "all") {
+      return managedPage.consoleMessages.filter((m) => m.level === level);
+    }
+    return [...managedPage.consoleMessages];
+  }
+
+  /** Return all network requests, optionally filtered. */
+  getNetworkRequests(): NetworkRequest[] {
+    if (!this.activeTabId) return [];
+    const managedPage = this.pages.get(this.activeTabId);
+    if (!managedPage) return [];
+    return [...managedPage.networkRequests];
+  }
+
+  clearConsoleMessages(): void {
+    if (!this.activeTabId) return;
+    const managedPage = this.pages.get(this.activeTabId);
+    if (managedPage) {
+      managedPage.consoleMessages = [];
+    }
+  }
+
+  clearNetworkRequests(): void {
+    if (!this.activeTabId) return;
+    const managedPage = this.pages.get(this.activeTabId);
+    if (managedPage) {
+      managedPage.networkRequests = [];
+    }
   }
 
   clearErrors(): void {
     if (!this.activeTabId) return;
     const managedPage = this.pages.get(this.activeTabId);
     if (managedPage) {
-      managedPage.consoleErrors = [];
-      managedPage.networkErrors = [];
+      managedPage.consoleMessages = [];
+      managedPage.networkRequests = [];
     }
   }
 

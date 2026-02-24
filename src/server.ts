@@ -12,6 +12,7 @@ import { registerObservationTools } from "./tools/observation.js";
 import { registerInteractionTools } from "./tools/interaction.js";
 import { registerDialogTools } from "./tools/dialog.js";
 import { registerSessionTools } from "./tools/session.js";
+import { registerMonitoringTools } from "./tools/monitoring.js";
 import { registerDevModeTools } from "./tools/dev-mode.js";
 import type { DevModeState } from "./dev/dev-mode-state.js";
 
@@ -62,6 +63,7 @@ export function createServer(deps: ServerDeps): McpServer {
   registerInteractionTools(server, toolDeps);
   registerDialogTools(server, toolDeps);
   registerSessionTools(server, toolDeps);
+  registerMonitoringTools(server, toolDeps);
   registerDevModeTools(server, toolDeps);
 
   return server;

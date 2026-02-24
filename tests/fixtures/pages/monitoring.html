@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Monitoring Test Page</title>
+</head>
+<body>
+  <h1>Monitoring Tests</h1>
+
+  <button id="log-btn" onclick="console.log('log message')">Log</button>
+  <button id="info-btn" onclick="console.info('info message')">Info</button>
+  <button id="warn-btn" onclick="console.warn('warning message')">Warn</button>
+  <button id="error-btn" onclick="console.error('error message')">Error</button>
+  <button id="debug-btn" onclick="console.debug('debug message')">Debug</button>
+
+  <button id="multi-log-btn" onclick="multiLog()">Multiple Logs</button>
+
+  <button id="fetch-ok-btn" onclick="fetchOk()">Fetch OK</button>
+  <button id="fetch-404-btn" onclick="fetch404()">Fetch 404</button>
+  <button id="fetch-json-btn" onclick="fetchJson()">Fetch JSON</button>
+
+  <div id="result"></div>
+
+  <script>
+    function multiLog() {
+      console.log('first');
+      console.info('second');
+      console.warn('third');
+      console.error('fourth');
+      document.getElementById('result').textContent = 'multi-logged';
+    }
+
+    function fetchOk() {
+      fetch(window.location.href)
+        .then(() => {
+          document.getElementById('result').textContent = 'fetch-ok';
+        });
+    }
+
+    function fetch404() {
+      fetch('/nonexistent-path-404')
+        .catch(() => {
+          document.getElementById('result').textContent = 'fetch-404';
+        });
+    }
+
+    function fetchJson() {
+      fetch('/api/data', { method: 'POST' })
+        .catch(() => {
+          document.getElementById('result').textContent = 'fetch-json';
+        });
+    }
+  </script>
+</body>
+</html>

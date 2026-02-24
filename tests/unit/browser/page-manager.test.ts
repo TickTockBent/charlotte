@@ -112,6 +112,42 @@ describe("PageManager", () => {
     });
   });
 
+  describe("console and network accessors", () => {
+    let pageManager: PageManager;
+
+    beforeEach(() => {
+      pageManager = new PageManager(createDefaultConfig());
+    });
+
+    it("getConsoleMessages returns empty array when no pages", () => {
+      expect(pageManager.getConsoleMessages()).toEqual([]);
+    });
+
+    it("getConsoleMessages with level filter returns empty array when no pages", () => {
+      expect(pageManager.getConsoleMessages("error")).toEqual([]);
+    });
+
+    it("getNetworkRequests returns empty array when no pages", () => {
+      expect(pageManager.getNetworkRequests()).toEqual([]);
+    });
+
+    it("clearConsoleMessages does not throw when no pages", () => {
+      expect(() => pageManager.clearConsoleMessages()).not.toThrow();
+    });
+
+    it("clearNetworkRequests does not throw when no pages", () => {
+      expect(() => pageManager.clearNetworkRequests()).not.toThrow();
+    });
+
+    it("getConsoleErrors returns empty array when no pages", () => {
+      expect(pageManager.getConsoleErrors()).toEqual([]);
+    });
+
+    it("getNetworkErrors returns empty array when no pages", () => {
+      expect(pageManager.getNetworkErrors()).toEqual([]);
+    });
+  });
+
   describe("dialog tracking", () => {
     let pageManager: PageManager;
 

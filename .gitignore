@@ -24,7 +24,7 @@ Thumbs.db
 coverage/
 
 # Internal Docs
-internal/
+test_artifacts/
 
 # Agent Files
 agents.md

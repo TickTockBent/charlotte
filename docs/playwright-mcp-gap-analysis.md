@@ -40,13 +40,15 @@ where Charlotte has capabilities Playwright MCP does not**, for completeness.
 
 ## 1. Tool Inventory Comparison
 
-### Charlotte Tools (32)
+### Charlotte Tools (36)
 
 | Category | Tools |
 |----------|-------|
 | Navigation (4) | `navigate`, `back`, `forward`, `reload` |
 | Observation (4) | `observe`, `find`, `screenshot`, `diff` |
-| Interaction (9) | `click`, `type`, `select`, `toggle`, `submit`, `scroll`, `hover`, `key`, `wait_for` |
+| Interaction (10) | `click`, `type`, `select`, `toggle`, `submit`, `scroll`, `hover`, `drag`, `key`, `wait_for` |
+| Dialog (1) | `dialog` |
+| Monitoring (2) | `console`, `requests` |
 | Session (10) | `tabs`, `tab_open`, `tab_switch`, `tab_close`, `viewport`, `network`, `get_cookies`, `set_cookies`, `clear_cookies`, `set_headers`, `configure` |
 | Dev Mode (3) | `dev_serve`, `dev_inject`, `dev_audit` |
 | Utility (1) | `evaluate` |
@@ -67,12 +69,12 @@ where Charlotte has capabilities Playwright MCP does not**, for completeness.
 
 ## 2. Interaction Gaps
 
-### GAP-01: Drag and Drop
+### GAP-01: Drag and Drop — *remediated in v0.4.0*
 
 | Attribute | Detail |
 |-----------|--------|
 | **Playwright Tool** | `browser_drag` (snapshot mode), `browser_mouse_drag_xy` (vision mode) |
-| **Charlotte Status** | Not implemented |
+| **Charlotte Status** | Implemented as `charlotte:drag` with `source_id` and `target_id` parameters. Uses mouse primitives (mousedown → intermediate moves → mouseup). Landmark IDs added so drop zones are referenceable. |
 | **Impact** | High — blocks automation of drag-sortable lists, kanban boards, sliders, file drop zones |
 | **Parameters (Playwright)** | `startElement`, `startRef`, `endElement`, `endRef` |
 | **Suggested Tool Name** | `charlotte:drag` |
@@ -535,7 +537,7 @@ Features Charlotte provides that Playwright MCP **does not** have as dedicated t
 |-----|------|-----------|
 | GAP-03 | `charlotte:dialog` | Unhandled dialogs freeze all automation — *remediated in v0.3.0* |
 | GAP-02 | `charlotte:upload` | File upload is a fundamental web interaction |
-| GAP-01 | `charlotte:drag` | Drag-and-drop is common in modern web apps |
+| GAP-01 | `charlotte:drag` | Drag-and-drop is common in modern web apps — *remediated in v0.4.0* |
 | GAP-21 | `charlotte:console` | Console access is essential for debugging — *remediated in v0.4.0* |
 | GAP-22 | `charlotte:requests` | Network request visibility essential for API debugging — *remediated in v0.4.0* |
 
@@ -581,7 +583,7 @@ Features Charlotte provides that Playwright MCP **does not** have as dedicated t
 
 | ID | Category | Gap | Playwright Tool/Feature | Charlotte Status | Impact |
 |----|----------|-----|-------------------------|------------------|--------|
-| GAP-01 | Interaction | Drag and drop | `browser_drag` | Missing | High |
+| GAP-01 | Interaction | Drag and drop | `browser_drag` | Remediated in v0.4.0 | High |
 | GAP-02 | Interaction | File upload | `browser_file_upload` | Missing | High |
 | GAP-03 | Interaction | Dialog handling | `browser_handle_dialog` | Remediated in v0.3.0 | High |
 | GAP-04 | Interaction | Batch form fill | `browser_fill_form` | Missing | Medium |

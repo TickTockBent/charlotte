@@ -6,6 +6,8 @@ All notable changes to Charlotte will be documented in this file.
 
 ### Added
 
+- **`charlotte:drag`** — Drag an element to another element using mouse primitives (mousedown → intermediate moves → mouseup). Accepts `source_id` and `target_id` element IDs. Closes GAP-01 from the Playwright MCP gap analysis.
+- **Landmark IDs** — Landmarks now have stable hash-based IDs (`rgn-xxxx`) like headings and interactive elements, making them referenceable by tools (e.g., as drag-and-drop targets).
 - **`charlotte:console`** — Retrieve console messages from the active page at all severity levels (log, info, warn, error, debug) with timestamps. Supports level filtering and buffer clearing. Closes GAP-21 from the Playwright MCP gap analysis.
 - **`charlotte:requests`** — Retrieve network request history from the active page with method, status, resource type, and timestamps. Supports filtering by URL pattern, resource type, and minimum status code. Closes GAP-22 from the Playwright MCP gap analysis.
 

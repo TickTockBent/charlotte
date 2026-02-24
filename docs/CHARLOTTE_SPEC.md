@@ -117,6 +117,7 @@ interface PageStructure {
 
 ```typescript
 interface Landmark {
+  id: string;            // Stable hash-based ID (e.g., "rgn-e0d2")
   role: string;          // ARIA landmark role (banner, main, navigation, contentinfo, etc.)
   label: string;         // Accessible name, or role as fallback
   bounds: Bounds;
@@ -459,6 +460,15 @@ Prefers clicking the submit button if one exists; falls back to dispatching a `s
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `element_id` | `string` | Yes | — | Target element ID |
+
+#### `charlotte:drag`
+
+Drag one element to another using mouse primitives (mousedown → intermediate moves → mouseup). Both `source_id` and `target_id` can reference interactive elements, landmarks, or headings — any element with an ID in the page representation.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `source_id` | `string` | Yes | — | Element ID of the drag source |
+| `target_id` | `string` | Yes | — | Element ID of the drop target |
 
 #### `charlotte:key`
 

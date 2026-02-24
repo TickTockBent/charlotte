@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { BrowserManager } from "../../../src/browser/browser-manager.js";
 import { PageManager } from "../../../src/browser/page-manager.js";
+import { createDefaultConfig } from "../../../src/types/config.js";
 
 describe("PageManager", () => {
   let browserManager: BrowserManager;
@@ -108,6 +109,33 @@ describe("PageManager", () => {
 
     it("throws when no active tab and getActivePage is called", () => {
       expect(() => pageManager.getActivePage()).toThrow("No active tab");
+    });
+  });
+
+  describe("dialog tracking", () => {
+    let pageManager: PageManager;
+
+    beforeEach(() => {
+      pageManager = new PageManager(createDefaultConfig());
+    });
+
+    it("getPendingDialogInfo returns null when no dialog pending", async () => {
+      await pageManager.openTab(browserManager);
+      expect(pageManager.getPendingDialogInfo()).toBeNull();
+    });
+
+    it("getPendingDialog returns null when no dialog pending", async () => {
+      await pageManager.openTab(browserManager);
+      expect(pageManager.getPendingDialog()).toBeNull();
+    });
+
+    it("clearPendingDialog does not throw when no dialog pending", async () => {
+      await pageManager.openTab(browserManager);
+      expect(() => pageManager.clearPendingDialog()).not.toThrow();
+    });
+
+    it("clearPendingDialog does not throw when no pages exist", () => {
+      expect(() => pageManager.clearPendingDialog()).not.toThrow();
     });
   });
 });

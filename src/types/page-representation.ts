@@ -83,6 +83,13 @@ export interface ReloadEvent {
   timestamp: string;
 }
 
+export interface PendingDialog {
+  type: "alert" | "confirm" | "prompt" | "beforeunload";
+  message: string;
+  default_value?: string;  // Only present for "prompt" dialogs
+  timestamp: string;       // ISO 8601
+}
+
 export interface PageRepresentation {
   url: string;
   title: string;
@@ -98,5 +105,6 @@ export interface PageRepresentation {
   };
   interactive_summary?: InteractiveSummary;
   reload_event?: ReloadEvent;
+  pending_dialog?: PendingDialog;
   delta?: import("./snapshot.js").SnapshotDiff;
 }

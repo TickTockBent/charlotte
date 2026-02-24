@@ -1,5 +1,7 @@
-import type { Page } from "puppeteer";
+import type { Page, Dialog } from "puppeteer";
 import type { BrowserManager } from "./browser-manager.js";
+import type { CharlotteConfig } from "../types/config.js";
+import type { PendingDialog } from "../types/page-representation.js";
 import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 import { logger } from "../utils/logger.js";
 
@@ -15,6 +17,8 @@ interface ManagedPage {
   page: Page;
   consoleErrors: Array<{ level: string; text: string }>;
   networkErrors: Array<{ url: string; status: number; statusText: string }>;
+  pendingDialog: Dialog | null;
+  pendingDialogInfo: PendingDialog | null;
 }
 
 let nextTabIdCounter = 1;
@@ -26,6 +30,12 @@ function generateTabId(): string {
 export class PageManager {
   private pages = new Map<string, ManagedPage>();
   private activeTabId: string | null = null;
+  private config: CharlotteConfig;
+
+  constructor(config?: CharlotteConfig) {
+    // Accept optional config; callers without config get a permissive default
+    this.config = config ?? { snapshotDepth: 50, autoSnapshot: "every_action", dialogAutoDismiss: "none" };
+  }
 
   async openTab(browserManager: BrowserManager, url?: string): Promise<string> {
     const page = await browserManager.newPage();
@@ -36,6 +46,8 @@ export class PageManager {
       page,
       consoleErrors: [],
       networkErrors: [],
+      pendingDialog: null,
+      pendingDialogInfo: null,
     };
 
     // Collect console errors
@@ -58,6 +70,39 @@ export class PageManager {
           statusText: response.statusText(),
         });
       }
+    });
+
+    // Handle JavaScript dialogs (alert, confirm, prompt, beforeunload)
+    page.on("dialog", async (dialog) => {
+      const dialogType = dialog.type() as PendingDialog["type"];
+      const autoDismiss = this.config.dialogAutoDismiss;
+
+      logger.info("Dialog appeared", { tabId, type: dialogType, message: dialog.message() });
+
+      // Auto-dismiss logic
+      if (autoDismiss === "accept_all" || (autoDismiss === "accept_alerts" && dialogType === "alert")) {
+        await dialog.accept();
+        return;
+      }
+      if (autoDismiss === "dismiss_all") {
+        await dialog.dismiss();
+        return;
+      }
+
+      // Queue for manual handling
+      managedPage.pendingDialog = dialog;
+      managedPage.pendingDialogInfo = {
+        type: dialogType,
+        message: dialog.message(),
+        ...(dialogType === "prompt" ? { default_value: dialog.defaultValue() } : {}),
+        timestamp: new Date().toISOString(),
+      };
+    });
+
+    // Clear stale dialog references on navigation
+    page.on("framenavigated", () => {
+      managedPage.pendingDialog = null;
+      managedPage.pendingDialogInfo = null;
     });
 
     this.pages.set(tabId, managedPage);
@@ -170,6 +215,27 @@ export class PageManager {
     if (managedPage) {
       managedPage.consoleErrors = [];
       managedPage.networkErrors = [];
+    }
+  }
+
+  getPendingDialogInfo(): PendingDialog | null {
+    if (!this.activeTabId) return null;
+    const managedPage = this.pages.get(this.activeTabId);
+    return managedPage?.pendingDialogInfo ?? null;
+  }
+
+  getPendingDialog(): Dialog | null {
+    if (!this.activeTabId) return null;
+    const managedPage = this.pages.get(this.activeTabId);
+    return managedPage?.pendingDialog ?? null;
+  }
+
+  clearPendingDialog(): void {
+    if (!this.activeTabId) return;
+    const managedPage = this.pages.get(this.activeTabId);
+    if (managedPage) {
+      managedPage.pendingDialog = null;
+      managedPage.pendingDialogInfo = null;
     }
   }
 

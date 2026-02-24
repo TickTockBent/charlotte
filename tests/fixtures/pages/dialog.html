@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dialog Test Page</title>
+</head>
+<body>
+  <h1>Dialog Tests</h1>
+
+  <button id="alert-btn" onclick="alert('Hello from alert')">Alert</button>
+
+  <button id="confirm-btn" onclick="handleConfirm()">Confirm</button>
+
+  <button id="prompt-btn" onclick="handlePrompt()">Prompt</button>
+
+  <button id="delayed-alert" onclick="setTimeout(() => alert('Delayed'), 200)">Delayed Alert</button>
+
+  <button id="beforeunload-btn" onclick="registerBeforeUnload()">Register Beforeunload</button>
+
+  <div id="result"></div>
+
+  <script>
+    function handleConfirm() {
+      const result = confirm('Do you agree?');
+      document.getElementById('result').textContent = result ? 'confirmed' : 'cancelled';
+    }
+
+    function handlePrompt() {
+      const result = prompt('Enter name', 'default-name');
+      document.getElementById('result').textContent = result === null ? 'null' : result;
+    }
+
+    function registerBeforeUnload() {
+      window.onbeforeunload = function(e) {
+        e.preventDefault();
+        return 'Are you sure?';
+      };
+      document.getElementById('result').textContent = 'beforeunload registered';
+    }
+  </script>
+</body>
+</html>

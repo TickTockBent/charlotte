@@ -15,12 +15,15 @@ import { logger } from "./utils/logger.js";
 async function main(): Promise<void> {
   logger.info("Charlotte starting");
 
+  // Initialize config first (needed by PageManager for dialog handling)
+  const config = createDefaultConfig();
+
   // Initialize browser
   const browserManager = new BrowserManager();
   await browserManager.launch();
 
   // Initialize page management
-  const pageManager = new PageManager();
+  const pageManager = new PageManager(config);
 
   // Open a default tab
   await pageManager.openTab(browserManager);
@@ -32,9 +35,6 @@ async function main(): Promise<void> {
     cdpSessionManager,
     elementIdGenerator,
   );
-
-  // Initialize state management
-  const config = createDefaultConfig();
   const snapshotStore = new SnapshotStore(config.snapshotDepth);
 
   // Initialize screenshot artifact store

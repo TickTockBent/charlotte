@@ -184,7 +184,7 @@ export async function renderAfterAction(
  * Strip empty/default fields from a PageRepresentation to reduce response size.
  * Returns a cleaned copy — does not mutate the original.
  */
-function stripEmptyFields(representation: PageRepresentation): Record<string, unknown> {
+export function stripEmptyFields(representation: PageRepresentation): Record<string, unknown> {
   const cleaned: Record<string, unknown> = { ...representation };
 
   // When interactive_summary is present (minimal detail), strip the full

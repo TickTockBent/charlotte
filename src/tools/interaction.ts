@@ -105,7 +105,7 @@ async function waitForPossibleNavigation(
     };
     page.on("dialog", handler);
     // Clean up on timeout — if no dialog fires, we don't need this listener
-    setTimeout(() => { page.off("dialog", handler); }, detectionWindowMs);
+    setTimeout(() => { page.off("dialog", handler); resolve(); }, detectionWindowMs);
   });
 
   // Race: action vs dialog

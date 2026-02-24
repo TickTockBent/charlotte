@@ -5,7 +5,7 @@ import { logger } from "../utils/logger.js";
 import type { ToolDependencies } from "./tool-helpers.js";
 import {
   renderAfterAction,
-  formatPageResponse,
+  stripEmptyFields,
   handleToolError,
 } from "./tool-helpers.js";
 
@@ -75,7 +75,7 @@ export function registerDialogTools(
         // Build response with dialog_handled metadata
         const responsePayload = {
           dialog_handled: dialogHandled,
-          page: representation,
+          page: stripEmptyFields(representation),
         };
 
         return {

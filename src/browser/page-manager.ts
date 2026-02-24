@@ -1,7 +1,8 @@
 import type { Page, Dialog } from "puppeteer";
 import type { BrowserManager } from "./browser-manager.js";
-import type { CharlotteConfig } from "../types/config.js";
 import type { PendingDialog } from "../types/page-representation.js";
+import { createDefaultConfig } from "../types/config.js";
+import type { CharlotteConfig } from "../types/config.js";
 import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 import { logger } from "../utils/logger.js";
 
@@ -34,7 +35,7 @@ export class PageManager {
 
   constructor(config?: CharlotteConfig) {
     // Accept optional config; callers without config get a permissive default
-    this.config = config ?? { snapshotDepth: 50, autoSnapshot: "every_action", dialogAutoDismiss: "none" };
+    this.config = config ?? createDefaultConfig();
   }
 
   async openTab(browserManager: BrowserManager, url?: string): Promise<string> {

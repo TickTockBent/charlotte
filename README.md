@@ -336,7 +336,49 @@ Four pages cover navigation, forms, interactive elements, delayed content, scrol
 
 **Shadow DOM** — Open shadow DOM works transparently. Chromium's accessibility tree pierces open shadow boundaries, so web components (e.g., GitHub's `<relative-time>`, `<tool-tip>`) render their content into Charlotte's representation without special handling. Closed shadow roots are opaque to the accessibility tree and will not be captured.
 
+**No dialog handling** — JavaScript dialogs (`alert`, `confirm`, `prompt`) are not intercepted or exposed. An unhandled dialog will block all page interaction until the browser dismisses it automatically, which can stall automation workflows.
+
+**No file upload support** — Charlotte identifies `file_input` elements in the page representation but provides no tool to set file paths on them. Workflows that require file uploads cannot be completed.
+
+**No drag-and-drop support** — There is no tool for drag-and-drop interactions. Kanban boards, sortable lists, slider handles, and file drop zones cannot be automated.
+
+**Console and network monitoring are error-only** — Charlotte captures console errors and failed network requests in the page representation, but does not expose a dedicated tool for retrieving all console messages or all network requests. Agents debugging JavaScript or API issues have limited visibility.
+
 ## Roadmap
+
+### Interaction Gaps
+
+**Dialog Handling** — Intercept JavaScript dialogs (`alert`, `confirm`, `prompt`) and expose a `charlotte:dialog` tool to accept or dismiss them with optional prompt text. Unhandled dialogs currently block all page interaction.
+
+**File Upload** — Add a `charlotte:upload` tool to set file paths on `file_input` elements via Puppeteer's `elementHandle.uploadFile()`. Charlotte already identifies file inputs but cannot act on them.
+
+**Drag and Drop** — Add a `charlotte:drag` tool for element-to-element drag-and-drop using Puppeteer mouse primitives. Covers kanban boards, sortable lists, sliders, and drop zones.
+
+**Batch Form Fill** — Add a `charlotte:fill_form` tool that accepts an array of `{element_id, value}` pairs and fills an entire form in a single tool call, reducing N sequential `type`/`select`/`toggle` calls to one.
+
+**Slow Typing** — Add a `slowly` or `character_delay` parameter to `charlotte:type` for character-by-character input. Required for sites with key-by-key event handlers (autocomplete, search-as-you-type, input validation).
+
+**Click Modifiers** — Add a `modifiers` parameter (`ctrl`, `shift`, `alt`, `meta`) to `charlotte:click` for Ctrl+Click (open in new tab), Shift+Click (range select), and similar patterns.
+
+### Monitoring
+
+**Console Message Retrieval** — Add a `charlotte:console` tool to retrieve all console messages (not just errors) with level filtering. Charlotte already listens to console events internally but only surfaces errors in the page representation.
+
+**Network Request Monitoring** — Add a `charlotte:requests` tool to retrieve all network requests (not just failures) with filtering options. Enables agents to debug API calls and resource loading.
+
+### Session & Configuration
+
+**Connect to Existing Browser** — Add a `--cdp-endpoint` CLI argument so Charlotte can attach to an already-running browser via `puppeteer.connect()` instead of always launching a new instance. Enables working with logged-in sessions and browser extensions.
+
+**Persistent Init Scripts** — Add a `--init-script` CLI argument to inject JavaScript on every page load via `page.evaluateOnNewDocument()`. Charlotte's `dev_inject` currently applies CSS/JS once and does not persist across navigations.
+
+**Configuration File** — Support a `--config` CLI argument to load settings from a JSON file, simplifying repeatable setups and CI/CD integration.
+
+**File Output** — Add an optional `filename` parameter to `screenshot`, `observe`, and future monitoring tools so large responses can be written to disk instead of returned inline, reducing token consumption.
+
+**Full Device Emulation** — Extend `charlotte:viewport` to accept named devices (e.g., "iPhone 15") and configure user agent, touch support, and device pixel ratio via CDP, not just viewport dimensions.
+
+### Feature Roadmap
 
 **Screenshot Artifacts** — Save screenshots as persistent file artifacts rather than only returning inline data, enabling agents to reference and manage captured images across sessions.
 
@@ -345,6 +387,8 @@ Four pages cover navigation, forms, interactive elements, delayed content, scrol
 **ARM64 Docker Images** — Add `linux/arm64` platform support to the Docker publish workflow for native performance on Apple Silicon Macs and ARM servers.
 
 **Iframe Content Extraction** — Traverse child frames via CDP to include iframe content in the page representation. Currently, Charlotte only reads the main frame's accessibility tree; same-origin and cross-origin iframe content is invisible.
+
+See [docs/playwright-mcp-gap-analysis.md](docs/playwright-mcp-gap-analysis.md) for the full gap analysis against Playwright MCP, including lower-priority items (vision tools, testing/verification, tracing, transport, security) and areas where Charlotte has advantages.
 
 ## Full Specification
 

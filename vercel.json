@@ -1,0 +1,6 @@
+{
+  "buildCommand": "cd site && npm install && npm run build",
+  "outputDirectory": "site/out",
+  "installCommand": "echo 'skipping root install'",
+  "ignoreCommand": "git diff HEAD^ HEAD --quiet -- site/"
+}

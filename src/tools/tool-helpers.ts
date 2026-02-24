@@ -39,6 +39,10 @@ export interface RenderOptions {
 /**
  * Render the active page, attach console/network errors, and optionally
  * push a snapshot to the store.
+ *
+ * When a JavaScript dialog is blocking the page, the renderer pipeline cannot
+ * complete (page.title() and other JS-dependent calls hang). In that case,
+ * returns a minimal stub representation with the pending_dialog info attached.
  */
 export async function renderActivePage(
   deps: ToolDependencies,
@@ -53,6 +57,29 @@ export async function renderActivePage(
   } = options;
 
   const page = deps.pageManager.getActivePage();
+
+  // If a dialog is blocking, we can't render — page.title() and other
+  // JS-dependent CDP calls will hang. Return a stub with dialog info.
+  const pendingDialogInfo = deps.pageManager.getPendingDialogInfo();
+  if (pendingDialogInfo) {
+    const viewport = page.viewport() ?? { width: 1280, height: 720 };
+    return {
+      url: page.url(),
+      title: "(dialog blocking)",
+      viewport: { width: viewport.width, height: viewport.height },
+      snapshot_id: 0,
+      timestamp: new Date().toISOString(),
+      structure: { landmarks: [], headings: [] },
+      interactive: [],
+      forms: [],
+      errors: {
+        console: deps.pageManager.getConsoleErrors(),
+        network: deps.pageManager.getNetworkErrors(),
+      },
+      pending_dialog: pendingDialogInfo,
+    };
+  }
+
   const representation = await deps.rendererPipeline.render(page, {
     detail,
     selector,
@@ -200,6 +227,11 @@ function stripEmptyFields(representation: PageRepresentation): Record<string, un
     }
 
     cleaned.structure = structure;
+  }
+
+  // Strip absent pending_dialog
+  if (!cleaned.pending_dialog) {
+    delete cleaned.pending_dialog;
   }
 
   return cleaned;

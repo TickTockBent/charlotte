@@ -2,6 +2,20 @@
 
 All notable changes to Charlotte will be documented in this file.
 
+## [0.3.0] - 2026-02-24
+
+### Added
+
+- **`charlotte:dialog`** — Accept or dismiss JavaScript dialogs (`alert`, `confirm`, `prompt`, `beforeunload`). Dialogs are captured by PageManager and surfaced as `pending_dialog` in every tool response while blocking. Response includes `dialog_handled` metadata confirming what was resolved. Closes GAP-03 from the Playwright MCP gap analysis.
+- **Dialog-aware action racing** — Interaction tools (`click`, `submit`) now race the action against dialog detection. Clicks that trigger dialogs return immediately with `pending_dialog` instead of hanging for 30s.
+- **`dialog_auto_dismiss` configuration** — New parameter on `charlotte:configure` to auto-handle dialogs without explicit tool calls. Options: `"none"` (default, queue for manual handling), `"accept_alerts"`, `"accept_all"`, `"dismiss_all"`.
+- **Dialog-blocking stub responses** — When a dialog is open, `renderActivePage` returns a minimal stub representation (since `page.title()` hangs while dialogs are blocking). The stub includes `pending_dialog` so agents always know a dialog needs handling.
+
+### Changed
+
+- `PageManager` now accepts `CharlotteConfig` in its constructor for dialog auto-dismiss configuration.
+- Config initialization moved before `PageManager` creation in `src/index.ts`.
+
 ## [0.2.0] - 2026-02-22
 
 ### Changed

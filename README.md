@@ -12,7 +12,7 @@ Charlotte takes a different approach. It decomposes each page into a typed, stru
 
 ### Benchmarks
 
-Charlotte v0.2.0 vs Playwright MCP, measured by characters returned per tool call on real websites:
+Charlotte v0.3.0 vs Playwright MCP, measured by characters returned per tool call on real websites:
 
 **Navigation** (first contact with a page):
 
@@ -66,7 +66,7 @@ Agents receive landmarks, headings, interactive elements with typed metadata, bo
 
 **Observation** — `observe` (3 detail levels), `find` (spatial + semantic search), `screenshot`, `diff` (structural comparison against snapshots)
 
-**Interaction** — `click`, `type`, `select`, `toggle`, `submit`, `scroll`, `hover`, `key`, `wait_for` (async condition polling)
+**Interaction** — `click`, `type`, `select`, `toggle`, `submit`, `scroll`, `hover`, `key`, `wait_for` (async condition polling), `dialog` (accept/dismiss JS dialogs)
 
 **Session Management** — `tabs`, `tab_open`, `tab_switch`, `tab_close`, `viewport` (device presets), `network` (throttling, URL blocking), `set_cookies`, `get_cookies`, `clear_cookies`, `set_headers`, `configure`
 
@@ -316,11 +316,11 @@ The **Renderer Pipeline** is the core — it calls extractors in order and assem
 3. Landmark, heading, interactive element, and content extraction
 4. Element ID generation (hash-based, stable across re-renders)
 
-All tools go through `renderActivePage()` which handles snapshots, reload events, and response formatting.
+All tools go through `renderActivePage()` which handles snapshots, reload events, dialog detection, and response formatting.
 
 ## Sandbox
 
-Charlotte includes a test website in `tests/sandbox/` that exercises all 30 tools without touching the public internet. Serve it locally with:
+Charlotte includes a test website in `tests/sandbox/` that exercises all 33 tools without touching the public internet. Serve it locally with:
 
 ```
 dev_serve({ path: "tests/sandbox" })
@@ -336,8 +336,6 @@ Four pages cover navigation, forms, interactive elements, delayed content, scrol
 
 **Shadow DOM** — Open shadow DOM works transparently. Chromium's accessibility tree pierces open shadow boundaries, so web components (e.g., GitHub's `<relative-time>`, `<tool-tip>`) render their content into Charlotte's representation without special handling. Closed shadow roots are opaque to the accessibility tree and will not be captured.
 
-**No dialog handling** — JavaScript dialogs (`alert`, `confirm`, `prompt`) are not intercepted or exposed. An unhandled dialog will block all page interaction until the browser dismisses it automatically, which can stall automation workflows.
-
 **No file upload support** — Charlotte identifies `file_input` elements in the page representation but provides no tool to set file paths on them. Workflows that require file uploads cannot be completed.
 
 **No drag-and-drop support** — There is no tool for drag-and-drop interactions. Kanban boards, sortable lists, slider handles, and file drop zones cannot be automated.
@@ -347,8 +345,6 @@ Four pages cover navigation, forms, interactive elements, delayed content, scrol
 ## Roadmap
 
 ### Interaction Gaps
-
-**Dialog Handling** — Intercept JavaScript dialogs (`alert`, `confirm`, `prompt`) and expose a `charlotte:dialog` tool to accept or dismiss them with optional prompt text. Unhandled dialogs currently block all page interaction.
 
 **File Upload** — Add a `charlotte:upload` tool to set file paths on `file_input` elements via Puppeteer's `elementHandle.uploadFile()`. Charlotte already identifies file inputs but cannot act on them.
 

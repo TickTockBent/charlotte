@@ -10,6 +10,7 @@ import { registerEvaluateTools } from "./tools/evaluate.js";
 import { registerNavigationTools } from "./tools/navigation.js";
 import { registerObservationTools } from "./tools/observation.js";
 import { registerInteractionTools } from "./tools/interaction.js";
+import { registerDialogTools } from "./tools/dialog.js";
 import { registerSessionTools } from "./tools/session.js";
 import { registerDevModeTools } from "./tools/dev-mode.js";
 import type { DevModeState } from "./dev/dev-mode-state.js";
@@ -29,7 +30,7 @@ export function createServer(deps: ServerDeps): McpServer {
   const server = new McpServer(
     {
       name: "charlotte",
-      version: "0.1.0",
+      version: "0.3.0",
     },
     {
       capabilities: {
@@ -59,6 +60,7 @@ export function createServer(deps: ServerDeps): McpServer {
   registerNavigationTools(server, toolDeps);
   registerObservationTools(server, toolDeps);
   registerInteractionTools(server, toolDeps);
+  registerDialogTools(server, toolDeps);
   registerSessionTools(server, toolDeps);
   registerDevModeTools(server, toolDeps);
 

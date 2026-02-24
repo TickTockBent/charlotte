@@ -91,6 +91,8 @@ where Charlotte has capabilities Playwright MCP does not**, for completeness.
 
 ### GAP-03: Dialog Handling (alert / confirm / prompt)
 
+> **Remediated in Charlotte v0.3.0** — `charlotte:dialog` tool implemented with `accept`/`prompt_text` parameters, `pending_dialog` surfacing in all tool responses, dialog-aware action racing, and configurable auto-dismiss via `charlotte:configure`.
+
 | Attribute | Detail |
 |-----------|--------|
 | **Playwright Tool** | `browser_handle_dialog` |
@@ -527,7 +529,7 @@ Features Charlotte provides that Playwright MCP **does not** have as dedicated t
 
 | Gap | Tool | Rationale |
 |-----|------|-----------|
-| GAP-03 | `charlotte:dialog` | Unhandled dialogs freeze all automation |
+| GAP-03 | `charlotte:dialog` | Unhandled dialogs freeze all automation — *remediated in v0.3.0* |
 | GAP-02 | `charlotte:upload` | File upload is a fundamental web interaction |
 | GAP-01 | `charlotte:drag` | Drag-and-drop is common in modern web apps |
 | GAP-21 | `charlotte:console` | Console access is essential for debugging |
@@ -577,7 +579,7 @@ Features Charlotte provides that Playwright MCP **does not** have as dedicated t
 |----|----------|-----|-------------------------|------------------|--------|
 | GAP-01 | Interaction | Drag and drop | `browser_drag` | Missing | High |
 | GAP-02 | Interaction | File upload | `browser_file_upload` | Missing | High |
-| GAP-03 | Interaction | Dialog handling | `browser_handle_dialog` | Missing | High |
+| GAP-03 | Interaction | Dialog handling | `browser_handle_dialog` | Remediated in v0.3.0 | High |
 | GAP-04 | Interaction | Batch form fill | `browser_fill_form` | Missing | Medium |
 | GAP-05 | Interaction | Slow typing | `slowly` param | Missing | Medium |
 | GAP-06 | Interaction | Click modifiers | `modifiers` param | Missing | Medium |

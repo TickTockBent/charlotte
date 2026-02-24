@@ -67,6 +67,10 @@ async function clickElementByBackendNodeId(
  * Listens for the `framenavigated` CDP event to detect if a click caused navigation.
  * If navigation is detected within `detectionWindowMs`, waits for the page load event
  * (up to `loadTimeoutMs`). If no navigation fires, returns after `settleMs`.
+ *
+ * Also races against dialog events — if the action triggers a JavaScript dialog
+ * (alert, confirm, prompt, beforeunload), the action promise will block indefinitely.
+ * This function detects that and returns early so the caller can surface `pending_dialog`.
  */
 async function waitForPossibleNavigation(
   page: Page,
@@ -74,6 +78,7 @@ async function waitForPossibleNavigation(
   { detectionWindowMs = 500, loadTimeoutMs = 10000, settleMs = 50 } = {},
 ): Promise<void> {
   let navigationDetected = false;
+  let dialogDetected = false;
 
   // Listen for navigation start via page event (fires on any navigation)
   const navigationStartPromise = new Promise<void>((resolve) => {
@@ -91,10 +96,36 @@ async function waitForPossibleNavigation(
     }, detectionWindowMs);
   });
 
-  // Dispatch the action
-  await action();
+  // Listen for dialog (blocks the action from completing)
+  const dialogPromise = new Promise<void>((resolve) => {
+    const handler = () => {
+      dialogDetected = true;
+      page.off("dialog", handler);
+      resolve();
+    };
+    page.on("dialog", handler);
+    // Clean up on timeout — if no dialog fires, we don't need this listener
+    setTimeout(() => { page.off("dialog", handler); }, detectionWindowMs);
+  });
 
-  // Wait for either navigation detection or detection window to expire
+  // Race: action vs dialog
+  const actionPromise = action();
+  await Promise.race([
+    actionPromise.then(() => "action" as const),
+    dialogPromise.then(() => "dialog" as const),
+  ]);
+
+  if (dialogDetected) {
+    // Dialog is blocking the action. Don't await actionPromise — it will
+    // resolve later when the dialog is handled via charlotte:dialog.
+    // Guard against unhandled rejection from the fire-and-forget promise.
+    actionPromise.catch(() => {
+      logger.debug("Post-dialog action promise rejected (expected)");
+    });
+    return;
+  }
+
+  // Action completed normally — check for navigation
   await navigationStartPromise;
 
   if (navigationDetected) {

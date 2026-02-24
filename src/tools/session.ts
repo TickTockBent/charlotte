@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { logger } from "../utils/logger.js";
-import type { AutoSnapshotMode } from "../types/config.js";
+import type { AutoSnapshotMode, DialogAutoDismiss } from "../types/config.js";
 import type { ToolDependencies } from "./tool-helpers.js";
 import {
   renderActivePage,
@@ -241,9 +241,15 @@ export function registerSessionTools(
           .describe(
             "Directory for persistent screenshot artifacts. Changes take effect immediately; existing artifacts remain in the previous directory.",
           ),
+        dialog_auto_dismiss: z
+          .enum(["none", "accept_alerts", "accept_all", "dismiss_all"])
+          .optional()
+          .describe(
+            'Auto-dismiss behavior for JS dialogs. "none" (default) queues for charlotte:dialog.',
+          ),
       },
     },
-    async ({ snapshot_depth, auto_snapshot, screenshot_dir }) => {
+    async ({ snapshot_depth, auto_snapshot, screenshot_dir, dialog_auto_dismiss }) => {
       try {
         logger.info("Configuring Charlotte", { snapshot_depth, auto_snapshot, screenshot_dir });
 
@@ -261,6 +267,10 @@ export function registerSessionTools(
           await deps.artifactStore.setScreenshotDir(screenshot_dir);
         }
 
+        if (dialog_auto_dismiss !== undefined) {
+          deps.config.dialogAutoDismiss = dialog_auto_dismiss as DialogAutoDismiss;
+        }
+
         return {
           content: [
             {
@@ -271,6 +281,7 @@ export function registerSessionTools(
                   snapshot_depth: deps.config.snapshotDepth,
                   auto_snapshot: deps.config.autoSnapshot,
                   screenshot_dir: deps.artifactStore.screenshotDir,
+                  dialog_auto_dismiss: deps.config.dialogAutoDismiss,
                 },
               }),
             },

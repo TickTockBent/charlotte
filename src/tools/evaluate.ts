@@ -42,7 +42,7 @@ export function registerEvaluateTools(
       const result = await Promise.race([
         page.evaluate(async (expr: string, awaitPromise: boolean) => {
           try {
-            let result = eval(expr);
+            let result = new Function('return ' + expr)();
             if (awaitPromise && result && typeof result === "object" && typeof result.then === "function") {
               result = await result;
             }

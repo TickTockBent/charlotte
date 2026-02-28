@@ -969,7 +969,7 @@ async function pollWaitForCondition(
     if (allSatisfied && condition.js) {
       try {
         const jsResult = await page.evaluate((expression) => {
-          return !!eval(expression);
+          return !!new Function('return ' + expression)();
         }, condition.js);
         if (!jsResult) allSatisfied = false;
       } catch {

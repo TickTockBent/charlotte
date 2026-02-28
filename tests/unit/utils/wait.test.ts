@@ -21,7 +21,7 @@ function createMockPage(behavior: {
         if (fnStr.includes("innerText")) {
           return Promise.resolve(behavior.textExists ?? false);
         }
-        if (fnStr.includes("eval")) {
+        if (fnStr.includes("new Function")) {
           return Promise.resolve(behavior.jsResult ?? false);
         }
       }

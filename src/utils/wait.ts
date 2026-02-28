@@ -67,7 +67,7 @@ async function evaluateCondition(
     const jsExpression = condition.js;
     try {
       const result = await page.evaluate((expression) => {
-        return !!eval(expression);
+        return !!new Function('return ' + expression)();
       }, jsExpression);
       if (!result) return false;
     } catch {

@@ -123,10 +123,13 @@ export class PageManager {
       };
     });
 
-    // Clear stale dialog references on navigation
-    page.on("framenavigated", () => {
-      managedPage.pendingDialog = null;
-      managedPage.pendingDialogInfo = null;
+    // Clear stale dialog references on main-frame navigation only.
+    // Subframe navigations (iframes, ads, embeds) must not wipe dialog state.
+    page.on("framenavigated", (frame) => {
+      if (frame === page.mainFrame()) {
+        managedPage.pendingDialog = null;
+        managedPage.pendingDialogInfo = null;
+      }
     });
 
     this.pages.set(tabId, managedPage);

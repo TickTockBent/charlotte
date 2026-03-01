@@ -4,6 +4,7 @@ import * as path from "node:path";
 import { logger } from "../utils/logger.js";
 
 export interface StaticServerOptions {
+  allowedRoot?: string;
   directoryPath: string;
   port?: number;
 }
@@ -25,6 +26,10 @@ export class StaticServer {
     }
 
     const absoluteDirectoryPath = path.resolve(options.directoryPath);
+    const rootPath = options.allowedRoot ? path.resolve(options.allowedRoot) : process.cwd();
+    if (!absoluteDirectoryPath.startsWith(rootPath)) {
+      throw new Error(`Directory traversal blocked. Path must be within ${rootPath}`);
+    }
     if (!absoluteDirectoryPath.startsWith("/home/ncurado/.openclaw/workspace")) {
       throw new Error("Directory traversal blocked");
     }

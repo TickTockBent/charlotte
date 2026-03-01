@@ -1,5 +1,6 @@
 import type { PageManager } from "../browser/page-manager.js";
-import type { ReloadEvent } from "../types/page-representation.js";
+import { ReloadEvent } from "../types/page-representation.js";
+import type { CharlotteConfig } from "../types/config.js";
 import { StaticServer, type StaticServerInfo } from "./static-server.js";
 import { FileWatcher } from "./file-watcher.js";
 import { logger } from "../utils/logger.js";
@@ -14,6 +15,12 @@ export interface DevServeOptions {
 }
 
 export class DevModeState {
+  private config: CharlotteConfig;
+
+  constructor(config: CharlotteConfig) {
+    this.config = config;
+  }
+
   private staticServer = new StaticServer();
   private fileWatcher = new FileWatcher();
   private pendingReloadEvent: ReloadEvent | null = null;
@@ -27,6 +34,7 @@ export class DevModeState {
 
     const serverInfo = await this.staticServer.start({
       directoryPath: options.directoryPath,
+      allowedRoot: this.config.allowedWorkspaceRoot,
       port: options.port,
     });
 

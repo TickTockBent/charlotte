@@ -97,6 +97,9 @@ describe("FileWatcher", () => {
       ...POLLING_OPTIONS,
     });
 
+    // Wait for polling to establish its initial stat baseline
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
     // Rapidly create multiple files
     fs.writeFileSync(path.join(tempDir, "file1.txt"), "a");
     fs.writeFileSync(path.join(tempDir, "file2.txt"), "b");
@@ -179,6 +182,9 @@ describe("FileWatcher", () => {
         debounceMs: 50,
         ...POLLING_OPTIONS,
       });
+
+      // Wait for polling to establish its initial stat baseline
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
       // Write to original dir — should not trigger
       fs.writeFileSync(path.join(tempDir, "old.txt"), "data");

@@ -11,8 +11,6 @@ export class BrowserManager {
     this.launchOptions = {
       headless: true,
       args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
         "--disable-gpu",
         "--disable-dev-shm-usage",
       ],

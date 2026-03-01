@@ -25,6 +25,9 @@ export class StaticServer {
     }
 
     const absoluteDirectoryPath = path.resolve(options.directoryPath);
+    if (!absoluteDirectoryPath.startsWith("/home/ncurado/.openclaw/workspace")) {
+      throw new Error("Directory traversal blocked");
+    }
 
     const app = express();
     app.use(express.static(absoluteDirectoryPath));
@@ -32,7 +35,7 @@ export class StaticServer {
     const listenPort = options.port ?? 0;
 
     return new Promise<StaticServerInfo>((resolve, reject) => {
-      const server = app.listen(listenPort, () => {
+      const server = app.listen(listenPort, "127.0.0.1", () => {
         const address = server.address();
         if (!address || typeof address === "string") {
           reject(new Error("Failed to get server address"));

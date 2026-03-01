@@ -1,5 +1,5 @@
 import type { PageManager } from "../browser/page-manager.js";
-import { ReloadEvent } from "../types/page-representation.js";
+import type { ReloadEvent } from "../types/page-representation.js";
 import type { CharlotteConfig } from "../types/config.js";
 import { StaticServer, type StaticServerInfo } from "./static-server.js";
 import { FileWatcher } from "./file-watcher.js";

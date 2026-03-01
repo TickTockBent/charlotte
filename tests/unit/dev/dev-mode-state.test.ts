@@ -1,32 +1,33 @@
+import { createDefaultConfig } from "../../../src/types/config.js";
 import { describe, it, expect } from "vitest";
 import { DevModeState } from "../../../src/dev/dev-mode-state.js";
 
 describe("DevModeState", () => {
   describe("consumePendingReloadEvent", () => {
     it("returns null when no events are pending", () => {
-      const devModeState = new DevModeState();
+      const devModeState = new DevModeState(createDefaultConfig());
       expect(devModeState.consumePendingReloadEvent()).toBeNull();
     });
 
     it("returns null when called again after consumption", () => {
-      const devModeState = new DevModeState();
+      const devModeState = new DevModeState(createDefaultConfig());
       // No events buffered
       expect(devModeState.consumePendingReloadEvent()).toBeNull();
       expect(devModeState.consumePendingReloadEvent()).toBeNull();
     });
 
     it("isServing returns false initially", () => {
-      const devModeState = new DevModeState();
+      const devModeState = new DevModeState(createDefaultConfig());
       expect(devModeState.isServing()).toBe(false);
     });
 
     it("getServerInfo returns null initially", () => {
-      const devModeState = new DevModeState();
+      const devModeState = new DevModeState(createDefaultConfig());
       expect(devModeState.getServerInfo()).toBeNull();
     });
 
     it("stopAll succeeds when nothing is running", async () => {
-      const devModeState = new DevModeState();
+      const devModeState = new DevModeState(createDefaultConfig());
       // Should not throw
       await devModeState.stopAll();
     });

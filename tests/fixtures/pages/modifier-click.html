@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modifier Click Test Page</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: sans-serif; padding: 20px; }
+    button { padding: 8px 16px; cursor: pointer; margin-right: 8px; margin-bottom: 8px; }
+    .result { margin: 10px 0; padding: 10px; background: #f0f0f0; border: 1px solid #ddd; }
+  </style>
+</head>
+<body>
+  <main role="main" aria-label="Modifier click test content">
+    <h1>Modifier Click Test</h1>
+
+    <div id="result" class="result">Ready</div>
+
+    <section aria-label="Modifier click tests">
+      <h2>Click Modifier Tests</h2>
+      <button id="modifier-btn" aria-label="Modifier Test Button">Modifier Test Button</button>
+    </section>
+  </main>
+
+  <script>
+    const modifierButton = document.getElementById('modifier-btn');
+    const resultDiv = document.getElementById('result');
+
+    modifierButton.addEventListener('click', function(event) {
+      const modifiers = [];
+      if (event.ctrlKey) modifiers.push('ctrl');
+      if (event.shiftKey) modifiers.push('shift');
+      if (event.altKey) modifiers.push('alt');
+      if (event.metaKey) modifiers.push('meta');
+
+      if (modifiers.length === 0) {
+        resultDiv.textContent = 'clicked:none';
+      } else {
+        resultDiv.textContent = 'clicked:' + modifiers.sort().join('+');
+      }
+    });
+
+    modifierButton.addEventListener('contextmenu', function(event) {
+      event.preventDefault();
+      const modifiers = [];
+      if (event.ctrlKey) modifiers.push('ctrl');
+      if (event.shiftKey) modifiers.push('shift');
+      if (event.altKey) modifiers.push('alt');
+      if (event.metaKey) modifiers.push('meta');
+
+      if (modifiers.length === 0) {
+        resultDiv.textContent = 'rightclicked:none';
+      } else {
+        resultDiv.textContent = 'rightclicked:' + modifiers.sort().join('+');
+      }
+    });
+
+    modifierButton.addEventListener('dblclick', function(event) {
+      const modifiers = [];
+      if (event.ctrlKey) modifiers.push('ctrl');
+      if (event.shiftKey) modifiers.push('shift');
+      if (event.altKey) modifiers.push('alt');
+      if (event.metaKey) modifiers.push('meta');
+
+      if (modifiers.length === 0) {
+        resultDiv.textContent = 'dblclicked:none';
+      } else {
+        resultDiv.textContent = 'dblclicked:' + modifiers.sort().join('+');
+      }
+    });
+  </script>
+</body>
+</html>

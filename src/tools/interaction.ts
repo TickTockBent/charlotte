@@ -12,6 +12,14 @@ import {
   handleToolError,
 } from "./tool-helpers.js";
 
+/** Maps short modifier names to Puppeteer KeyInput values. */
+const MODIFIER_KEY_MAP: Record<string, KeyInput> = {
+  ctrl: "Control" as KeyInput,
+  shift: "Shift" as KeyInput,
+  alt: "Alt" as KeyInput,
+  meta: "Meta" as KeyInput,
+};
+
 /**
  * Click an element by backend node ID using CDP to get coordinates,
  * or more simply by resolving to an XPath/selector and using page.click.
@@ -22,6 +30,7 @@ async function clickElementByBackendNodeId(
   page: Page,
   backendNodeId: number,
   clickType: "left" | "right" | "double" = "left",
+  modifiers: Array<"ctrl" | "shift" | "alt" | "meta"> = [],
 ): Promise<void> {
   // Get the element's box model to find clickable coordinates
   const cdpSession = await page.createCDPSession();
@@ -49,12 +58,26 @@ async function clickElementByBackendNodeId(
     const centerY =
       (contentQuad[1] + contentQuad[3] + contentQuad[5] + contentQuad[7]) / 4;
 
-    if (clickType === "right") {
-      await page.mouse.click(centerX, centerY, { button: "right" });
-    } else if (clickType === "double") {
-      await page.mouse.click(centerX, centerY, { clickCount: 2 });
-    } else {
-      await page.mouse.click(centerX, centerY);
+    // Hold down modifier keys before the click
+    for (const modifier of modifiers) {
+      const modifierKey = MODIFIER_KEY_MAP[modifier];
+      await page.keyboard.down(modifierKey);
+    }
+
+    try {
+      if (clickType === "right") {
+        await page.mouse.click(centerX, centerY, { button: "right" });
+      } else if (clickType === "double") {
+        await page.mouse.click(centerX, centerY, { clickCount: 2 });
+      } else {
+        await page.mouse.click(centerX, centerY);
+      }
+    } finally {
+      // Release modifier keys in reverse order (always release even if click fails)
+      for (const modifier of [...modifiers].reverse()) {
+        const modifierKey = MODIFIER_KEY_MAP[modifier];
+        await page.keyboard.up(modifierKey);
+      }
     }
   } finally {
     await cdpSession.detach();
@@ -393,18 +416,34 @@ export function registerInteractionTools(
           .enum(["left", "right", "double"])
           .optional()
           .describe('Click type: "left" (default), "right", "double"'),
+        modifiers: z
+          .array(z.enum(["ctrl", "shift", "alt", "meta"]))
+          .optional()
+          .describe(
+            'Modifier keys to hold during click: ["ctrl"], ["shift"], ["alt"], ["meta"], or combinations like ["ctrl", "shift"]',
+          ),
       },
     },
-    async ({ element_id, click_type }) => {
+    async ({ element_id, click_type, modifiers }) => {
       try {
         await deps.browserManager.ensureConnected();
         const { page, backendNodeId } = await resolveElement(deps, element_id);
         const clickVariant = click_type ?? "left";
+        const activeModifiers = modifiers ?? [];
 
-        logger.info("Clicking element", { element_id, clickType: clickVariant });
+        logger.info("Clicking element", {
+          element_id,
+          clickType: clickVariant,
+          modifiers: activeModifiers,
+        });
 
         await waitForPossibleNavigation(page, () =>
-          clickElementByBackendNodeId(page, backendNodeId, clickVariant),
+          clickElementByBackendNodeId(
+            page,
+            backendNodeId,
+            clickVariant,
+            activeModifiers,
+          ),
         );
 
         const representation = await renderAfterAction(deps);
@@ -911,13 +950,6 @@ export function registerInteractionTools(
     },
   );
 }
-
-const MODIFIER_KEY_MAP: Record<string, KeyInput> = {
-  ctrl: "Control" as KeyInput,
-  shift: "Shift" as KeyInput,
-  alt: "Alt" as KeyInput,
-  meta: "Meta" as KeyInput,
-};
 
 /**
  * Poll for complex wait_for conditions that may involve element state checks.

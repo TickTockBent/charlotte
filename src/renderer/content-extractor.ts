@@ -139,11 +139,19 @@ export class ContentExtractor {
     const textParts: string[] = [];
 
     const traverse = (node: ParsedAXNode) => {
-      // Include text from nodes that represent content
+      // Include text from nodes that represent content.
+      // For content-role nodes (headings, paragraphs, etc.), the AX tree `name`
+      // already includes all descendant text including CSS pseudo-element content.
+      // We emit the name and skip children to avoid duplicating that text.
+      if (node.name && isContentRole(node.role)) {
+        textParts.push(node.name);
+        return;
+      }
+
+      // For StaticText/text nodes not under a content-role parent (which would
+      // have returned above), include the text directly.
       if (node.role === "StaticText" || node.role === "text") {
         if (node.name) textParts.push(node.name);
-      } else if (node.name && isContentRole(node.role)) {
-        textParts.push(node.name);
       }
 
       for (const child of node.children) {

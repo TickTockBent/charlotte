@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pseudo Element Test Page</title>
+  <style>
+    body { font-family: sans-serif; margin: 20px; }
+
+    /* ::before pseudo-element on heading */
+    h1.before-icon::before {
+      content: "\2605 ";  /* star character + space */
+    }
+
+    /* ::after pseudo-element on heading */
+    h2.after-arrow::after {
+      content: " \2192";  /* space + right arrow */
+    }
+
+    /* Both ::before and ::after on heading */
+    h2.both-decorations::before {
+      content: "[ ";
+    }
+    h2.both-decorations::after {
+      content: " ]";
+    }
+
+    /* Decorative-only pseudo-elements (no text content duplication expected) */
+    h3.decorative-before::before {
+      content: "";
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      background: red;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    /* Pseudo-element on a paragraph */
+    p.note::before {
+      content: "Note: ";
+      font-weight: bold;
+    }
+
+    /* Pseudo-element on a link */
+    a.external::after {
+      content: " \2197";  /* external link icon */
+    }
+  </style>
+</head>
+<body>
+  <main role="main" aria-label="Content">
+    <h1 class="before-icon">Welcome to the Site</h1>
+
+    <h2 class="after-arrow">Getting Started</h2>
+    <p>This section covers the basics.</p>
+
+    <h2 class="both-decorations">Features Overview</h2>
+    <p>A list of features available.</p>
+
+    <h3 class="decorative-before">Visual Indicator</h3>
+    <p class="note">This paragraph has a prefix via pseudo-element.</p>
+
+    <h2>Plain Heading</h2>
+    <p>This heading has no pseudo-elements for comparison.</p>
+
+    <a class="external" href="https://example.com">Example Link</a>
+  </main>
+</body>
+</html>

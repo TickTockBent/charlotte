@@ -42,7 +42,7 @@ async function main(): Promise<void> {
   await artifactStore.initialize();
 
   // Initialize dev mode state
-  const devModeState = new DevModeState();
+  const devModeState = new DevModeState(config);
 
   // Create and configure MCP server
   const mcpServer = createServer({

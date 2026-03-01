@@ -1,9 +1,11 @@
 import express from "express";
 import * as http from "node:http";
 import * as path from "node:path";
+import * as fs from "node:fs";
 import { logger } from "../utils/logger.js";
 
 export interface StaticServerOptions {
+  allowedRoot?: string;
   directoryPath: string;
   port?: number;
 }
@@ -24,7 +26,15 @@ export class StaticServer {
       await this.stop();
     }
 
-    const absoluteDirectoryPath = path.resolve(options.directoryPath);
+    const resolvedDirPath = path.resolve(options.directoryPath);
+    const absoluteDirectoryPath = fs.existsSync(resolvedDirPath) ? fs.realpathSync(resolvedDirPath) : resolvedDirPath;
+    
+    const configuredRoot = options.allowedRoot ? path.resolve(options.allowedRoot) : process.cwd();
+    const rootPath = fs.existsSync(configuredRoot) ? fs.realpathSync(configuredRoot) : configuredRoot;
+    
+    if (!absoluteDirectoryPath.startsWith(rootPath)) {
+      throw new Error(`Directory traversal blocked. Path must be within ${rootPath}`);
+    }
 
     const app = express();
     app.use(express.static(absoluteDirectoryPath));
@@ -32,7 +42,7 @@ export class StaticServer {
     const listenPort = options.port ?? 0;
 
     return new Promise<StaticServerInfo>((resolve, reject) => {
-      const server = app.listen(listenPort, () => {
+      const server = app.listen(listenPort, "127.0.0.1", () => {
         const address = server.address();
         if (!address || typeof address === "string") {
           reject(new Error("Failed to get server address"));

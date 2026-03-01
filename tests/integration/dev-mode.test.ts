@@ -18,11 +18,11 @@ import {
   renderAfterAction,
 } from "../../src/tools/tool-helpers.js";
 
-const FIXTURES_DIR = path.resolve(
+let TEMP_FIXTURES_DIR: string;
+let FIXTURES_DIR = path.resolve(
   import.meta.dirname,
   "../fixtures/pages",
 );
-const AUDIT_TARGET_FIXTURE = `file://${path.resolve(FIXTURES_DIR, "audit-target.html")}`;
 
 describe("Dev mode integration", () => {
   let browserManager: BrowserManager;
@@ -32,6 +32,7 @@ describe("Dev mode integration", () => {
   let rendererPipeline: RendererPipeline;
   let devModeState: DevModeState;
   let deps: ToolDependencies;
+  let AUDIT_TARGET_FIXTURE: string;
 
   beforeAll(async () => {
     browserManager = new BrowserManager();
@@ -45,7 +46,17 @@ describe("Dev mode integration", () => {
       elementIdGenerator,
     );
     const config = createDefaultConfig();
-    devModeState = new DevModeState();
+    config.allowedWorkspaceRoot = os.tmpdir(); // Set allowed root for tests
+    devModeState = new DevModeState(config);
+
+    // Create a temporary directory for fixtures and copy them over
+    TEMP_FIXTURES_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "charlotte-test-fixtures-"));
+    fs.cpSync(FIXTURES_DIR, TEMP_FIXTURES_DIR, { recursive: true });
+    // IMPORTANT: Update FIXTURES_DIR reference for the tests that use it
+    FIXTURES_DIR = TEMP_FIXTURES_DIR;
+    // Update AUDIT_TARGET_FIXTURE to use the temp directory
+    AUDIT_TARGET_FIXTURE = `file://${path.resolve(FIXTURES_DIR, "audit-target.html")}`;
+    
     const artifactStore = new ArtifactStore(
       path.join(os.tmpdir(), "charlotte-devmode-test-artifacts"),
     );
@@ -65,6 +76,10 @@ describe("Dev mode integration", () => {
   afterAll(async () => {
     await devModeState.stopAll();
     await browserManager.close();
+    // Clean up the temporary fixtures directory
+    if (TEMP_FIXTURES_DIR && fs.existsSync(TEMP_FIXTURES_DIR)) {
+      fs.rmSync(TEMP_FIXTURES_DIR, { recursive: true, force: true });
+    }
   });
 
   describe("dev_serve", () => {

@@ -18,7 +18,8 @@ import {
   renderAfterAction,
 } from "../../src/tools/tool-helpers.js";
 
-const FIXTURES_DIR = path.resolve(
+let TEMP_FIXTURES_DIR: string;
+let FIXTURES_DIR = path.resolve(
   import.meta.dirname,
   "../fixtures/pages",
 );
@@ -45,7 +46,15 @@ describe("Dev mode integration", () => {
       elementIdGenerator,
     );
     const config = createDefaultConfig();
-    devModeState = new DevModeState();
+    config.allowedWorkspaceRoot = os.tmpdir(); // Set allowed root for tests
+    devModeState = new DevModeState(config);
+
+    // Create a temporary directory for fixtures and copy them over
+    TEMP_FIXTURES_DIR = path.join(os.tmpdir(), "charlotte-test-fixtures-");
+    fs.mkdirSync(TEMP_FIXTURES_DIR);
+    fs.cpSync(FIXTURES_DIR, TEMP_FIXTURES_DIR, { recursive: true });
+    // IMPORTANT: Update FIXTURES_DIR reference for the tests that use it
+    FIXTURES_DIR = TEMP_FIXTURES_DIR;
     const artifactStore = new ArtifactStore(
       path.join(os.tmpdir(), "charlotte-devmode-test-artifacts"),
     );

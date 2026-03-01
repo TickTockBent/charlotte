@@ -1,6 +1,7 @@
 import express from "express";
 import * as http from "node:http";
 import * as path from "node:path";
+import * as fs from "node:fs";
 import { logger } from "../utils/logger.js";
 
 export interface StaticServerOptions {
@@ -25,13 +26,14 @@ export class StaticServer {
       await this.stop();
     }
 
-    const absoluteDirectoryPath = path.resolve(options.directoryPath);
-    const rootPath = options.allowedRoot ? path.resolve(options.allowedRoot) : process.cwd();
+    const resolvedDirPath = path.resolve(options.directoryPath);
+    const absoluteDirectoryPath = fs.existsSync(resolvedDirPath) ? fs.realpathSync(resolvedDirPath) : resolvedDirPath;
+    
+    const configuredRoot = options.allowedRoot ? path.resolve(options.allowedRoot) : process.cwd();
+    const rootPath = fs.existsSync(configuredRoot) ? fs.realpathSync(configuredRoot) : configuredRoot;
+    
     if (!absoluteDirectoryPath.startsWith(rootPath)) {
       throw new Error(`Directory traversal blocked. Path must be within ${rootPath}`);
-    }
-    if (!absoluteDirectoryPath.startsWith("/home/ncurado/.openclaw/workspace")) {
-      throw new Error("Directory traversal blocked");
     }
 
     const app = express();

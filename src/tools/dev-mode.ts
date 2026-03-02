@@ -1,7 +1,7 @@
 import { z } from "zod";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer, RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 import { logger } from "../utils/logger.js";
 import { Auditor, type AuditCategory } from "../dev/auditor.js";
@@ -16,9 +16,11 @@ import {
 export function registerDevModeTools(
   server: McpServer,
   deps: ToolDependencies,
-): void {
+): Record<string, RegisteredTool> {
+  const tools: Record<string, RegisteredTool> = {};
+
   // ─── charlotte:dev_serve ───
-  server.registerTool(
+  tools["charlotte:dev_serve"] = server.registerTool(
     "charlotte:dev_serve",
     {
       description:
@@ -120,7 +122,7 @@ export function registerDevModeTools(
   );
 
   // ─── charlotte:dev_inject ───
-  server.registerTool(
+  tools["charlotte:dev_inject"] = server.registerTool(
     "charlotte:dev_inject",
     {
       description:
@@ -176,7 +178,7 @@ export function registerDevModeTools(
   );
 
   // ─── charlotte:dev_audit ───
-  server.registerTool(
+  tools["charlotte:dev_audit"] = server.registerTool(
     "charlotte:dev_audit",
     {
       description:
@@ -225,4 +227,6 @@ export function registerDevModeTools(
       }
     },
   );
+
+  return tools;
 }

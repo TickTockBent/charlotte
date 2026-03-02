@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { logger } from "../utils/logger.js";
 import type { AutoSnapshotMode, DialogAutoDismiss } from "../types/config.js";
+import type { RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ToolDependencies } from "./tool-helpers.js";
 import {
   renderActivePage,
@@ -25,9 +26,11 @@ const CookieSchema = z.object({
 export function registerSessionTools(
   server: McpServer,
   deps: ToolDependencies,
-): void {
+): Record<string, RegisteredTool> {
+  const tools: Record<string, RegisteredTool> = {};
+
   // ─── charlotte:get_cookies ───
-  server.registerTool(
+  tools["charlotte:get_cookies"] = server.registerTool(
     "charlotte:get_cookies",
     {
       description:
@@ -79,7 +82,7 @@ export function registerSessionTools(
   );
 
   // ─── charlotte:clear_cookies ───
-  server.registerTool(
+  tools["charlotte:clear_cookies"] = server.registerTool(
     "charlotte:clear_cookies",
     {
       description:
@@ -126,7 +129,7 @@ export function registerSessionTools(
   );
 
   // ─── charlotte:set_cookies ───
-  server.registerTool(
+  tools["charlotte:set_cookies"] = server.registerTool(
     "charlotte:set_cookies",
     {
       description:
@@ -179,7 +182,7 @@ export function registerSessionTools(
   );
 
   // ─── charlotte:set_headers ───
-  server.registerTool(
+  tools["charlotte:set_headers"] = server.registerTool(
     "charlotte:set_headers",
     {
       description:
@@ -219,7 +222,7 @@ export function registerSessionTools(
   );
 
   // ─── charlotte:configure ───
-  server.registerTool(
+  tools["charlotte:configure"] = server.registerTool(
     "charlotte:configure",
     {
       description:
@@ -294,7 +297,7 @@ export function registerSessionTools(
   );
 
   // ─── charlotte:tabs ───
-  server.registerTool(
+  tools["charlotte:tabs"] = server.registerTool(
     "charlotte:tabs",
     {
       description: "List all open browser tabs with their URLs, titles, and active status.",
@@ -321,7 +324,7 @@ export function registerSessionTools(
   );
 
   // ─── charlotte:tab_open ───
-  server.registerTool(
+  tools["charlotte:tab_open"] = server.registerTool(
     "charlotte:tab_open",
     {
       description:
@@ -362,7 +365,7 @@ export function registerSessionTools(
   );
 
   // ─── charlotte:tab_switch ───
-  server.registerTool(
+  tools["charlotte:tab_switch"] = server.registerTool(
     "charlotte:tab_switch",
     {
       description:
@@ -390,7 +393,7 @@ export function registerSessionTools(
   );
 
   // ─── charlotte:tab_close ───
-  server.registerTool(
+  tools["charlotte:tab_close"] = server.registerTool(
     "charlotte:tab_close",
     {
       description:
@@ -434,7 +437,7 @@ export function registerSessionTools(
     desktop: { width: 1280, height: 720 },
   };
 
-  server.registerTool(
+  tools["charlotte:viewport"] = server.registerTool(
     "charlotte:viewport",
     {
       description:
@@ -535,7 +538,7 @@ export function registerSessionTools(
     },
   };
 
-  server.registerTool(
+  tools["charlotte:network"] = server.registerTool(
     "charlotte:network",
     {
       description:
@@ -597,4 +600,6 @@ export function registerSessionTools(
       }
     },
   );
+
+  return tools;
 }

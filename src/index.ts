@@ -11,9 +11,57 @@ import { createDefaultConfig } from "./types/config.js";
 import { createServer } from "./server.js";
 import { DevModeState } from "./dev/dev-mode-state.js";
 import { logger } from "./utils/logger.js";
+import type { ToolProfile, ToolGroupName } from "./tools/tool-groups.js";
+
+const VALID_PROFILES: ToolProfile[] = [
+  "core", "browse", "interact", "develop", "audit", "full",
+];
+
+const VALID_GROUPS: ToolGroupName[] = [
+  "navigation", "observation", "interaction", "session",
+  "dev_mode", "dialog", "evaluate", "monitoring",
+];
+
+function parseCliArgs(): { profile?: ToolProfile; toolGroups?: ToolGroupName[] } {
+  const args = process.argv.slice(2);
+
+  const profileArg = args.find((a) => a.startsWith("--profile="));
+  const toolsArg = args.find((a) => a.startsWith("--tools="));
+
+  if (profileArg && toolsArg) {
+    logger.warn("Both --profile and --tools provided; --profile takes precedence");
+  }
+
+  if (profileArg) {
+    const profile = profileArg.split("=")[1] as ToolProfile;
+    if (!VALID_PROFILES.includes(profile)) {
+      logger.error(`Invalid profile: ${profile}. Valid profiles: ${VALID_PROFILES.join(", ")}`);
+      process.exit(1);
+    }
+    return { profile };
+  }
+
+  if (toolsArg) {
+    const groups = toolsArg.split("=")[1].split(",") as ToolGroupName[];
+    for (const group of groups) {
+      if (!VALID_GROUPS.includes(group)) {
+        logger.error(`Invalid tool group: ${group}. Valid groups: ${VALID_GROUPS.join(", ")}`);
+        process.exit(1);
+      }
+    }
+    return { toolGroups: groups };
+  }
+
+  // Default: browse profile
+  return {};
+}
 
 async function main(): Promise<void> {
-  logger.info("Charlotte starting");
+  const cliOptions = parseCliArgs();
+  logger.info("Charlotte starting", {
+    profile: cliOptions.profile ?? "browse",
+    toolGroups: cliOptions.toolGroups,
+  });
 
   // Initialize config first (needed by PageManager for dialog handling)
   const config = createDefaultConfig();
@@ -45,16 +93,19 @@ async function main(): Promise<void> {
   const devModeState = new DevModeState(config);
 
   // Create and configure MCP server
-  const mcpServer = createServer({
-    browserManager,
-    pageManager,
-    rendererPipeline,
-    elementIdGenerator,
-    snapshotStore,
-    artifactStore,
-    config,
-    devModeState,
-  });
+  const mcpServer = createServer(
+    {
+      browserManager,
+      pageManager,
+      rendererPipeline,
+      elementIdGenerator,
+      snapshotStore,
+      artifactStore,
+      config,
+      devModeState,
+    },
+    cliOptions,
+  );
 
   // Connect stdio transport
   const transport = new StdioServerTransport();

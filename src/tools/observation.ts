@@ -9,6 +9,7 @@ import type {
   InteractiveElement,
   Bounds,
 } from "../types/page-representation.js";
+import type { RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
   renderActivePage,
   resolveElement,
@@ -45,8 +46,10 @@ const NEAR_THRESHOLD_PX = 200;
 export function registerObservationTools(
   server: McpServer,
   deps: ToolDependencies,
-): void {
-  server.registerTool(
+): Record<string, RegisteredTool> {
+  const tools: Record<string, RegisteredTool> = {};
+
+  tools["charlotte:observe"] = server.registerTool(
     "charlotte:observe",
     {
       description:
@@ -90,7 +93,7 @@ export function registerObservationTools(
     },
   );
 
-  server.registerTool(
+  tools["charlotte:find"] = server.registerTool(
     "charlotte:find",
     {
       description:
@@ -228,7 +231,7 @@ export function registerObservationTools(
     },
   );
 
-  server.registerTool(
+  tools["charlotte:screenshot"] = server.registerTool(
     "charlotte:screenshot",
     {
       description:
@@ -344,7 +347,7 @@ export function registerObservationTools(
   );
 
   // ─── charlotte:screenshots ───
-  server.registerTool(
+  tools["charlotte:screenshots"] = server.registerTool(
     "charlotte:screenshots",
     {
       description:
@@ -383,7 +386,7 @@ export function registerObservationTools(
   );
 
   // ─── charlotte:screenshot_get ───
-  server.registerTool(
+  tools["charlotte:screenshot_get"] = server.registerTool(
     "charlotte:screenshot_get",
     {
       description:
@@ -448,7 +451,7 @@ export function registerObservationTools(
   );
 
   // ─── charlotte:screenshot_delete ───
-  server.registerTool(
+  tools["charlotte:screenshot_delete"] = server.registerTool(
     "charlotte:screenshot_delete",
     {
       description:
@@ -489,7 +492,7 @@ export function registerObservationTools(
   );
 
   // ─── charlotte:diff ───
-  server.registerTool(
+  tools["charlotte:diff"] = server.registerTool(
     "charlotte:diff",
     {
       description:
@@ -568,4 +571,6 @@ export function registerObservationTools(
       }
     },
   );
+
+  return tools;
 }

@@ -1,0 +1,222 @@
+{
+  "testName": "Browse Session (5 sites)",
+  "serverName": "Charlotte (full)",
+  "calls": [
+    {
+      "toolName": "charlotte:navigate",
+      "arguments": {
+        "url": "https://example.com"
+      },
+      "responseChars": 612,
+      "estimatedTokens": 153,
+      "wallTimeMs": 1601.0977509999998,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "minimal"
+      },
+      "responseChars": 612,
+      "estimatedTokens": 153,
+      "wallTimeMs": 4.791866999999911,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "summary"
+      },
+      "responseChars": 738,
+      "estimatedTokens": 185,
+      "wallTimeMs": 5.186964999999873,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:find",
+      "arguments": {
+        "type": "link"
+      },
+      "responseChars": 169,
+      "estimatedTokens": 43,
+      "wallTimeMs": 5.346905999999763,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:navigate",
+      "arguments": {
+        "url": "https://news.ycombinator.com"
+      },
+      "responseChars": 336,
+      "estimatedTokens": 84,
+      "wallTimeMs": 507.03566500000034,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "minimal"
+      },
+      "responseChars": 336,
+      "estimatedTokens": 84,
+      "wallTimeMs": 58.35141300000032,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "summary"
+      },
+      "responseChars": 30787,
+      "estimatedTokens": 7697,
+      "wallTimeMs": 52.487920999999915,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:find",
+      "arguments": {
+        "type": "link"
+      },
+      "responseChars": 30368,
+      "estimatedTokens": 7592,
+      "wallTimeMs": 52.66721899999993,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:navigate",
+      "arguments": {
+        "url": "https://en.wikipedia.org/wiki/Model_Context_Protocol"
+      },
+      "responseChars": 3109,
+      "estimatedTokens": 778,
+      "wallTimeMs": 674.4828859999998,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "minimal"
+      },
+      "responseChars": 3297,
+      "estimatedTokens": 825,
+      "wallTimeMs": 58.26003899999978,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "summary"
+      },
+      "responseChars": 34027,
+      "estimatedTokens": 8507,
+      "wallTimeMs": 60.29693099999986,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:find",
+      "arguments": {
+        "type": "link"
+      },
+      "responseChars": 29871,
+      "estimatedTokens": 7468,
+      "wallTimeMs": 58.95692400000007,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:navigate",
+      "arguments": {
+        "url": "https://httpbin.org/forms/post"
+      },
+      "responseChars": 365,
+      "estimatedTokens": 92,
+      "wallTimeMs": 84.92189599999983,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "minimal"
+      },
+      "responseChars": 365,
+      "estimatedTokens": 92,
+      "wallTimeMs": 5.580527999999504,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "summary"
+      },
+      "responseChars": 2493,
+      "estimatedTokens": 624,
+      "wallTimeMs": 4.922289000000092,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:find",
+      "arguments": {
+        "type": "link"
+      },
+      "responseChars": 41,
+      "estimatedTokens": 11,
+      "wallTimeMs": 5.1672239999998055,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:navigate",
+      "arguments": {
+        "url": "https://github.com/anthropics/anthropic-cookbook"
+      },
+      "responseChars": 3533,
+      "estimatedTokens": 884,
+      "wallTimeMs": 1923.8075289999997,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "minimal"
+      },
+      "responseChars": 3533,
+      "estimatedTokens": 884,
+      "wallTimeMs": 68.04484200000115,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "summary"
+      },
+      "responseChars": 37410,
+      "estimatedTokens": 9353,
+      "wallTimeMs": 67.51700699999856,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:find",
+      "arguments": {
+        "type": "link"
+      },
+      "responseChars": 32301,
+      "estimatedTokens": 8076,
+      "wallTimeMs": 57.94429500000115,
+      "isError": false
+    }
+  ],
+  "cumulative": {
+    "totalChars": 214303,
+    "totalEstimatedTokens": 53585,
+    "totalWallTimeMs": 5356.868096999999,
+    "totalCalls": 20
+  },
+  "toolDefinitions": {
+    "toolCount": 40,
+    "definitionChars": 25152,
+    "estimatedDefinitionTokens": 7187,
+    "cumulativeDefinitionTokens": 143740
+  },
+  "success": true,
+  "successCriteria": "All 5 navigations succeed and at least 3 sites return meaningful content.",
+  "notes": "5/5 sites returned meaningful content",
+  "timestamp": 1772546966674
+}

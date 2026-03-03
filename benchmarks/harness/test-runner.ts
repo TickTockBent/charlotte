@@ -5,7 +5,7 @@
 import { readFile } from "node:fs/promises";
 import { join, resolve, dirname } from "node:path";
 import { BenchmarkMcpClient, ServerConfig, ToolCallResult } from "./mcp-client.js";
-import { TestRunResult } from "./metrics.js";
+import { TestRunResult, ToolDefinitionMetrics } from "./metrics.js";
 import { saveRawResult } from "./reporter.js";
 
 export interface BenchmarkTest {
@@ -60,6 +60,20 @@ export async function runTestAgainstServer(
       await client.connect();
       client.resetHistory();
 
+      // Capture tool definition metrics before running the test
+      let toolDefinitionMetrics: ToolDefinitionMetrics | undefined;
+      try {
+        const toolListMetrics = await client.listToolsWithMetrics();
+        toolDefinitionMetrics = {
+          toolCount: toolListMetrics.toolCount,
+          definitionChars: toolListMetrics.definitionChars,
+          estimatedDefinitionTokens: toolListMetrics.estimatedDefinitionTokens,
+          cumulativeDefinitionTokens: 0, // computed after test completes
+        };
+      } catch {
+        // listTools may not be supported by all servers — skip silently
+      }
+
       const { success, notes } = await test.run(client, serverConfig.name);
 
       const cumulative = client.getCumulativeMetrics();
@@ -72,11 +86,18 @@ export async function runTestAgainstServer(
         isError: call.isError,
       }));
 
+      // Compute cumulative definition tokens (definition sent with every call)
+      if (toolDefinitionMetrics) {
+        toolDefinitionMetrics.cumulativeDefinitionTokens =
+          toolDefinitionMetrics.estimatedDefinitionTokens * cumulative.totalCalls;
+      }
+
       const result: TestRunResult = {
         testName: test.name,
         serverName: serverConfig.name,
         calls,
         cumulative,
+        toolDefinitions: toolDefinitionMetrics,
         success,
         successCriteria: test.successCriteria,
         notes,

@@ -1,0 +1,146 @@
+{
+  "testName": "Interactive Session (form)",
+  "serverName": "Charlotte (full)",
+  "calls": [
+    {
+      "toolName": "charlotte:navigate",
+      "arguments": {
+        "url": "https://httpbin.org/forms/post"
+      },
+      "responseChars": 364,
+      "estimatedTokens": 91,
+      "wallTimeMs": 2012.1255579999997,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "summary"
+      },
+      "responseChars": 2492,
+      "estimatedTokens": 623,
+      "wallTimeMs": 11.753649000000223,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:find",
+      "arguments": {
+        "type": "text_input"
+      },
+      "responseChars": 665,
+      "estimatedTokens": 167,
+      "wallTimeMs": 11.4567449999995,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:type",
+      "arguments": {
+        "element_id": "inp-82f6",
+        "text": "benchmark"
+      },
+      "responseChars": 2816,
+      "estimatedTokens": 704,
+      "wallTimeMs": 33.75170799999978,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "minimal"
+      },
+      "responseChars": 364,
+      "estimatedTokens": 91,
+      "wallTimeMs": 7.912301000000298,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:type",
+      "arguments": {
+        "element_id": "inp-27ea",
+        "text": "test-user"
+      },
+      "responseChars": 3027,
+      "estimatedTokens": 757,
+      "wallTimeMs": 26.283008000000336,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "minimal"
+      },
+      "responseChars": 364,
+      "estimatedTokens": 91,
+      "wallTimeMs": 7.155439000000115,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:type",
+      "arguments": {
+        "element_id": "inp-9c95",
+        "text": "test@example.com"
+      },
+      "responseChars": 3050,
+      "estimatedTokens": 763,
+      "wallTimeMs": 27.49735099999998,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "minimal"
+      },
+      "responseChars": 364,
+      "estimatedTokens": 91,
+      "wallTimeMs": 5.353465000000142,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:type",
+      "arguments": {
+        "element_id": "inp-15f6",
+        "text": "12345"
+      },
+      "responseChars": 3271,
+      "estimatedTokens": 818,
+      "wallTimeMs": 58.13314999999966,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "minimal"
+      },
+      "responseChars": 592,
+      "estimatedTokens": 148,
+      "wallTimeMs": 6.741233000000648,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "minimal"
+      },
+      "responseChars": 592,
+      "estimatedTokens": 148,
+      "wallTimeMs": 6.634910999999192,
+      "isError": false
+    }
+  ],
+  "cumulative": {
+    "totalChars": 17961,
+    "totalEstimatedTokens": 4492,
+    "totalWallTimeMs": 2214.7985179999996,
+    "totalCalls": 12
+  },
+  "toolDefinitions": {
+    "toolCount": 40,
+    "definitionChars": 25152,
+    "estimatedDefinitionTokens": 7187,
+    "cumulativeDefinitionTokens": 86244
+  },
+  "success": true,
+  "successCriteria": "At least one input filled and form submitted or state observed after interactions.",
+  "notes": "Found 4 inputs, filled 4, submitted: false",
+  "timestamp": 1772546971825
+}

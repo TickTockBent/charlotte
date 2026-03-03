@@ -23,6 +23,14 @@ export interface ToolCallResult {
   isError: boolean;
 }
 
+export interface ToolListMetrics {
+  toolCount: number;
+  toolNames: string[];
+  definitionChars: number;
+  estimatedDefinitionTokens: number;
+  rawToolsJson: string;
+}
+
 export class BenchmarkMcpClient {
   private client: Client;
   private transport: StdioClientTransport;
@@ -53,6 +61,22 @@ export class BenchmarkMcpClient {
   async listTools(): Promise<string[]> {
     const response = await this.client.listTools();
     return response.tools.map((tool) => tool.name);
+  }
+
+  async listToolsWithMetrics(): Promise<ToolListMetrics> {
+    const response = await this.client.listTools();
+    const toolNames = response.tools.map((tool) => tool.name);
+    const rawToolsJson = JSON.stringify(response.tools);
+    const definitionChars = rawToolsJson.length;
+    const estimatedDefinitionTokens = Math.ceil(definitionChars / 3.5);
+
+    return {
+      toolCount: toolNames.length,
+      toolNames,
+      definitionChars,
+      estimatedDefinitionTokens,
+      rawToolsJson,
+    };
   }
 
   async callTool(

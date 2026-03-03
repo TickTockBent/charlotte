@@ -9,10 +9,14 @@ import { TestRunResult } from "./metrics.js";
 const RESULTS_DIR = join(import.meta.dirname, "..", "results");
 const RAW_DIR = join(RESULTS_DIR, "raw");
 
-export async function saveRawResult(result: TestRunResult): Promise<string> {
-  await mkdir(RAW_DIR, { recursive: true });
+export async function saveRawResult(
+  result: TestRunResult,
+  outputDir?: string
+): Promise<string> {
+  const targetDir = outputDir ?? RAW_DIR;
+  await mkdir(targetDir, { recursive: true });
   const filename = `${result.testName}--${result.serverName}--${Date.now()}.json`;
-  const filepath = join(RAW_DIR, filename);
+  const filepath = join(targetDir, filename);
   await writeFile(filepath, JSON.stringify(result, null, 2));
   return filepath;
 }

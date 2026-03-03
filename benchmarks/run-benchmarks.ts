@@ -151,6 +151,12 @@ async function main() {
   console.log(`Tests: ${testsToRun.map((t) => t.name).join(", ")}`);
   console.log("");
 
+  // Compute output directory early so raw results go to the right place
+  let outputDir: string | undefined;
+  if (suite === "profiles") {
+    outputDir = join(import.meta.dirname, "results", "raw", "tiered-profiles-v1");
+  }
+
   const allResults: TestRunResult[] = [];
 
   for (const serverName of serverNames) {
@@ -175,7 +181,7 @@ async function main() {
       }
 
       console.log(`  [RUN]  ${test.name}...`);
-      const result = await runTestAgainstServer(test, serverConfig);
+      const result = await runTestAgainstServer(test, serverConfig, 1, outputDir);
 
       const statusIcon = result.success ? "PASS" : "FAIL";
       const defInfo = result.toolDefinitions
@@ -194,12 +200,6 @@ async function main() {
 
   // Generate summary
   console.log("\n\n=== Generating Summary ===\n");
-
-  // Use suite-specific output directory for profiles
-  let outputDir: string | undefined;
-  if (suite === "profiles") {
-    outputDir = join(import.meta.dirname, "results", "raw", "tiered-profiles-v1");
-  }
 
   const summaryPath = await saveSummary(allResults, outputDir);
   console.log(`Summary written to: ${summaryPath}`);

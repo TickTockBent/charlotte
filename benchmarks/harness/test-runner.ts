@@ -49,7 +49,8 @@ export async function loadServerConfig(configName: string): Promise<ServerConfig
 export async function runTestAgainstServer(
   test: BenchmarkTest,
   serverConfig: ServerConfig,
-  retries = 1
+  retries = 1,
+  outputDir?: string
 ): Promise<TestRunResult> {
   let lastError: Error | null = null;
 
@@ -104,7 +105,7 @@ export async function runTestAgainstServer(
         timestamp: Date.now(),
       };
 
-      await saveRawResult(result);
+      await saveRawResult(result, outputDir);
       return result;
     } catch (error) {
       lastError = error as Error;

@@ -41,6 +41,13 @@ export async function captureToolCall<T>(
   };
 }
 
+export interface ToolDefinitionMetrics {
+  toolCount: number;
+  definitionChars: number;
+  estimatedDefinitionTokens: number;
+  cumulativeDefinitionTokens: number;
+}
+
 export interface TestRunResult {
   testName: string;
   serverName: string;
@@ -58,6 +65,7 @@ export interface TestRunResult {
     totalWallTimeMs: number;
     totalCalls: number;
   };
+  toolDefinitions?: ToolDefinitionMetrics;
   success: boolean;
   successCriteria: string;
   notes: string;

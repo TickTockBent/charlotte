@@ -1,0 +1,6 @@
+{
+  "name": "Charlotte (browse)",
+  "command": "node",
+  "args": ["dist/index.js", "--profile=browse"],
+  "cwd": "../.."
+}

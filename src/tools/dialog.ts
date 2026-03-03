@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 import { logger } from "../utils/logger.js";
+import type { RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ToolDependencies } from "./tool-helpers.js";
 import {
   renderAfterAction,
@@ -12,9 +13,11 @@ import {
 export function registerDialogTools(
   server: McpServer,
   deps: ToolDependencies,
-): void {
+): Record<string, RegisteredTool> {
+  const tools: Record<string, RegisteredTool> = {};
+
   // ─── charlotte:dialog ───
-  server.registerTool(
+  tools["charlotte:dialog"] = server.registerTool(
     "charlotte:dialog",
     {
       description:
@@ -91,4 +94,6 @@ export function registerDialogTools(
       }
     },
   );
+
+  return tools;
 }

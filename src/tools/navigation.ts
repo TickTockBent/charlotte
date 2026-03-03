@@ -3,6 +3,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 import { logger } from "../utils/logger.js";
 import type { DetailLevel } from "../renderer/renderer-pipeline.js";
+import type { RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ToolDependencies } from "./tool-helpers.js";
 import {
   renderActivePage,
@@ -20,8 +21,10 @@ const detailSchema = z
 export function registerNavigationTools(
   server: McpServer,
   deps: ToolDependencies,
-): void {
-  server.registerTool(
+): Record<string, RegisteredTool> {
+  const tools: Record<string, RegisteredTool> = {};
+
+  tools["charlotte:navigate"] = server.registerTool(
     "charlotte:navigate",
     {
       description:
@@ -96,7 +99,7 @@ export function registerNavigationTools(
     },
   );
 
-  server.registerTool(
+  tools["charlotte:back"] = server.registerTool(
     "charlotte:back",
     {
       description:
@@ -133,7 +136,7 @@ export function registerNavigationTools(
     },
   );
 
-  server.registerTool(
+  tools["charlotte:forward"] = server.registerTool(
     "charlotte:forward",
     {
       description:
@@ -170,7 +173,7 @@ export function registerNavigationTools(
     },
   );
 
-  server.registerTool(
+  tools["charlotte:reload"] = server.registerTool(
     "charlotte:reload",
     {
       description:
@@ -212,4 +215,6 @@ export function registerNavigationTools(
       }
     },
   );
+
+  return tools;
 }

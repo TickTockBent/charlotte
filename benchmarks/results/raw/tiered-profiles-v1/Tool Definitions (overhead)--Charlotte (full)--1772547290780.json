@@ -1,0 +1,32 @@
+{
+  "testName": "Tool Definitions (overhead)",
+  "serverName": "Charlotte (full)",
+  "calls": [
+    {
+      "toolName": "charlotte:navigate",
+      "arguments": {
+        "url": "about:blank"
+      },
+      "responseChars": 258,
+      "estimatedTokens": 65,
+      "wallTimeMs": 63.24234000000001,
+      "isError": false
+    }
+  ],
+  "cumulative": {
+    "totalChars": 258,
+    "totalEstimatedTokens": 65,
+    "totalWallTimeMs": 63.24234000000001,
+    "totalCalls": 1
+  },
+  "toolDefinitions": {
+    "toolCount": 40,
+    "definitionChars": 25152,
+    "estimatedDefinitionTokens": 7187,
+    "cumulativeDefinitionTokens": 7187
+  },
+  "success": true,
+  "successCriteria": "Tool count matches expected profile size and definition payload is captured.",
+  "notes": "Tools: 40 (expected 40, match). Definition chars: 25,152. Est. definition tokens: 7,187",
+  "timestamp": 1772547290780
+}

@@ -11,9 +11,20 @@ import { createDefaultConfig } from "./types/config.js";
 import { createServer } from "./server.js";
 import { DevModeState } from "./dev/dev-mode-state.js";
 import { logger } from "./utils/logger.js";
+import { parseCliArgs } from "./cli.js";
 
 async function main(): Promise<void> {
-  logger.info("Charlotte starting");
+  let cliOptions;
+  try {
+    cliOptions = parseCliArgs();
+  } catch (error) {
+    logger.error((error as Error).message);
+    process.exit(1);
+  }
+  logger.info("Charlotte starting", {
+    profile: cliOptions.profile ?? "browse",
+    toolGroups: cliOptions.toolGroups,
+  });
 
   // Initialize config first (needed by PageManager for dialog handling)
   const config = createDefaultConfig();
@@ -45,16 +56,19 @@ async function main(): Promise<void> {
   const devModeState = new DevModeState(config);
 
   // Create and configure MCP server
-  const mcpServer = createServer({
-    browserManager,
-    pageManager,
-    rendererPipeline,
-    elementIdGenerator,
-    snapshotStore,
-    artifactStore,
-    config,
-    devModeState,
-  });
+  const { server: mcpServer } = createServer(
+    {
+      browserManager,
+      pageManager,
+      rendererPipeline,
+      elementIdGenerator,
+      snapshotStore,
+      artifactStore,
+      config,
+      devModeState,
+    },
+    cliOptions,
+  );
 
   // Connect stdio transport
   const transport = new StdioServerTransport();

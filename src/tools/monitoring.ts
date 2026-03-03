@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer, RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { logger } from "../utils/logger.js";
 import type { ToolDependencies } from "./tool-helpers.js";
 import { handleToolError } from "./tool-helpers.js";
@@ -7,9 +7,11 @@ import { handleToolError } from "./tool-helpers.js";
 export function registerMonitoringTools(
   server: McpServer,
   deps: ToolDependencies,
-): void {
+): Record<string, RegisteredTool> {
+  const tools: Record<string, RegisteredTool> = {};
+
   // ─── charlotte:console ───
-  server.registerTool(
+  tools["charlotte:console"] = server.registerTool(
     "charlotte:console",
     {
       description:
@@ -66,7 +68,7 @@ export function registerMonitoringTools(
   );
 
   // ─── charlotte:requests ───
-  server.registerTool(
+  tools["charlotte:requests"] = server.registerTool(
     "charlotte:requests",
     {
       description:
@@ -163,4 +165,6 @@ export function registerMonitoringTools(
       }
     },
   );
+
+  return tools;
 }

@@ -1,0 +1,6 @@
+{
+  "name": "Charlotte (full)",
+  "command": "node",
+  "args": ["dist/index.js", "--profile=full"],
+  "cwd": "../.."
+}

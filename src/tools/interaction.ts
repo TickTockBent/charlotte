@@ -3,6 +3,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { Page, KeyInput } from "puppeteer";
 import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 import { logger } from "../utils/logger.js";
+import type { RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ToolDependencies } from "./tool-helpers.js";
 import {
   renderActivePage,
@@ -403,9 +404,11 @@ async function submitFormByBackendNodeId(
 export function registerInteractionTools(
   server: McpServer,
   deps: ToolDependencies,
-): void {
+): Record<string, RegisteredTool> {
+  const tools: Record<string, RegisteredTool> = {};
+
   // ─── charlotte:click ───
-  server.registerTool(
+  tools["charlotte:click"] = server.registerTool(
     "charlotte:click",
     {
       description:
@@ -455,7 +458,7 @@ export function registerInteractionTools(
   );
 
   // ─── charlotte:type ───
-  server.registerTool(
+  tools["charlotte:type"] = server.registerTool(
     "charlotte:type",
     {
       description:
@@ -504,7 +507,7 @@ export function registerInteractionTools(
   );
 
   // ─── charlotte:select ───
-  server.registerTool(
+  tools["charlotte:select"] = server.registerTool(
     "charlotte:select",
     {
       description:
@@ -532,7 +535,7 @@ export function registerInteractionTools(
   );
 
   // ─── charlotte:toggle ───
-  server.registerTool(
+  tools["charlotte:toggle"] = server.registerTool(
     "charlotte:toggle",
     {
       description:
@@ -562,7 +565,7 @@ export function registerInteractionTools(
   );
 
   // ─── charlotte:submit ───
-  server.registerTool(
+  tools["charlotte:submit"] = server.registerTool(
     "charlotte:submit",
     {
       description:
@@ -627,7 +630,7 @@ export function registerInteractionTools(
   );
 
   // ─── charlotte:scroll ───
-  server.registerTool(
+  tools["charlotte:scroll"] = server.registerTool(
     "charlotte:scroll",
     {
       description:
@@ -742,7 +745,7 @@ export function registerInteractionTools(
   );
 
   // ─── charlotte:hover ───
-  server.registerTool(
+  tools["charlotte:hover"] = server.registerTool(
     "charlotte:hover",
     {
       description:
@@ -769,7 +772,7 @@ export function registerInteractionTools(
   );
 
   // ─── charlotte:drag ───
-  server.registerTool(
+  tools["charlotte:drag"] = server.registerTool(
     "charlotte:drag",
     {
       description:
@@ -807,7 +810,7 @@ export function registerInteractionTools(
   );
 
   // ─── charlotte:key ───
-  server.registerTool(
+  tools["charlotte:key"] = server.registerTool(
     "charlotte:key",
     {
       description:
@@ -858,7 +861,7 @@ export function registerInteractionTools(
   );
 
   // ─── charlotte:wait_for ───
-  server.registerTool(
+  tools["charlotte:wait_for"] = server.registerTool(
     "charlotte:wait_for",
     {
       description:
@@ -949,6 +952,8 @@ export function registerInteractionTools(
       }
     },
   );
+
+  return tools;
 }
 
 /**

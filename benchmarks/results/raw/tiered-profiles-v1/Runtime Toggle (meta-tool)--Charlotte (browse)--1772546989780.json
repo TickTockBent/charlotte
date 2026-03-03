@@ -1,0 +1,72 @@
+{
+  "testName": "Runtime Toggle (meta-tool)",
+  "serverName": "Charlotte (browse)",
+  "calls": [
+    {
+      "toolName": "charlotte:tools",
+      "arguments": {
+        "action": "list"
+      },
+      "responseChars": 2193,
+      "estimatedTokens": 549,
+      "wallTimeMs": 2.621831000000384,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:tools",
+      "arguments": {
+        "action": "enable",
+        "group": "monitoring"
+      },
+      "responseChars": 164,
+      "estimatedTokens": 41,
+      "wallTimeMs": 2.243037000000186,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:navigate",
+      "arguments": {
+        "url": "about:blank"
+      },
+      "responseChars": 258,
+      "estimatedTokens": 65,
+      "wallTimeMs": 24.583134000000427,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:console",
+      "arguments": {},
+      "responseChars": 104,
+      "estimatedTokens": 26,
+      "wallTimeMs": 0.9976500000011583,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:tools",
+      "arguments": {
+        "action": "disable",
+        "group": "monitoring"
+      },
+      "responseChars": 166,
+      "estimatedTokens": 42,
+      "wallTimeMs": 0.9543270000031043,
+      "isError": false
+    }
+  ],
+  "cumulative": {
+    "totalChars": 2885,
+    "totalEstimatedTokens": 723,
+    "totalWallTimeMs": 31.39997900000526,
+    "totalCalls": 5
+  },
+  "toolDefinitions": {
+    "toolCount": 22,
+    "definitionChars": 13042,
+    "estimatedDefinitionTokens": 3727,
+    "cumulativeDefinitionTokens": 18635
+  },
+  "success": true,
+  "successCriteria": "Tool count increases after enable, monitoring tool works, tool count decreases after disable.",
+  "notes": "Initial: 22 tools. After enable: 24 tools (grew: true). Console tool worked: true. After disable: 22 tools (restored: true). Initial def chars: 13,042. Expanded def chars: 14,671. Contracted def chars: 13,042",
+  "timestamp": 1772546989780
+}

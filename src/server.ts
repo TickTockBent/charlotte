@@ -14,6 +14,16 @@ import { registerDialogTools } from "./tools/dialog.js";
 import { registerSessionTools } from "./tools/session.js";
 import { registerMonitoringTools } from "./tools/monitoring.js";
 import { registerDevModeTools } from "./tools/dev-mode.js";
+import { registerMetaTool, type ToolRegistry } from "./tools/meta-tool.js";
+import {
+  type ToolProfile,
+  type ToolGroupName,
+  TOOL_GROUPS,
+  resolveProfile,
+  resolveGroups,
+  ALL_GROUP_NAMES,
+  GROUP_DESCRIPTIONS,
+} from "./tools/tool-groups.js";
 import type { DevModeState } from "./dev/dev-mode-state.js";
 
 export interface ServerDeps {
@@ -27,7 +37,50 @@ export interface ServerDeps {
   devModeState?: DevModeState;
 }
 
-export function createServer(deps: ServerDeps): McpServer {
+export interface ServerOptions {
+  profile?: ToolProfile;
+  toolGroups?: ToolGroupName[];
+}
+
+export interface CreateServerResult {
+  server: McpServer;
+  registry: ToolRegistry;
+}
+
+export function createServer(
+  deps: ServerDeps,
+  options: ServerOptions = {},
+): CreateServerResult {
+  // Resolve which tools should be enabled
+  const profileName = options.toolGroups ? undefined : (options.profile ?? "browse");
+  const enabledTools = options.toolGroups
+    ? resolveGroups(options.toolGroups)
+    : resolveProfile(profileName!);
+
+  // Build server instructions — only list groups where every tool is disabled
+  const fullyDisabledGroups = ALL_GROUP_NAMES.filter((group) => {
+    const groupTools = TOOL_GROUPS[group];
+    return groupTools.every((t) => !enabledTools.has(t));
+  });
+
+  const activeLabel = profileName
+    ? `Active profile: ${profileName}.`
+    : `Active groups: ${options.toolGroups!.join(", ")}.`;
+  const instructionLines = [
+    `Charlotte browser automation server. ${activeLabel}`,
+  ];
+  if (fullyDisabledGroups.length > 0) {
+    instructionLines.push(
+      "Additional tool groups available via charlotte:tools:",
+    );
+    for (const group of fullyDisabledGroups) {
+      instructionLines.push(`  - ${group}: ${GROUP_DESCRIPTIONS[group]}`);
+    }
+    instructionLines.push(
+      "Call charlotte:tools to list groups or enable/disable them.",
+    );
+  }
+
   const server = new McpServer(
     {
       name: "charlotte",
@@ -37,16 +90,24 @@ export function createServer(deps: ServerDeps): McpServer {
       capabilities: {
         tools: {},
       },
+      instructions: instructionLines.join("\n"),
     },
   );
 
-  // Phase 1: evaluate tool
-  registerEvaluateTools(server, {
-    browserManager: deps.browserManager,
-    getActivePage: () => deps.pageManager.getActivePage(),
-  });
+  // ─── Register all tools and collect references ───
 
-  // Phase 2–4: all tool modules share the same dependency bundle
+  const registry: ToolRegistry = {};
+
+  // Evaluate tool (different deps signature)
+  Object.assign(
+    registry,
+    registerEvaluateTools(server, {
+      browserManager: deps.browserManager,
+      getActivePage: () => deps.pageManager.getActivePage(),
+    }),
+  );
+
+  // All other tool modules share the same dependency bundle
   const toolDeps = {
     browserManager: deps.browserManager,
     pageManager: deps.pageManager,
@@ -58,13 +119,25 @@ export function createServer(deps: ServerDeps): McpServer {
     devModeState: deps.devModeState,
   };
 
-  registerNavigationTools(server, toolDeps);
-  registerObservationTools(server, toolDeps);
-  registerInteractionTools(server, toolDeps);
-  registerDialogTools(server, toolDeps);
-  registerSessionTools(server, toolDeps);
-  registerMonitoringTools(server, toolDeps);
-  registerDevModeTools(server, toolDeps);
+  Object.assign(registry, registerNavigationTools(server, toolDeps));
+  Object.assign(registry, registerObservationTools(server, toolDeps));
+  Object.assign(registry, registerInteractionTools(server, toolDeps));
+  Object.assign(registry, registerDialogTools(server, toolDeps));
+  Object.assign(registry, registerSessionTools(server, toolDeps));
+  Object.assign(registry, registerMonitoringTools(server, toolDeps));
+  Object.assign(registry, registerDevModeTools(server, toolDeps));
 
-  return server;
+  // ─── Apply profile: disable tools not in the enabled set ───
+
+  for (const [toolName, tool] of Object.entries(registry)) {
+    if (!enabledTools.has(toolName)) {
+      tool.disable();
+    }
+  }
+
+  // ─── Register meta-tool (always enabled) ───
+
+  registerMetaTool(server, registry);
+
+  return { server, registry };
 }

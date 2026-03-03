@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer, RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { BrowserManager } from "../browser/browser-manager.js";
 import type { PageManager } from "../browser/page-manager.js";
 import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
@@ -14,8 +14,10 @@ export interface EvaluateDeps {
 export function registerEvaluateTools(
   server: McpServer,
   deps: EvaluateDeps,
-): void {
-  server.registerTool("charlotte:evaluate", {
+): Record<string, RegisteredTool> {
+  const tools: Record<string, RegisteredTool> = {};
+
+  tools["charlotte:evaluate"] = server.registerTool("charlotte:evaluate", {
     description:
       "Execute JavaScript in page context. Useful for reading computed values, triggering custom events, or accessing page-level APIs.",
     inputSchema: {
@@ -136,4 +138,6 @@ export function registerEvaluateTools(
       };
     }
   });
+
+  return tools;
 }

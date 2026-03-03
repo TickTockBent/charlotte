@@ -2,18 +2,28 @@
 
 All notable changes to Charlotte will be documented in this file.
 
-## [Unreleased]
+## [0.4.0] - 2026-03-03
 
 ### Added
 
+- **Tiered tool visibility** — Startup profiles control which tools load into the agent's context. `--profile=browse` (default, 22 tools) replaces the previous behavior of loading all 40 tools. Six profiles available: `core` (7), `browse` (22), `interact` (27), `develop` (30), `audit` (13), `full` (40). Granular group selection via `--tools=group1,group2`.
+- **`charlotte:tools` meta-tool** — Runtime tool group management. Agents can list available groups, enable groups to activate tools mid-session, and disable groups to reduce overhead — without restarting the server. Always registered regardless of profile.
+- **Profile benchmark suite** — `npx tsx benchmarks/run-benchmarks.ts --suite profiles` runs tool definition overhead benchmarks across full, browse, and core profiles. Four tests: pure overhead measurement, 5-site browsing session, form interaction, and runtime toggle correctness. Results archived under `benchmarks/results/raw/tiered-profiles-v1/`.
 - **`charlotte:drag`** — Drag an element to another element using mouse primitives (mousedown → intermediate moves → mouseup). Accepts `source_id` and `target_id` element IDs. Closes GAP-01 from the Playwright MCP gap analysis.
 - **Landmark IDs** — Landmarks now have stable hash-based IDs (`rgn-xxxx`) like headings and interactive elements, making them referenceable by tools (e.g., as drag-and-drop targets).
 - **`charlotte:console`** — Retrieve console messages from the active page at all severity levels (log, info, warn, error, debug) with timestamps. Supports level filtering and buffer clearing. Closes GAP-21 from the Playwright MCP gap analysis.
 - **`charlotte:requests`** — Retrieve network request history from the active page with method, status, resource type, and timestamps. Supports filtering by URL pattern, resource type, and minimum status code. Closes GAP-22 from the Playwright MCP gap analysis.
+- **Modifier key clicks** — `charlotte:click` now accepts an optional `modifiers` parameter (`ctrl`, `shift`, `alt`, `meta`, or combinations) for Ctrl+Click, Shift+Click, etc. Works with all click types (left, right, double).
+
+### Fixed
+
+- **Pseudo-element content duplication** — `extractFullContent()` was emitting both content-role node names and their StaticText children, causing duplicate text when CSS `::before`/`::after` pseudo-elements were present.
 
 ### Changed
 
+- Default startup profile is now `browse` (22 tools) instead of loading all 40 tools. Use `--profile=full` for the previous behavior.
 - PageManager now captures all console messages and all network responses (not just errors). Ring buffers capped at 1000 entries each. Backward-compatible: `getConsoleErrors()` and `getNetworkErrors()` still return only errors for `PageRepresentation.errors`.
+- Static server now binds to `127.0.0.1` instead of `0.0.0.0`, preventing external network access. Directory traversal prevention via `allowedWorkspaceRoot` validation with `fs.realpathSync()`.
 
 ## [0.3.0] - 2026-02-24
 

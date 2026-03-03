@@ -12,7 +12,7 @@ Charlotte takes a different approach. It decomposes each page into a typed, stru
 
 ### Benchmarks
 
-Charlotte v0.3.0 vs Playwright MCP, measured by characters returned per tool call on real websites:
+Charlotte v0.4.0 vs Playwright MCP, measured by characters returned per tool call on real websites:
 
 **Navigation** (first contact with a page):
 
@@ -25,16 +25,15 @@ Charlotte v0.3.0 vs Playwright MCP, measured by characters returned per tool cal
 
 Charlotte's `navigate` returns minimal detail by default — landmarks, headings, and interactive element counts grouped by page region. Enough to orient, not enough to overwhelm. On Wikipedia, that's **135x smaller** than Playwright's response.
 
-**Observation** (when the agent needs full detail):
+**Tool definition overhead** (invisible cost per API call):
 
-| Site | Charlotte `observe` | Playwright `browser_snapshot` |
-|:---|---:|---:|
-| example.com | 612 | 498 |
-| Wikipedia (AI article) | 521,127 | 1,040,878 |
-| Hacker News | 30,781 | 61,143 |
-| GitHub repo | 37,628 | 80,190 |
+| Profile | Tools | Def. tokens/call | Savings vs full |
+|:---|---:|---:|---:|
+| full | 40 | 7,187 | — |
+| browse (default) | 22 | 3,727 | **48%** |
+| core | 7 | 1,677 | **77%** |
 
-Even at full summary detail, Charlotte's structured format is **~2x smaller** than Playwright's raw accessibility dump — while providing typed metadata, form structures, and content summaries that a flat tree doesn't.
+Tool definitions are sent on every API round-trip. With the default `browse` profile, Charlotte carries 48% less definition overhead than loading all 40 tools. Over a 20-call browsing session, that's **38.6% fewer total tokens**. See the [profile benchmark report](docs/charlotte-profile-benchmark-report.md) for full results.
 
 **The workflow difference:** Playwright agents receive 61K+ characters every time they look at Hacker News, whether they're reading headlines or looking for a login button. Charlotte agents get 336 characters on arrival, call `find({ type: "link", text: "login" })` to get exactly what they need, and never pay for the rest.
 
@@ -75,6 +74,27 @@ Agents receive landmarks, headings, interactive elements with typed metadata, bo
 **Development Mode** — `dev_serve` (static server + file watching with auto-reload), `dev_inject` (CSS/JS injection), `dev_audit` (a11y, performance, SEO, contrast, broken links)
 
 **Utilities** — `evaluate` (arbitrary JS execution in page context)
+
+## Tool Profiles
+
+Charlotte ships 40 tools, but most workflows only need a subset. Startup profiles control which tools load into the agent's context, reducing definition overhead by up to 77%.
+
+```bash
+charlotte --profile browse    # 22 tools (default) — navigate, observe, interact, tabs
+charlotte --profile core      # 7 tools — navigate, observe, find, click, type, submit
+charlotte --profile full      # 40 tools — everything
+charlotte --profile interact  # 27 tools — full interaction + dialog + evaluate
+charlotte --profile develop   # 30 tools — interact + dev_serve, dev_inject, dev_audit
+charlotte --profile audit     # 13 tools — navigation + observation + dev_audit + viewport
+```
+
+Agents can activate more tools mid-session without restarting:
+
+```
+charlotte:tools enable dev_mode    → activates dev_serve, dev_audit, dev_inject
+charlotte:tools disable dev_mode   → deactivates them
+charlotte:tools list               → see what's loaded
+```
 
 ## Quick Start
 
@@ -118,8 +138,11 @@ npm run build
 Charlotte communicates over stdio using the MCP protocol:
 
 ```bash
-# If installed globally
+# If installed globally (default browse profile)
 charlotte
+
+# With a specific profile
+charlotte --profile core
 
 # If installed from source
 npm start
@@ -323,7 +346,7 @@ All tools go through `renderActivePage()` which handles snapshots, reload events
 
 ## Sandbox
 
-Charlotte includes a test website in `tests/sandbox/` that exercises all 36 tools without touching the public internet. Serve it locally with:
+Charlotte includes a test website in `tests/sandbox/` that exercises all 40 tools without touching the public internet. Serve it locally with:
 
 ```
 dev_serve({ path: "tests/sandbox" })
@@ -350,8 +373,6 @@ Four pages cover navigation, forms, interactive elements, delayed content, scrol
 **Batch Form Fill** — Add a `charlotte:fill_form` tool that accepts an array of `{element_id, value}` pairs and fills an entire form in a single tool call, reducing N sequential `type`/`select`/`toggle` calls to one.
 
 **Slow Typing** — Add a `slowly` or `character_delay` parameter to `charlotte:type` for character-by-character input. Required for sites with key-by-key event handlers (autocomplete, search-as-you-type, input validation).
-
-**Click Modifiers** — Add a `modifiers` parameter (`ctrl`, `shift`, `alt`, `meta`) to `charlotte:click` for Ctrl+Click (open in new tab), Shift+Click (range select), and similar patterns.
 
 ### Session & Configuration
 

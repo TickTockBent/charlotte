@@ -131,7 +131,7 @@ export default function Hero() {
             <span className="ml-2 text-muted">smaller than Playwright</span>
           </div>
           <div>
-            <span className="font-mono text-2xl font-bold text-accent">30</span>
+            <span className="font-mono text-2xl font-bold text-accent">40</span>
             <span className="ml-2 text-muted">MCP tools</span>
           </div>
           <div>

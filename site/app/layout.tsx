@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Charlotte — The Web, Readable",
     description:
-      "MCP server that renders web pages into structured, agent-readable representations. 30 tools for AI agents to navigate, observe, and interact with the web.",
+      "MCP server that renders web pages into structured, agent-readable representations. 40 tools for AI agents to navigate, observe, and interact with the web.",
     type: "website",
     url: "https://charlotte-mcp.vercel.app",
   },
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Charlotte — The Web, Readable",
     description:
-      "MCP server that renders web pages into structured, agent-readable representations. 30 tools for AI agents.",
+      "MCP server that renders web pages into structured, agent-readable representations. 40 tools for AI agents.",
   },
 };
 

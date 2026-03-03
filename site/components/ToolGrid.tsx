@@ -24,11 +24,12 @@ const toolCategories = [
       "submit",
       "scroll",
       "hover",
+      "drag",
       "key",
       "wait_for",
     ],
     description:
-      "Act on pages. Click, type, submit forms, scroll, and poll for async conditions.",
+      "Act on pages. Click, type, submit forms, drag elements, scroll, and poll for async conditions.",
   },
   {
     name: "Session",
@@ -57,9 +58,23 @@ const toolCategories = [
   {
     name: "Utility",
     icon: "terminal",
-    tools: ["evaluate"],
+    tools: ["evaluate", "dialog"],
     description:
-      "Execute arbitrary JavaScript in page context. Read computed values, trigger events.",
+      "Execute arbitrary JavaScript in page context. Handle browser dialogs (alert, confirm, prompt).",
+  },
+  {
+    name: "Monitoring",
+    icon: "activity",
+    tools: ["console", "requests"],
+    description:
+      "Inspect runtime behavior. Retrieve console messages and network request history with filters.",
+  },
+  {
+    name: "Meta",
+    icon: "settings",
+    tools: ["tools"],
+    description:
+      "Manage tool visibility at runtime. List, enable, and disable tool groups without restarting.",
   },
 ];
 
@@ -99,6 +114,15 @@ function CategoryIcon({ icon }: { icon: string }) {
         <line x1="12" y1="19" x2="20" y2="19" />
       </>
     ),
+    activity: (
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+    ),
+    settings: (
+      <>
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+      </>
+    ),
   };
 
   return (
@@ -127,7 +151,7 @@ export default function ToolGrid() {
     >
       <div className="max-w-5xl mx-auto">
         <h2 className="text-3xl font-bold tracking-tight mb-4">
-          30 Tools, 6 Categories
+          40 Tools, 8 Categories
         </h2>
         <p className="text-muted text-lg mb-10 max-w-2xl">
           Everything an agent needs to navigate, understand, and interact with

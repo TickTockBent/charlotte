@@ -81,7 +81,7 @@ export type ToolProfile = "core" | "browse" | "interact" | "develop" | "audit" |
  * groups (e.g. browse includes scroll but not drag), so we define them as
  * flat tool lists rather than group references.
  */
-const PROFILE_TOOLS: Record<ToolProfile, string[]> = {
+export const PROFILE_TOOLS: Record<ToolProfile, string[]> = {
   core: [
     "charlotte:navigate",
     "charlotte:observe",
@@ -226,7 +226,7 @@ export function resolveProfile(profile: ToolProfile): Set<string> {
 }
 
 /**
- * Resolve a comma-separated list of group names to the set of tool names.
+ * Resolve an array of group names to the set of tool names.
  */
 export function resolveGroups(groupNames: ToolGroupName[]): Set<string> {
   const tools = new Set<string>();

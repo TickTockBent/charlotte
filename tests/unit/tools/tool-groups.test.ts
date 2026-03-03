@@ -3,6 +3,7 @@ import {
   TOOL_GROUPS,
   ALL_GROUP_NAMES,
   ALL_TOOL_NAMES,
+  PROFILE_TOOLS,
   resolveProfile,
   resolveGroups,
   getToolGroup,
@@ -78,6 +79,8 @@ describe("tool-groups", () => {
 
     it("browse profile includes navigation, observation, partial interaction, and tabs", () => {
       const tools = resolveProfile("browse");
+      // Exact size: 4 nav + 7 obs + 6 interaction + 4 tabs = 21
+      expect(tools.size).toBe(21);
       // Navigation (all 4)
       expect(tools.has("charlotte:navigate")).toBe(true);
       expect(tools.has("charlotte:back")).toBe(true);
@@ -103,36 +106,63 @@ describe("tool-groups", () => {
       // Session management is not included
       expect(tools.has("charlotte:get_cookies")).toBe(false);
       expect(tools.has("charlotte:network")).toBe(false);
+      // No dev_mode, dialog, evaluate, monitoring
+      expect(tools.has("charlotte:dev_serve")).toBe(false);
+      expect(tools.has("charlotte:dialog")).toBe(false);
+      expect(tools.has("charlotte:evaluate")).toBe(false);
+      expect(tools.has("charlotte:console")).toBe(false);
     });
 
     it("interact profile includes all interaction tools plus dialog and evaluate", () => {
       const tools = resolveProfile("interact");
+      // Exact size: 4 nav + 7 obs + 10 interaction + 4 tabs + dialog + evaluate = 27
+      expect(tools.size).toBe(27);
       expect(tools.has("charlotte:drag")).toBe(true);
       expect(tools.has("charlotte:hover")).toBe(true);
       expect(tools.has("charlotte:key")).toBe(true);
       expect(tools.has("charlotte:wait_for")).toBe(true);
       expect(tools.has("charlotte:dialog")).toBe(true);
       expect(tools.has("charlotte:evaluate")).toBe(true);
-      // No dev_mode
+      // Not in interact:
       expect(tools.has("charlotte:dev_serve")).toBe(false);
+      expect(tools.has("charlotte:dev_inject")).toBe(false);
+      expect(tools.has("charlotte:dev_audit")).toBe(false);
+      expect(tools.has("charlotte:get_cookies")).toBe(false);
+      expect(tools.has("charlotte:network")).toBe(false);
+      expect(tools.has("charlotte:console")).toBe(false);
+      expect(tools.has("charlotte:configure")).toBe(false);
     });
 
     it("develop profile includes dev_mode tools", () => {
       const tools = resolveProfile("develop");
+      // Exact size: interact (27) + 3 dev_mode = 30
+      expect(tools.size).toBe(30);
       expect(tools.has("charlotte:dev_serve")).toBe(true);
       expect(tools.has("charlotte:dev_inject")).toBe(true);
       expect(tools.has("charlotte:dev_audit")).toBe(true);
+      // Not in develop:
+      expect(tools.has("charlotte:get_cookies")).toBe(false);
+      expect(tools.has("charlotte:network")).toBe(false);
+      expect(tools.has("charlotte:console")).toBe(false);
+      expect(tools.has("charlotte:configure")).toBe(false);
+      expect(tools.has("charlotte:set_headers")).toBe(false);
     });
 
-    it("audit profile includes dev_audit and viewport but not full dev_mode", () => {
+    it("audit profile includes dev_audit and viewport but not full dev_mode or interaction", () => {
       const tools = resolveProfile("audit");
+      // Exact size: 4 nav + 7 obs + dev_audit + viewport = 13
+      expect(tools.size).toBe(13);
       expect(tools.has("charlotte:dev_audit")).toBe(true);
       expect(tools.has("charlotte:viewport")).toBe(true);
-      // No dev_serve or dev_inject
+      // Not in audit:
       expect(tools.has("charlotte:dev_serve")).toBe(false);
       expect(tools.has("charlotte:dev_inject")).toBe(false);
-      // No interaction tools
       expect(tools.has("charlotte:click")).toBe(false);
+      expect(tools.has("charlotte:type")).toBe(false);
+      expect(tools.has("charlotte:dialog")).toBe(false);
+      expect(tools.has("charlotte:evaluate")).toBe(false);
+      expect(tools.has("charlotte:tabs")).toBe(false);
+      expect(tools.has("charlotte:console")).toBe(false);
     });
 
     it("full profile includes all tools", () => {
@@ -172,6 +202,22 @@ describe("tool-groups", () => {
 
     it("returns undefined for unknown tool", () => {
       expect(getToolGroup("charlotte:nonexistent")).toBeUndefined();
+    });
+  });
+
+  describe("PROFILE_TOOLS", () => {
+    const allToolNameSet = new Set(ALL_TOOL_NAMES);
+    const profileNames = Object.keys(PROFILE_TOOLS) as ToolProfile[];
+
+    it.each(profileNames)("%s profile contains only valid tool names", (profile) => {
+      for (const toolName of PROFILE_TOOLS[profile]) {
+        expect(allToolNameSet.has(toolName)).toBe(true);
+      }
+    });
+
+    it.each(profileNames)("%s profile has no duplicate entries", (profile) => {
+      const unique = new Set(PROFILE_TOOLS[profile]);
+      expect(unique.size).toBe(PROFILE_TOOLS[profile].length);
     });
   });
 

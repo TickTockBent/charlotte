@@ -27,16 +27,16 @@ Define a mapping of group names to tool names:
 
 Profiles are named sets of groups. Add a `ToolProfile` type and a resolver:
 
-| Profile | Groups included |
-|---------|----------------|
-| `core` | navigation, observation (observe + find only) |
-| `browse` | navigation, observation, interaction (click + type + select + toggle + submit + scroll only) |
-| `interact` | navigation, observation, interaction (all) |
-| `develop` | navigation, observation, interaction (all), dev_mode |
-| `audit` | navigation, observation (observe + find + screenshot + diff), dev_mode (dev_audit only), session (viewport only) |
-| `full` | everything |
+| Profile | Tools (count) | Groups included |
+|---------|---------------|----------------|
+| `core` | 6 | navigation (navigate only), observation (observe + find only), interaction (click + type + submit only) |
+| `browse` | 21 | navigation (all), observation (all), interaction (click + type + select + toggle + submit + scroll), session (tabs only) |
+| `interact` | 27 | navigation (all), observation (all), interaction (all), session (tabs only), dialog, evaluate |
+| `develop` | 30 | interact + dev_mode (all) |
+| `audit` | 13 | navigation (all), observation (all), dev_mode (dev_audit only), session (viewport only) |
+| `full` | 39 | everything |
 
-Note: some profiles include partial groups (e.g., `browse` includes scroll but not drag). The group mapping needs to support this — either sub-groups or per-profile tool lists.
+Design rationale: `core` trades back/forward/reload for click/type/submit because a minimal profile without any interaction tools would be nearly useless. `browse` and higher profiles include tabs because tab management is common during browsing. `interact` includes dialog and evaluate because agents doing full interaction frequently need JS execution and dialog handling. Profiles use flat per-profile tool lists rather than group references to support partial group inclusion cleanly.
 
 ### 3. CLI Argument Parsing
 
@@ -82,9 +82,10 @@ Set the MCP server `instructions` field to indicate the active profile and list 
 
 ## Files Likely Touched
 
-- `src/index.ts` — CLI arg parsing, pass profile to server creation
-- `src/server.ts` — Accept profile, conditional registration, store tool refs
+- `src/index.ts` — Pass parsed options to server creation
+- New: `src/cli.ts` — CLI argument parsing (`parseCliArgs`)
+- `src/server.ts` — Accept profile, conditional registration, store tool refs, return `{ server, registry }`
 - `src/tools/*.ts` — Return tool references from register functions
 - New: `src/tools/tool-groups.ts` — Group definitions, profile definitions, resolver
 - New: `src/tools/meta-tool.ts` — The `charlotte:tools` handler
-- `tests/` — New tests for profiles and meta-tool, possibly test setup changes
+- `tests/unit/tools/` — Tests for profiles, meta-tool, CLI parsing, server integration

@@ -20,26 +20,26 @@ export type ToolRegistry = Record<string, RegisteredTool>;
 /**
  * Get the enabled/disabled status of each group based on the tool registry.
  */
-function getGroupStatus(registry: ToolRegistry): Record<string, {
+interface GroupStatus {
   enabled: boolean;
+  enabled_count: number;
+  total_count: number;
   tools: string[];
   description: string;
-}> {
-  const status: Record<string, {
-    enabled: boolean;
-    tools: string[];
-    description: string;
-  }> = {};
+}
+
+function getGroupStatus(registry: ToolRegistry): Record<string, GroupStatus> {
+  const status: Record<string, GroupStatus> = {};
 
   for (const groupName of ALL_GROUP_NAMES) {
     const toolNames = TOOL_GROUPS[groupName];
-    // A group is "enabled" if at least one of its tools is enabled
-    // and "disabled" if all are disabled
-    const enabledTools = toolNames.filter(
+    const enabledCount = toolNames.filter(
       (name) => registry[name]?.enabled === true,
-    );
+    ).length;
     status[groupName] = {
-      enabled: enabledTools.length > 0,
+      enabled: enabledCount === toolNames.length,
+      enabled_count: enabledCount,
+      total_count: toolNames.length,
       tools: [...toolNames],
       description: GROUP_DESCRIPTIONS[groupName],
     };
@@ -74,22 +74,27 @@ export function registerMetaTool(
           .optional()
           .describe('"list" (default) — show all groups and status. "enable"/"disable" — toggle a group.'),
         group: z
-          .enum([
-            "navigation",
-            "observation",
-            "interaction",
-            "session",
-            "dev_mode",
-            "dialog",
-            "evaluate",
-            "monitoring",
-          ])
+          .enum(ALL_GROUP_NAMES as [ToolGroupName, ...ToolGroupName[]])
           .optional()
           .describe("Tool group to enable or disable"),
       },
     },
     async ({ action, group }) => {
       const effectiveAction = action ?? "list";
+
+      if ((effectiveAction === "enable" || effectiveAction === "disable") && !group) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify({
+                error: "group is required for enable/disable actions",
+              }),
+            },
+          ],
+          isError: true,
+        };
+      }
 
       if (effectiveAction === "enable" && group) {
         const toolNames = TOOL_GROUPS[group as ToolGroupName];

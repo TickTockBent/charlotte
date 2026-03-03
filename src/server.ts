@@ -42,30 +42,38 @@ export interface ServerOptions {
   toolGroups?: ToolGroupName[];
 }
 
+export interface CreateServerResult {
+  server: McpServer;
+  registry: ToolRegistry;
+}
+
 export function createServer(
   deps: ServerDeps,
   options: ServerOptions = {},
-): McpServer {
+): CreateServerResult {
   // Resolve which tools should be enabled
-  const profile = options.profile ?? "browse";
+  const profileName = options.toolGroups ? undefined : (options.profile ?? "browse");
   const enabledTools = options.toolGroups
     ? resolveGroups(options.toolGroups)
-    : resolveProfile(profile);
+    : resolveProfile(profileName!);
 
-  // Build server instructions
-  const disabledGroups = ALL_GROUP_NAMES.filter((group) => {
+  // Build server instructions — only list groups where every tool is disabled
+  const fullyDisabledGroups = ALL_GROUP_NAMES.filter((group) => {
     const groupTools = TOOL_GROUPS[group];
-    return groupTools.some((t) => !enabledTools.has(t));
+    return groupTools.every((t) => !enabledTools.has(t));
   });
 
+  const activeLabel = profileName
+    ? `Active profile: ${profileName}.`
+    : `Active groups: ${options.toolGroups!.join(", ")}.`;
   const instructionLines = [
-    `Charlotte browser automation server. Active profile: ${profile}.`,
+    `Charlotte browser automation server. ${activeLabel}`,
   ];
-  if (disabledGroups.length > 0) {
+  if (fullyDisabledGroups.length > 0) {
     instructionLines.push(
       "Additional tool groups available via charlotte:tools:",
     );
-    for (const group of disabledGroups) {
+    for (const group of fullyDisabledGroups) {
       instructionLines.push(`  - ${group}: ${GROUP_DESCRIPTIONS[group]}`);
     }
     instructionLines.push(
@@ -131,5 +139,5 @@ export function createServer(
 
   registerMetaTool(server, registry);
 
-  return server;
+  return { server, registry };
 }

@@ -32,6 +32,9 @@ export default function Home() {
             <a href="#quickstart" className="hover:text-foreground transition-colors">
               Quick Start
             </a>
+            <a href="/changelog" className="hover:text-foreground transition-colors">
+              Changelog
+            </a>
           </div>
           <a
             href="https://github.com/TickTockBent/charlotte"

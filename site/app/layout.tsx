@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Charlotte — The Web, Readable",
   description:
-    "MCP server that renders web pages into structured, agent-readable representations using headless Chromium. 30 tools for navigation, observation, and interaction.",
+    "MCP server that renders web pages into structured, agent-readable representations using headless Chromium. 40 tools for navigation, observation, and interaction.",
   keywords: [
     "MCP",
     "Model Context Protocol",

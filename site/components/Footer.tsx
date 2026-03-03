@@ -29,6 +29,13 @@ export default function Footer() {
           >
             MIT License
           </a>
+          <span className="text-surface-border">|</span>
+          <a
+            href="/changelog"
+            className="hover:text-foreground transition-colors"
+          >
+            Changelog
+          </a>
         </div>
         <p className="text-sm text-muted">
           Built with Charlotte.

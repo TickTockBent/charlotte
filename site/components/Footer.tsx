@@ -31,6 +31,13 @@ export default function Footer() {
           </a>
           <span className="text-surface-border">|</span>
           <a
+            href="/vs-playwright"
+            className="hover:text-foreground transition-colors"
+          >
+            Charlotte vs Playwright
+          </a>
+          <span className="text-surface-border">|</span>
+          <a
             href="/changelog"
             className="hover:text-foreground transition-colors"
           >

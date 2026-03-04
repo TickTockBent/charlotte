@@ -114,6 +114,9 @@ export default function ChangelogPage() {
             <Link href="/" className="hover:text-foreground transition-colors">
               Home
             </Link>
+            <Link href="/vs-playwright" className="hover:text-foreground transition-colors">
+              Compare
+            </Link>
             <a
               href="https://github.com/TickTockBent/charlotte"
               target="_blank"

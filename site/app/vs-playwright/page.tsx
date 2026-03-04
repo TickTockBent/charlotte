@@ -346,14 +346,14 @@ export default function VsPlaywrightPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" data-axiom-page-type="article" data-axiom-page-purpose="Compare Charlotte and Playwright MCP with real benchmark data across response sizes, token costs, and feature matrices. Determine which browser MCP server fits your use case.">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
       {/* Nav */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b border-surface-border">
+      <nav aria-label="Site navigation" className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b border-surface-border">
         <div className="max-w-5xl mx-auto px-6 sm:px-8 lg:px-12 h-14 flex items-center justify-between">
           <Link href="/" className="font-mono font-bold text-foreground">
             charlotte
@@ -392,8 +392,30 @@ export default function VsPlaywrightPage() {
         </div>
       </nav>
 
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Home", item: "https://charlotte-rose.vercel.app/" },
+              { "@type": "ListItem", position: 2, name: "Charlotte vs Playwright MCP", item: "https://charlotte-rose.vercel.app/vs-playwright/" },
+            ],
+          }),
+        }}
+      />
+
       {/* Content */}
       <main className="max-w-5xl mx-auto px-6 sm:px-8 lg:px-12 pt-28 pb-20">
+        <nav aria-label="Breadcrumb" className="text-sm text-muted mb-6">
+          <ol className="flex items-center gap-1.5">
+            <li><Link href="/" className="hover:text-foreground transition-colors">Home</Link></li>
+            <li aria-hidden="true" className="text-surface-border">/</li>
+            <li aria-current="page" className="text-foreground">Charlotte vs Playwright MCP</li>
+          </ol>
+        </nav>
+
         {/* Hero */}
         <header className="mb-16">
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">

@@ -100,7 +100,7 @@ export default function Benchmarks() {
   const activeTabInfo = tabs.find((t) => t.key === activeTab)!;
 
   return (
-    <section id="benchmarks" className="py-20 px-6 sm:px-8 lg:px-12 border-t border-surface-border">
+    <section id="benchmarks" className="py-20 px-6 sm:px-8 lg:px-12 border-t border-surface-border" data-axiom-role="primary-content" data-axiom-summary="Performance benchmarks comparing Charlotte vs Playwright MCP response sizes and token costs across real websites." data-axiom-priority="high">
       <div className="max-w-5xl mx-auto">
         <h2 className="text-3xl font-bold tracking-tight mb-4">
           Benchmarks
@@ -112,10 +112,14 @@ export default function Benchmarks() {
         </p>
 
         {/* Tabs */}
-        <div className="flex gap-1 p-1 rounded-lg bg-surface border border-surface-border mb-8 w-fit">
+        <div role="tablist" aria-label="Benchmark categories" className="flex gap-1 p-1 rounded-lg bg-surface border border-surface-border mb-8 w-fit">
           {tabs.map((tab) => (
             <button
               key={tab.key}
+              role="tab"
+              aria-selected={activeTab === tab.key}
+              aria-controls={`benchmark-panel-${tab.key}`}
+              id={`benchmark-tab-${tab.key}`}
               onClick={() => setActiveTab(tab.key)}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 activeTab === tab.key
@@ -135,7 +139,7 @@ export default function Benchmarks() {
 
         {/* Navigate tab */}
         {activeTab === "navigate" && (
-          <div className="space-y-6">
+          <div role="tabpanel" id="benchmark-panel-navigate" aria-labelledby="benchmark-tab-navigate" className="space-y-6">
             {navigateData.map((row) => (
               <BarComparison
                 key={row.site}
@@ -150,7 +154,7 @@ export default function Benchmarks() {
 
         {/* Observe tab */}
         {activeTab === "observe" && (
-          <div className="space-y-6">
+          <div role="tabpanel" id="benchmark-panel-observe" aria-labelledby="benchmark-tab-observe" className="space-y-6">
             {observeData.map((row) => (
               <BarComparison
                 key={row.site}
@@ -165,7 +169,7 @@ export default function Benchmarks() {
 
         {/* Cost tab */}
         {activeTab === "cost" && (
-          <div className="rounded-lg border border-surface-border overflow-hidden">
+          <div role="tabpanel" id="benchmark-panel-cost" aria-labelledby="benchmark-tab-cost" className="rounded-lg border border-surface-border overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-surface-border bg-surface">

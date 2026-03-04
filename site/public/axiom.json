@@ -1,0 +1,108 @@
+{
+  "axiom_version": "1.0",
+
+  "site": {
+    "name": "Charlotte",
+    "description": "Open-source MCP server that renders web pages into structured, agent-readable representations using headless Chromium. 40 tools for AI agents to navigate, observe, and interact with the web.",
+    "primary_language": "en",
+    "contact": "https://github.com/TickTockBent/charlotte/issues",
+    "sameAs": [
+      "https://github.com/TickTockBent/charlotte",
+      "https://www.npmjs.com/package/@ticktockbent/charlotte"
+    ]
+  },
+
+  "capabilities": {
+    "actions": [
+      {
+        "id": "browse_documentation",
+        "description": "Read documentation about Charlotte's architecture, tools, and usage.",
+        "entry_point": "/",
+        "method": "link_follow"
+      },
+      {
+        "id": "view_benchmarks",
+        "description": "View performance benchmarks comparing Charlotte to Playwright MCP across real websites.",
+        "entry_point": "/#benchmarks",
+        "method": "link_follow"
+      },
+      {
+        "id": "compare_playwright",
+        "description": "Read a detailed head-to-head comparison of Charlotte vs Playwright MCP with response sizes, token costs, and feature matrices.",
+        "entry_point": "/vs-playwright/",
+        "method": "link_follow"
+      },
+      {
+        "id": "view_changelog",
+        "description": "View the full release history for Charlotte.",
+        "entry_point": "/changelog/",
+        "method": "link_follow"
+      },
+      {
+        "id": "install_charlotte",
+        "description": "Get installation instructions for adding Charlotte to an MCP-compatible client.",
+        "entry_point": "/#quickstart",
+        "method": "link_follow"
+      }
+    ],
+
+    "data_types": [
+      {
+        "type": "benchmark",
+        "description": "Performance comparison data between Charlotte and Playwright MCP across real websites including response sizes, token counts, and cost projections.",
+        "schema": "https://schema.org/Dataset",
+        "locations": ["/", "/vs-playwright/"]
+      },
+      {
+        "type": "software_release",
+        "description": "Release notes and changelogs for Charlotte versions.",
+        "locations": ["/changelog/"]
+      }
+    ]
+  },
+
+  "navigation": {
+    "sections": [
+      {
+        "name": "Home",
+        "path": "/",
+        "description": "Overview, architecture diagram, key stats, and quick start instructions.",
+        "children": [
+          { "name": "Benchmarks", "path": "/#benchmarks", "description": "Response size and cost comparisons vs Playwright MCP." },
+          { "name": "Output Format", "path": "/#output", "description": "Example responses at each detail level." },
+          { "name": "Tools", "path": "/#tools", "description": "All 40 tools organized by category." },
+          { "name": "Usage Examples", "path": "/#examples", "description": "Code examples for browsing, forms, and dev mode." },
+          { "name": "Quick Start", "path": "/#quickstart", "description": "Installation and configuration instructions." }
+        ]
+      },
+      {
+        "name": "Charlotte vs Playwright MCP",
+        "path": "/vs-playwright/",
+        "description": "Complete head-to-head comparison with benchmark data from Wikipedia, GitHub, Hacker News, LinkedIn, and httpbin."
+      },
+      {
+        "name": "Changelog",
+        "path": "/changelog/",
+        "description": "Release history from v0.1.0 to current."
+      }
+    ],
+    "sitemap": "/sitemap.xml"
+  },
+
+  "access": {
+    "public_content": true
+  },
+
+  "technical": {
+    "rendering": "ssg",
+    "spa_framework": "next.js",
+    "content_survivability": "full",
+    "api_available": false
+  },
+
+  "agent_policy": {
+    "tier2_allowed": true,
+    "tier3_allowed": true,
+    "max_requests_per_minute": 60
+  }
+}

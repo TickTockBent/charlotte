@@ -9,9 +9,9 @@ import Footer from "../components/Footer";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" data-axiom-page-type="homepage" data-axiom-page-purpose="Learn about Charlotte, an MCP server for token-efficient web browsing by AI agents. View benchmarks, tools, examples, and installation instructions.">
       {/* Nav */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b border-surface-border">
+      <nav aria-label="Primary navigation" className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b border-surface-border">
         <div className="max-w-5xl mx-auto px-6 sm:px-8 lg:px-12 h-14 flex items-center justify-between">
           <a href="#" className="font-mono font-bold text-foreground">
             charlotte

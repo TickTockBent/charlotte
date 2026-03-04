@@ -80,7 +80,7 @@ export default function OutputDemo() {
   const [activeDetail, setActiveDetail] = useState<DetailTab>("minimal");
 
   return (
-    <section id="output" className="py-20 px-6 sm:px-8 lg:px-12">
+    <section id="output" className="py-20 px-6 sm:px-8 lg:px-12" data-axiom-role="primary-content" data-axiom-summary="Example Charlotte responses at minimal and summary detail levels. Shows the structured JSON format agents receive." data-axiom-priority="high">
       <div className="max-w-5xl mx-auto">
         <h2 className="text-3xl font-bold tracking-tight mb-4">
           What Charlotte Returns
@@ -94,8 +94,12 @@ export default function OutputDemo() {
           {/* JSON output with detail toggle */}
           <div className="lg:col-span-3 min-w-0">
             {/* Detail toggle */}
-            <div className="flex gap-1 p-1 rounded-lg bg-surface border border-surface-border mb-4 w-fit">
+            <div role="tablist" aria-label="Response detail levels" className="flex gap-1 p-1 rounded-lg bg-surface border border-surface-border mb-4 w-fit">
               <button
+                role="tab"
+                aria-selected={activeDetail === "minimal"}
+                aria-controls="output-panel-minimal"
+                id="output-tab-minimal"
                 onClick={() => setActiveDetail("minimal")}
                 className={`px-3 py-1.5 rounded-md text-xs font-mono font-medium transition-colors ${
                   activeDetail === "minimal"
@@ -107,6 +111,10 @@ export default function OutputDemo() {
                 <span className="ml-1.5 text-muted">336 chars</span>
               </button>
               <button
+                role="tab"
+                aria-selected={activeDetail === "summary"}
+                aria-controls="output-panel-summary"
+                id="output-tab-summary"
                 onClick={() => setActiveDetail("summary")}
                 className={`px-3 py-1.5 rounded-md text-xs font-mono font-medium transition-colors ${
                   activeDetail === "summary"
@@ -118,10 +126,12 @@ export default function OutputDemo() {
                 <span className="ml-1.5 text-muted">full list</span>
               </button>
             </div>
-            <CodeBlock
-              code={activeDetail === "minimal" ? minimalRepresentation : summaryRepresentation}
-              language="PageRepresentation"
-            />
+            <div role="tabpanel" id={`output-panel-${activeDetail}`} aria-labelledby={`output-tab-${activeDetail}`}>
+              <CodeBlock
+                code={activeDetail === "minimal" ? minimalRepresentation : summaryRepresentation}
+                language="PageRepresentation"
+              />
+            </div>
           </div>
 
           {/* Sidebar: detail levels + element IDs */}

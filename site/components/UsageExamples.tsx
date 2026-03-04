@@ -61,6 +61,9 @@ export default function UsageExamples() {
     <section
       id="examples"
       className="py-20 px-6 sm:px-8 lg:px-12 border-t border-surface-border"
+      data-axiom-role="primary-content"
+      data-axiom-summary="Code examples showing Charlotte tool usage for browsing websites, filling forms, and local development with hot reload."
+      data-axiom-priority="medium"
     >
       <div className="max-w-5xl mx-auto">
         <h2 className="text-3xl font-bold tracking-tight mb-4">
@@ -72,10 +75,14 @@ export default function UsageExamples() {
         </p>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 border-b border-surface-border">
+        <div role="tablist" aria-label="Usage example categories" className="flex gap-1 mb-6 border-b border-surface-border">
           {examples.map((example, index) => (
             <button
               key={example.tab}
+              role="tab"
+              aria-selected={activeTab === index}
+              aria-controls={`example-panel-${index}`}
+              id={`example-tab-${index}`}
               onClick={() => setActiveTab(index)}
               className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
                 activeTab === index
@@ -89,7 +96,7 @@ export default function UsageExamples() {
         </div>
 
         {/* Active example */}
-        <div>
+        <div role="tabpanel" id={`example-panel-${activeTab}`} aria-labelledby={`example-tab-${activeTab}`}>
           <p className="text-sm text-muted mb-4">{examples[activeTab].label}</p>
           <CodeBlock code={examples[activeTab].code} language="tool calls" />
         </div>

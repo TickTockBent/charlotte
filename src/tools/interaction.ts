@@ -492,6 +492,12 @@ export function registerInteractionTools(
           modifiers: activeModifiers,
         });
 
+        // Move to target coordinates first to trigger pointer/mouse enter events.
+        // Real users always hover before clicking; frameworks like Next.js depend
+        // on hover-triggered prefetch before click handlers fire.
+        await page.mouse.move(x, y);
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
         await waitForPossibleNavigation(page, async () => {
           // Hold down modifier keys
           for (const modifier of activeModifiers) {

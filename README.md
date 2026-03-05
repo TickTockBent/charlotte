@@ -365,6 +365,8 @@ Four pages cover navigation, forms, interactive elements, delayed content, scrol
 
 **No file upload support** — Charlotte identifies `file_input` elements in the page representation but provides no tool to set file paths on them. Workflows that require file uploads cannot be completed.
 
+**`click_at` skips hover on framework-managed links** — `click_at` dispatched mouse events without a preceding hover sequence, which caused Next.js `<Link>` components to skip client-side navigation (they depend on hover-triggered prefetch). Fixed in next release by moving the mouse to the target coordinates and pausing 50ms before clicking, matching real user behavior. ([#48](https://github.com/TickTockBent/charlotte/issues/48))
+
 ## Roadmap
 
 ### Interaction Gaps

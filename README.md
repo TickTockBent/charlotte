@@ -12,7 +12,7 @@ Charlotte takes a different approach. It decomposes each page into a typed, stru
 
 ### Benchmarks
 
-Charlotte v0.4.0 vs Playwright MCP, measured by characters returned per tool call on real websites:
+Charlotte v0.4.1 vs Playwright MCP, measured by characters returned per tool call on real websites:
 
 **Navigation** (first contact with a page):
 
@@ -29,11 +29,11 @@ Charlotte's `navigate` returns minimal detail by default — landmarks, headings
 
 | Profile | Tools | Def. tokens/call | Savings vs full |
 |:---|---:|---:|---:|
-| full | 40 | 7,187 | — |
-| browse (default) | 22 | 3,727 | **48%** |
-| core | 7 | 1,677 | **77%** |
+| full | 41 | ~7,400 | — |
+| browse (default) | 23 | ~3,900 | **~47%** |
+| core | 7 | 1,677 | **~77%** |
 
-Tool definitions are sent on every API round-trip. With the default `browse` profile, Charlotte carries 48% less definition overhead than loading all 40 tools. Over a 20-call browsing session, that's **38.6% fewer total tokens**. See the [profile benchmark report](docs/charlotte-profile-benchmark-report.md) for full results.
+Tool definitions are sent on every API round-trip. With the default `browse` profile, Charlotte carries ~47% less definition overhead than loading all 41 tools. Over a 20-call browsing session, that's **~38% fewer total tokens**. See the [profile benchmark report](docs/charlotte-profile-benchmark-report.md) for full results.
 
 **The workflow difference:** Playwright agents receive 61K+ characters every time they look at Hacker News, whether they're reading headlines or looking for a login button. Charlotte agents get 336 characters on arrival, call `find({ type: "link", text: "login" })` to get exactly what they need, and never pay for the rest.
 
@@ -63,9 +63,9 @@ Agents receive landmarks, headings, interactive elements with typed metadata, bo
 
 **Navigation** — `navigate`, `back`, `forward`, `reload`
 
-**Observation** — `observe` (3 detail levels), `find` (spatial + semantic search), `screenshot`, `diff` (structural comparison against snapshots)
+**Observation** — `observe` (3 detail levels), `find` (spatial + semantic search, CSS selector mode), `screenshot`, `diff` (structural comparison against snapshots)
 
-**Interaction** — `click`, `type`, `select`, `toggle`, `submit`, `scroll`, `hover`, `drag`, `key`, `wait_for` (async condition polling), `dialog` (accept/dismiss JS dialogs)
+**Interaction** — `click`, `click_at` (coordinate-based), `type`, `select`, `toggle`, `submit`, `scroll`, `hover`, `drag`, `key`, `wait_for` (async condition polling), `dialog` (accept/dismiss JS dialogs)
 
 **Monitoring** — `console` (all severity levels, filtering, timestamps), `requests` (full HTTP history, method/status/resource type filtering)
 
@@ -77,14 +77,14 @@ Agents receive landmarks, headings, interactive elements with typed metadata, bo
 
 ## Tool Profiles
 
-Charlotte ships 40 tools, but most workflows only need a subset. Startup profiles control which tools load into the agent's context, reducing definition overhead by up to 77%.
+Charlotte ships 41 tools, but most workflows only need a subset. Startup profiles control which tools load into the agent's context, reducing definition overhead by up to 77%.
 
 ```bash
-charlotte --profile browse    # 22 tools (default) — navigate, observe, interact, tabs
+charlotte --profile browse    # 23 tools (default) — navigate, observe, interact, tabs
 charlotte --profile core      # 7 tools — navigate, observe, find, click, type, submit
-charlotte --profile full      # 40 tools — everything
-charlotte --profile interact  # 27 tools — full interaction + dialog + evaluate
-charlotte --profile develop   # 30 tools — interact + dev_serve, dev_inject, dev_audit
+charlotte --profile full      # 41 tools — everything
+charlotte --profile interact  # 28 tools — full interaction + dialog + evaluate
+charlotte --profile develop   # 31 tools — interact + dev_serve, dev_inject, dev_audit
 charlotte --profile audit     # 13 tools — navigation + observation + dev_audit + viewport
 ```
 
@@ -293,6 +293,7 @@ btn-a3f1  (button)    inp-c7e2  (text input)
 lnk-d4b9  (link)      sel-e8a3  (select)
 chk-f1a2  (checkbox)  frm-b1d4  (form)
 rgn-e0d2  (landmark)  hdg-0f40  (heading)
+dom-b2c3  (DOM element, from CSS selector queries)
 ```
 
 IDs survive unrelated DOM changes and element reordering within the same container. When an agent navigates at minimal detail (no individual element IDs), it uses `find` to locate elements by text, type, or spatial proximity — the returned elements include IDs ready for interaction.
@@ -346,7 +347,7 @@ All tools go through `renderActivePage()` which handles snapshots, reload events
 
 ## Sandbox
 
-Charlotte includes a test website in `tests/sandbox/` that exercises all 40 tools without touching the public internet. Serve it locally with:
+Charlotte includes a test website in `tests/sandbox/` that exercises all 41 tools without touching the public internet. Serve it locally with:
 
 ```
 dev_serve({ path: "tests/sandbox" })

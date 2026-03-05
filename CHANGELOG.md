@@ -2,6 +2,17 @@
 
 All notable changes to Charlotte will be documented in this file.
 
+## [0.4.1] - 2026-03-05
+
+### Added
+
+- **`charlotte:click_at`** — Click at specific page coordinates (x, y). Enables interaction with non-semantic elements (custom widgets, canvas regions, SVG graphics) that don't appear in the accessibility tree. Supports left/right/double click and modifier keys.
+- **CSS selector mode for `charlotte:find`** — New `selector` parameter queries the DOM directly via `DOM.querySelectorAll`, returning elements with Charlotte IDs usable by all interaction tools. Complements the existing accessibility tree search for elements that lack semantic roles.
+
+### Fixed
+
+- **`charlotte:evaluate` silent null on multi-statement code** — Replaced `new Function('return ' + expr)` with CDP `Runtime.evaluate`, which evaluates JavaScript as a program and returns the completion value of the last expression-statement. The previous implementation suffered from ASI (Automatic Semicolon Insertion) silently converting `return\n...` into `return;`, causing multi-line scripts to return null without error.
+
 ## [0.4.0] - 2026-03-03
 
 ### Added

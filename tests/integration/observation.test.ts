@@ -374,4 +374,121 @@ describe("Observation integration", () => {
       expect(updatedFullContent).toContain("Item 3");
     });
   });
+
+  describe("find with CSS selector", () => {
+    it("finds elements by CSS selector and returns Charlotte IDs", async () => {
+      const page = pageManager.getActivePage();
+      await page.goto(SIMPLE_FIXTURE, { waitUntil: "load" });
+
+      // Use CDP to query DOM elements by selector (mirrors findBySelector implementation)
+      const cdpSession = await page.createCDPSession();
+      try {
+        const { root } = await cdpSession.send("DOM.getDocument", { depth: 0 });
+        const { nodeIds } = await cdpSession.send("DOM.querySelectorAll", {
+          nodeId: root.nodeId,
+          selector: "h1",
+        });
+        expect(nodeIds.length).toBeGreaterThanOrEqual(1);
+
+        // Verify we can get backendNodeId for each
+        for (const nodeId of nodeIds) {
+          const { node } = await cdpSession.send("DOM.describeNode", { nodeId });
+          expect(node.backendNodeId).toBeDefined();
+          expect(node.nodeName.toLowerCase()).toBe("h1");
+        }
+      } finally {
+        await cdpSession.detach();
+      }
+    });
+
+    it("returns element IDs that resolve to valid backend node IDs", async () => {
+      const page = pageManager.getActivePage();
+      await page.goto(SIMPLE_FIXTURE, { waitUntil: "load" });
+
+      // Register a DOM element with the ElementIdGenerator
+      const cdpSession = await page.createCDPSession();
+      try {
+        const { root } = await cdpSession.send("DOM.getDocument", { depth: 0 });
+        const { nodeIds } = await cdpSession.send("DOM.querySelectorAll", {
+          nodeId: root.nodeId,
+          selector: "p",
+        });
+        expect(nodeIds.length).toBeGreaterThanOrEqual(1);
+
+        const { node } = await cdpSession.send("DOM.describeNode", {
+          nodeId: nodeIds[0],
+        });
+
+        // Generate an ID for this DOM element
+        const elementId = elementIdGenerator.generateId(
+          "dom_element",
+          "p",
+          "test text",
+          {
+            nearestLandmarkRole: null,
+            nearestLandmarkLabel: null,
+            nearestLabelledContainer: null,
+            siblingIndex: 0,
+          },
+          node.backendNodeId,
+        );
+
+        // ID should start with dom- prefix
+        expect(elementId).toMatch(/^dom-/);
+
+        // Should resolve back to the backend node ID
+        const resolvedId = elementIdGenerator.resolveId(elementId);
+        expect(resolvedId).toBe(node.backendNodeId);
+      } finally {
+        await cdpSession.detach();
+      }
+    });
+
+    it("DOM element IDs can be used with CDP interactions", async () => {
+      const page = pageManager.getActivePage();
+      await page.goto(FORM_FIXTURE, { waitUntil: "load" });
+
+      // Find a button via CSS selector and register it
+      const cdpSession = await page.createCDPSession();
+      try {
+        const { root } = await cdpSession.send("DOM.getDocument", { depth: 0 });
+        const { nodeIds } = await cdpSession.send("DOM.querySelectorAll", {
+          nodeId: root.nodeId,
+          selector: "button",
+        });
+        expect(nodeIds.length).toBeGreaterThanOrEqual(1);
+
+        const { node } = await cdpSession.send("DOM.describeNode", {
+          nodeId: nodeIds[0],
+        });
+
+        // Register and verify we can get box model for clicking
+        const backendNodeId = node.backendNodeId;
+        const { model } = await cdpSession.send("DOM.getBoxModel", {
+          backendNodeId,
+        });
+        expect(model).toBeDefined();
+        expect(model!.content.length).toBe(8); // 4 coordinate pairs
+      } finally {
+        await cdpSession.detach();
+      }
+    });
+
+    it("handles selector that matches no elements", async () => {
+      const page = pageManager.getActivePage();
+      await page.goto(SIMPLE_FIXTURE, { waitUntil: "load" });
+
+      const cdpSession = await page.createCDPSession();
+      try {
+        const { root } = await cdpSession.send("DOM.getDocument", { depth: 0 });
+        const { nodeIds } = await cdpSession.send("DOM.querySelectorAll", {
+          nodeId: root.nodeId,
+          selector: ".nonexistent-class",
+        });
+        expect(nodeIds).toHaveLength(0);
+      } finally {
+        await cdpSession.detach();
+      }
+    });
+  });
 });

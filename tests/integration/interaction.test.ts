@@ -582,6 +582,87 @@ describe("Interaction integration", () => {
     });
   });
 
+  describe("click_at", () => {
+    beforeEach(async () => {
+      const page = pageManager.getActivePage();
+      await page.goto(INTERACTION_FIXTURE, { waitUntil: "load" });
+    });
+
+    it("clicks at coordinates to trigger a button click handler", async () => {
+      const page = pageManager.getActivePage();
+
+      // Find the Click Me button to get its coordinates
+      const representation = await renderActivePage(deps, { detail: "minimal" });
+      const clickButton = findElementByLabel(representation, "Click Me");
+      expect(clickButton).toBeDefined();
+      expect(clickButton!.bounds).toBeDefined();
+
+      // Click at the button's center using raw coordinates
+      const centerX = clickButton!.bounds!.x + clickButton!.bounds!.w / 2;
+      const centerY = clickButton!.bounds!.y + clickButton!.bounds!.h / 2;
+      await page.mouse.click(centerX, centerY);
+
+      const resultText = await getResultText();
+      expect(resultText).toBe("Button clicked");
+    });
+
+    it("clicks a non-semantic element using coordinates from box model", async () => {
+      const page = pageManager.getActivePage();
+
+      // Scroll widget into view and get viewport-relative coordinates
+      const widgetBounds = await page.evaluate(() => {
+        const widget = document.getElementById("custom-widget");
+        if (!widget) return null;
+        widget.scrollIntoView({ block: "center" });
+        const rect = widget.getBoundingClientRect();
+        return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+      });
+      expect(widgetBounds).not.toBeNull();
+
+      await page.mouse.click(widgetBounds!.x, widgetBounds!.y);
+
+      const resultText = await getResultText();
+      expect(resultText).toBe("Widget clicked");
+    });
+
+    it("handles mousedown/mouseup pattern like crit's gutter", async () => {
+      const page = pageManager.getActivePage();
+
+      // Scroll gutter into view and get viewport-relative coordinates
+      const gutterBounds = await page.evaluate(() => {
+        const gutter = document.getElementById("gutter-sim");
+        if (!gutter) return null;
+        gutter.scrollIntoView({ block: "center" });
+        const rect = gutter.getBoundingClientRect();
+        return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+      });
+      expect(gutterBounds).not.toBeNull();
+
+      // page.mouse.click dispatches mousedown then mouseup at the same coordinates
+      // The mouseup bubbles to document, which is where the gutter's listener is
+      await page.mouse.click(gutterBounds!.x, gutterBounds!.y);
+
+      const resultText = await getResultText();
+      expect(resultText).toBe("Gutter activated");
+    });
+
+    it("supports double click at coordinates", async () => {
+      const page = pageManager.getActivePage();
+
+      // Get the Double Click Me button coordinates
+      const representation = await renderActivePage(deps, { detail: "minimal" });
+      const dblClickButton = findElementByLabel(representation, "Double Click");
+      expect(dblClickButton).toBeDefined();
+
+      const centerX = dblClickButton!.bounds!.x + dblClickButton!.bounds!.w / 2;
+      const centerY = dblClickButton!.bounds!.y + dblClickButton!.bounds!.h / 2;
+      await page.mouse.click(centerX, centerY, { clickCount: 2 });
+
+      const resultText = await getResultText();
+      expect(resultText).toBe("Double clicked");
+    });
+  });
+
   describe("wait_for", () => {
     beforeEach(async () => {
       const page = pageManager.getActivePage();

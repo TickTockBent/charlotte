@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { Page } from "puppeteer";
 import { logger } from "../utils/logger.js";
 import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 import { diffRepresentations } from "../state/differ.js";
@@ -17,6 +18,103 @@ import {
   formatElementsResponse,
   handleToolError,
 } from "./tool-helpers.js";
+
+/** Lightweight result from CSS selector queries. */
+interface DOMElementResult {
+  id: string;
+  tag: string;
+  text: string;
+  bounds: Bounds | null;
+}
+
+/**
+ * Query the DOM by CSS selector and register matched elements with
+ * the ElementIdGenerator so their IDs work with interaction tools.
+ */
+async function findBySelector(
+  page: Page,
+  deps: ToolDependencies,
+  selector: string,
+): Promise<DOMElementResult[]> {
+  const cdpSession = await page.createCDPSession();
+  try {
+    // Get the document root
+    const { root } = await cdpSession.send("DOM.getDocument", { depth: 0 });
+
+    // Query all matching nodes
+    const { nodeIds } = await cdpSession.send("DOM.querySelectorAll", {
+      nodeId: root.nodeId,
+      selector,
+    });
+
+    const results: DOMElementResult[] = [];
+
+    for (const nodeId of nodeIds) {
+      try {
+        // Get node details including backendNodeId
+        const { node } = await cdpSession.send("DOM.describeNode", { nodeId });
+        const backendNodeId = node.backendNodeId;
+        const tag = node.nodeName.toLowerCase();
+
+        // Get text content via Runtime
+        const { object } = await cdpSession.send("DOM.resolveNode", { nodeId });
+        let textContent = "";
+        if (object?.objectId) {
+          const textResult = await cdpSession.send("Runtime.callFunctionOn", {
+            objectId: object.objectId,
+            functionDeclaration: `function() { return (this.textContent || '').trim().substring(0, 100); }`,
+            returnByValue: true,
+          });
+          textContent = (textResult.result?.value as string) ?? "";
+        }
+
+        // Get bounds via box model
+        let bounds: Bounds | null = null;
+        try {
+          const { model } = await cdpSession.send("DOM.getBoxModel", { backendNodeId });
+          if (model) {
+            const contentQuad = model.content;
+            const minX = Math.min(contentQuad[0], contentQuad[2], contentQuad[4], contentQuad[6]);
+            const minY = Math.min(contentQuad[1], contentQuad[3], contentQuad[5], contentQuad[7]);
+            const maxX = Math.max(contentQuad[0], contentQuad[2], contentQuad[4], contentQuad[6]);
+            const maxY = Math.max(contentQuad[1], contentQuad[3], contentQuad[5], contentQuad[7]);
+            bounds = { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+          }
+        } catch {
+          // Element may be hidden or zero-sized — leave bounds as null
+        }
+
+        // Register with ElementIdGenerator so the ID works with click, hover, drag, etc.
+        const elementId = deps.elementIdGenerator.generateId(
+          "dom_element",
+          tag,
+          textContent.substring(0, 50),
+          {
+            nearestLandmarkRole: null,
+            nearestLandmarkLabel: null,
+            nearestLabelledContainer: null,
+            siblingIndex: results.length,
+          },
+          backendNodeId,
+        );
+
+        results.push({
+          id: elementId,
+          tag,
+          text: textContent,
+          bounds,
+        });
+      } catch {
+        // Skip nodes that can't be described (e.g. pseudo-elements)
+        continue;
+      }
+    }
+
+    return results;
+  } finally {
+    await cdpSession.detach();
+  }
+}
 
 /**
  * Compute Euclidean distance between the centers of two bounding boxes.
@@ -97,7 +195,7 @@ export function registerObservationTools(
     "charlotte:find",
     {
       description:
-        "Search for elements matching criteria. Filters interactive elements by text, role, type, or spatial proximity.",
+        "Search for elements matching criteria. Filters interactive elements by text, role, type, or spatial proximity. Use the selector parameter to find DOM elements by CSS selector — this reaches elements not in the accessibility tree (custom widgets, non-semantic divs). Selector results return Charlotte element IDs usable with click, hover, drag, etc.",
       inputSchema: {
         text: z
           .string()
@@ -122,12 +220,32 @@ export function registerObservationTools(
           .describe(
             "Element ID — find elements geometrically contained within this one's bounds",
           ),
+        selector: z
+          .string()
+          .optional()
+          .describe(
+            "CSS selector to query the DOM directly. Returns elements that may not be in the accessibility tree. Results include Charlotte element IDs for use with interaction tools.",
+          ),
       },
     },
-    async ({ text, role, type, near, within }) => {
+    async ({ text, role, type, near, within, selector }) => {
       try {
         await deps.browserManager.ensureConnected();
-        logger.info("Finding elements", { text, role, type, near, within });
+        logger.info("Finding elements", { text, role, type, near, within, selector });
+
+        // CSS selector mode: query DOM directly, bypass accessibility tree
+        if (selector) {
+          const page = deps.pageManager.getActivePage();
+          const domElements = await findBySelector(page, deps, selector);
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: JSON.stringify(domElements),
+              },
+            ],
+          };
+        }
 
         // Render the page to get current elements
         const representation = await renderActivePage(deps, { detail: "minimal" });

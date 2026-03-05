@@ -457,6 +457,73 @@ export function registerInteractionTools(
     },
   );
 
+  // ─── charlotte:click_at ───
+  tools["charlotte:click_at"] = server.registerTool(
+    "charlotte:click_at",
+    {
+      description:
+        "Click at specific page coordinates. Use when target elements are not in the accessibility tree (custom widgets, canvas, non-semantic interactive divs). Dispatches real CDP-level mouse events. Returns full page representation after the click.",
+      inputSchema: {
+        x: z.number().describe("X coordinate in page pixels"),
+        y: z.number().describe("Y coordinate in page pixels"),
+        click_type: z
+          .enum(["left", "right", "double"])
+          .optional()
+          .describe('Click type: "left" (default), "right", "double"'),
+        modifiers: z
+          .array(z.enum(["ctrl", "shift", "alt", "meta"]))
+          .optional()
+          .describe(
+            'Modifier keys to hold during click: ["ctrl"], ["shift"], ["alt"], ["meta"], or combinations',
+          ),
+      },
+    },
+    async ({ x, y, click_type, modifiers }) => {
+      try {
+        await deps.browserManager.ensureConnected();
+        const page = deps.pageManager.getActivePage();
+        const clickVariant = click_type ?? "left";
+        const activeModifiers = modifiers ?? [];
+
+        logger.info("Clicking at coordinates", {
+          x,
+          y,
+          clickType: clickVariant,
+          modifiers: activeModifiers,
+        });
+
+        await waitForPossibleNavigation(page, async () => {
+          // Hold down modifier keys
+          for (const modifier of activeModifiers) {
+            const modifierKey = MODIFIER_KEY_MAP[modifier];
+            await page.keyboard.down(modifierKey);
+          }
+
+          try {
+            if (clickVariant === "right") {
+              await page.mouse.click(x, y, { button: "right" });
+            } else if (clickVariant === "double") {
+              await page.mouse.click(x, y, { clickCount: 2 });
+            } else {
+              await page.mouse.click(x, y);
+            }
+          } finally {
+            // Release modifier keys in reverse order
+            for (const modifier of [...activeModifiers].reverse()) {
+              const modifierKey = MODIFIER_KEY_MAP[modifier];
+              await page.keyboard.up(modifierKey);
+            }
+          }
+        });
+
+        const representation = await renderAfterAction(deps);
+        return formatPageResponse(representation);
+      } catch (error: unknown) {
+        return handleToolError(error);
+      }
+    },
+  );
+
   // ─── charlotte:type ───
   tools["charlotte:type"] = server.registerTool(
     "charlotte:type",

@@ -42,7 +42,7 @@ describe("createServer", () => {
     it("full profile enables all 39 tools", () => {
       const { registry } = createServer(createMockDeps(), { profile: "full" });
 
-      expect(Object.keys(registry)).toHaveLength(39);
+      expect(Object.keys(registry)).toHaveLength(40);
       for (const [toolName, tool] of Object.entries(registry)) {
         expect(tool.enabled, `${toolName} should be enabled`).toBe(true);
       }
@@ -74,7 +74,7 @@ describe("createServer", () => {
         .map(([name]) => name);
 
       expect(enabledNames).toHaveLength(expectedEnabled.size);
-      expect(disabledNames.length).toBe(39 - expectedEnabled.size);
+      expect(disabledNames.length).toBe(40 - expectedEnabled.size);
 
       // Spot-check: drag should be disabled in browse
       expect(registry["charlotte:drag"].enabled).toBe(false);
@@ -121,7 +121,7 @@ describe("createServer", () => {
       // Meta-tool is intentionally excluded from the registry
       expect(registry["charlotte:tools"]).toBeUndefined();
       // All 39 other tools are in the registry
-      expect(Object.keys(registry)).toHaveLength(39);
+      expect(Object.keys(registry)).toHaveLength(40);
     });
   });
 

@@ -109,6 +109,34 @@
       <button id="slow-btn" onclick="setTimeout(function() { document.getElementById('result').textContent = 'Slow complete'; }, 2000)">Slow Action (2s)</button>
     </section>
 
+    <!-- Coordinate click test (non-semantic elements) -->
+    <section aria-label="Coordinate click tests">
+      <h2>Coordinate Click Tests</h2>
+      <div id="custom-widget" style="width: 200px; height: 50px; background: #ddd; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+        Custom Widget
+      </div>
+      <div id="gutter-sim" class="line-gutter" style="width: 30px; height: 30px; background: #eee; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+        4
+      </div>
+    </section>
+    <script>
+      // Attach handlers via JS (inline handlers on non-semantic divs can be unreliable in headless)
+      document.getElementById('custom-widget').addEventListener('click', function() {
+        document.getElementById('result').textContent = 'Widget clicked';
+      });
+      document.getElementById('gutter-sim').addEventListener('mousedown', function() {
+        this.dataset.started = 'true';
+        var self = this;
+        document.addEventListener('mouseup', function handler() {
+          if (self.dataset.started) {
+            document.getElementById('result').textContent = 'Gutter activated';
+            delete self.dataset.started;
+          }
+          document.removeEventListener('mouseup', handler);
+        });
+      });
+    </script>
+
     <!-- Form submit test -->
     <section aria-label="Submit tests">
       <h2>Submit Tests</h2>

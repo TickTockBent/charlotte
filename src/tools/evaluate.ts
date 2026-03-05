@@ -19,9 +19,9 @@ export function registerEvaluateTools(
 
   tools["charlotte:evaluate"] = server.registerTool("charlotte:evaluate", {
     description:
-      "Execute JavaScript in page context. Useful for reading computed values, triggering custom events, or accessing page-level APIs.",
+      "Execute JavaScript in page context. Supports single expressions and multi-statement code. Returns the completion value of the last expression-statement.",
     inputSchema: {
-      expression: z.string().describe("JS expression to evaluate"),
+      expression: z.string().describe("JS expression or multi-statement code to evaluate"),
       timeout: z
         .number()
         .optional()
@@ -40,50 +40,38 @@ export function registerEvaluateTools(
     const evaluationTimeout = timeout ?? 5000;
     const shouldAwaitPromise = await_promise ?? true;
 
+    const cdpSession = await page.createCDPSession();
     try {
-      const result = await Promise.race([
-        page.evaluate(async (expr: string, awaitPromise: boolean) => {
-          try {
-            let result = new Function('return ' + expr)();
-            if (awaitPromise && result && typeof result === "object" && typeof result.then === "function") {
-              result = await result;
-            }
-
-            // Serialize the result
-            if (result === undefined) return { value: null, type: "undefined" };
-            if (result === null) return { value: null, type: "null" };
-            if (typeof result === "function") return { value: result.toString(), type: "function" };
-            if (result instanceof HTMLElement) return { value: result.outerHTML.substring(0, 200), type: "HTMLElement" };
-            if (result instanceof Node) return { value: result.nodeName, type: "Node" };
-
-            try {
-              return { value: JSON.parse(JSON.stringify(result)), type: typeof result };
-            } catch {
-              return { value: String(result), type: typeof result };
-            }
-          } catch (error: any) {
-            return {
-              error: true,
-              message: error.message,
-              stack: error.stack,
-            };
-          }
-        }, expression, shouldAwaitPromise),
-
+      const evalResult = await Promise.race([
+        cdpSession.send("Runtime.evaluate", {
+          expression,
+          returnByValue: true,
+          awaitPromise: shouldAwaitPromise,
+          timeout: evaluationTimeout,
+        }),
         new Promise<never>((_, reject) =>
           setTimeout(
             () => reject(new Error("TIMEOUT")),
-            evaluationTimeout,
+            evaluationTimeout + 500, // slightly longer than CDP timeout as fallback
           ),
         ),
       ]);
 
-      if (result && typeof result === "object" && "error" in result && result.error) {
+      // Check for exceptions
+      if (evalResult.exceptionDetails) {
+        const exceptionMessage =
+          evalResult.exceptionDetails.exception?.description ??
+          evalResult.exceptionDetails.text ??
+          "Unknown evaluation error";
         throw new CharlotteError(
           CharlotteErrorCode.EVALUATION_ERROR,
-          `Evaluation error: ${(result as any).message}`,
+          `Evaluation error: ${exceptionMessage}`,
         );
       }
+
+      // Serialize the RemoteObject result
+      const remoteObject = evalResult.result;
+      const result = serializeRemoteObject(remoteObject);
 
       return {
         content: [
@@ -136,8 +124,47 @@ export function registerEvaluateTools(
         ],
         isError: true,
       };
+    } finally {
+      await cdpSession.detach();
     }
   });
 
   return tools;
+}
+
+/**
+ * Convert a CDP RemoteObject to a { value, type } result.
+ */
+function serializeRemoteObject(
+  remoteObject: { type: string; subtype?: string; value?: unknown; description?: string; className?: string },
+): { value: unknown; type: string } {
+  const { type, subtype, value, description, className } = remoteObject;
+
+  if (type === "undefined") {
+    return { value: null, type: "undefined" };
+  }
+
+  if (subtype === "null") {
+    return { value: null, type: "null" };
+  }
+
+  if (type === "function") {
+    return { value: description ?? "[function]", type: "function" };
+  }
+
+  if (type === "object" && subtype === "node") {
+    return { value: description ?? "[Node]", type: className ?? "Node" };
+  }
+
+  if (type === "object" && subtype === "error") {
+    return { value: description ?? "[Error]", type: "Error" };
+  }
+
+  // For primitives and serializable objects, returnByValue gives us the value directly
+  if (value !== undefined) {
+    return { value, type };
+  }
+
+  // Fallback for non-serializable objects
+  return { value: description ?? `[${className ?? type}]`, type: className ?? type };
 }

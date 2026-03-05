@@ -15,6 +15,7 @@ export const TYPE_PREFIX_MAP: Record<string, string> = {
   form: "frm",
   region: "rgn",
   heading: "hdg",
+  dom_element: "dom",
 };
 
 export interface DOMPathSignature {

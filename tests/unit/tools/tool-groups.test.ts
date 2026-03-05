@@ -31,7 +31,7 @@ describe("tool-groups", () => {
     });
 
     it("contains all 39 tools across groups", () => {
-      expect(ALL_TOOL_NAMES).toHaveLength(39);
+      expect(ALL_TOOL_NAMES).toHaveLength(40);
     });
 
     it("has no duplicate tool names across groups", () => {
@@ -52,8 +52,8 @@ describe("tool-groups", () => {
       expect(TOOL_GROUPS.navigation).toContain("charlotte:reload");
     });
 
-    it("interaction group has 10 tools", () => {
-      expect(TOOL_GROUPS.interaction).toHaveLength(10);
+    it("interaction group has 11 tools", () => {
+      expect(TOOL_GROUPS.interaction).toHaveLength(11);
     });
 
     it("session group has 11 tools", () => {
@@ -79,8 +79,8 @@ describe("tool-groups", () => {
 
     it("browse profile includes navigation, observation, partial interaction, and tabs", () => {
       const tools = resolveProfile("browse");
-      // Exact size: 4 nav + 7 obs + 6 interaction + 4 tabs = 21
-      expect(tools.size).toBe(21);
+      // Exact size: 4 nav + 7 obs + 7 interaction + 4 tabs = 22
+      expect(tools.size).toBe(22);
       // Navigation (all 4)
       expect(tools.has("charlotte:navigate")).toBe(true);
       expect(tools.has("charlotte:back")).toBe(true);
@@ -115,8 +115,8 @@ describe("tool-groups", () => {
 
     it("interact profile includes all interaction tools plus dialog and evaluate", () => {
       const tools = resolveProfile("interact");
-      // Exact size: 4 nav + 7 obs + 10 interaction + 4 tabs + dialog + evaluate = 27
-      expect(tools.size).toBe(27);
+      // Exact size: 4 nav + 7 obs + 11 interaction + 4 tabs + dialog + evaluate = 28
+      expect(tools.size).toBe(28);
       expect(tools.has("charlotte:drag")).toBe(true);
       expect(tools.has("charlotte:hover")).toBe(true);
       expect(tools.has("charlotte:key")).toBe(true);
@@ -135,8 +135,8 @@ describe("tool-groups", () => {
 
     it("develop profile includes dev_mode tools", () => {
       const tools = resolveProfile("develop");
-      // Exact size: interact (27) + 3 dev_mode = 30
-      expect(tools.size).toBe(30);
+      // Exact size: interact (28) + 3 dev_mode = 31
+      expect(tools.size).toBe(31);
       expect(tools.has("charlotte:dev_serve")).toBe(true);
       expect(tools.has("charlotte:dev_inject")).toBe(true);
       expect(tools.has("charlotte:dev_audit")).toBe(true);

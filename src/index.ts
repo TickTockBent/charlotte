@@ -28,6 +28,9 @@ async function main(): Promise<void> {
 
   // Initialize config first (needed by PageManager for dialog handling)
   const config = createDefaultConfig();
+  if (cliOptions.outputDir) {
+    config.outputDir = cliOptions.outputDir;
+  }
 
   // Initialize browser
   const browserManager = new BrowserManager();

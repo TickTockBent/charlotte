@@ -251,9 +251,15 @@ export function registerSessionTools(
           .describe(
             'Auto-dismiss behavior for JS dialogs. "none" (default) queues for charlotte:dialog.',
           ),
+        output_dir: z
+          .string()
+          .optional()
+          .describe(
+            "Directory for large tool output files (used by output_file parameter on observe, screenshot, console, requests). Created automatically if it doesn't exist.",
+          ),
       },
     },
-    async ({ snapshot_depth, auto_snapshot, screenshot_dir, dialog_auto_dismiss }) => {
+    async ({ snapshot_depth, auto_snapshot, screenshot_dir, dialog_auto_dismiss, output_dir }) => {
       try {
         logger.info("Configuring Charlotte", { snapshot_depth, auto_snapshot, screenshot_dir });
 
@@ -275,6 +281,13 @@ export function registerSessionTools(
           deps.config.dialogAutoDismiss = dialog_auto_dismiss as DialogAutoDismiss;
         }
 
+        if (output_dir !== undefined) {
+          deps.config.outputDir = output_dir;
+          // Ensure directory exists
+          const fs = await import("node:fs/promises");
+          await fs.mkdir(output_dir, { recursive: true });
+        }
+
         return {
           content: [
             {
@@ -286,6 +299,7 @@ export function registerSessionTools(
                   auto_snapshot: deps.config.autoSnapshot,
                   screenshot_dir: deps.artifactStore.screenshotDir,
                   dialog_auto_dismiss: deps.config.dialogAutoDismiss,
+                  output_dir: deps.config.outputDir ?? null,
                 },
               }),
             },

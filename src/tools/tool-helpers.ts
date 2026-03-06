@@ -1,3 +1,5 @@
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import type { Page } from "puppeteer";
 import type { PageManager } from "../browser/page-manager.js";
 import type { BrowserManager } from "../browser/browser-manager.js";
@@ -317,4 +319,65 @@ export function handleToolError(error: unknown): {
     `Unexpected error: ${error instanceof Error ? error.message : String(error)}`,
   );
   return formatErrorResponse(sessionError);
+}
+
+/**
+ * Resolve an output file path from the `output_file` parameter.
+ * If the path is relative, it is resolved against `config.outputDir`
+ * (or cwd if outputDir is not set). Ensures the parent directory exists.
+ */
+export async function resolveOutputPath(
+  outputFile: string,
+  config: CharlotteConfig,
+): Promise<string> {
+  const resolved = path.isAbsolute(outputFile)
+    ? outputFile
+    : path.resolve(config.outputDir ?? process.cwd(), outputFile);
+
+  // Ensure parent directory exists
+  await fs.mkdir(path.dirname(resolved), { recursive: true });
+  return resolved;
+}
+
+/**
+ * Write text content to a file and return a brief confirmation response.
+ */
+export async function writeOutputFile(
+  filePath: string,
+  content: string,
+): Promise<{ content: Array<{ type: "text"; text: string }> }> {
+  await fs.writeFile(filePath, content, "utf-8");
+  const stats = await fs.stat(filePath);
+  return {
+    content: [
+      {
+        type: "text" as const,
+        text: JSON.stringify({
+          output_file: filePath,
+          size: stats.size,
+        }),
+      },
+    ],
+  };
+}
+
+/**
+ * Write binary content to a file and return a brief confirmation response.
+ */
+export async function writeBinaryOutputFile(
+  filePath: string,
+  data: Buffer,
+): Promise<{ content: Array<{ type: "text"; text: string }> }> {
+  await fs.writeFile(filePath, data);
+  return {
+    content: [
+      {
+        type: "text" as const,
+        text: JSON.stringify({
+          output_file: filePath,
+          size: data.length,
+        }),
+      },
+    ],
+  };
 }

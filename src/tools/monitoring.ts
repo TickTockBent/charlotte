@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { McpServer, RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { logger } from "../utils/logger.js";
 import type { ToolDependencies } from "./tool-helpers.js";
-import { handleToolError, coercedBoolean } from "./tool-helpers.js";
+import { handleToolError, coercedBoolean, resolveOutputPath, writeOutputFile } from "./tool-helpers.js";
 
 export function registerMonitoringTools(
   server: McpServer,
@@ -28,9 +28,15 @@ export function registerMonitoringTools(
           .describe(
             "Clear the message buffer after retrieval (default: false).",
           ),
+        output_file: z
+          .string()
+          .optional()
+          .describe(
+            "Write console messages to this file path instead of returning inline. Relative paths resolve against output_dir (see charlotte:configure). Returns only a confirmation with the file path and size.",
+          ),
       },
     },
-    async ({ level, clear }) => {
+    async ({ level, clear, output_file }) => {
       try {
         await deps.browserManager.ensureConnected();
 
@@ -47,16 +53,23 @@ export function registerMonitoringTools(
           deps.pageManager.clearConsoleMessages();
         }
 
+        const result = {
+          messages,
+          count: messages.length,
+          level: filterLevel,
+          cleared: clear ?? false,
+        };
+
+        if (output_file) {
+          const resolvedPath = await resolveOutputPath(output_file, deps.config);
+          return await writeOutputFile(resolvedPath, JSON.stringify(result, null, 2));
+        }
+
         return {
           content: [
             {
               type: "text" as const,
-              text: JSON.stringify({
-                messages,
-                count: messages.length,
-                level: filterLevel,
-                cleared: clear ?? false,
-              }),
+              text: JSON.stringify(result),
             },
           ],
         };
@@ -110,9 +123,15 @@ export function registerMonitoringTools(
           .describe(
             "Clear the request buffer after retrieval (default: false).",
           ),
+        output_file: z
+          .string()
+          .optional()
+          .describe(
+            "Write network requests to this file path instead of returning inline. Relative paths resolve against output_dir (see charlotte:configure). Returns only a confirmation with the file path and size.",
+          ),
       },
     },
-    async ({ url_pattern, resource_type, status_min, clear }) => {
+    async ({ url_pattern, resource_type, status_min, clear, output_file }) => {
       try {
         await deps.browserManager.ensureConnected();
 
@@ -146,15 +165,22 @@ export function registerMonitoringTools(
           deps.pageManager.clearNetworkRequests();
         }
 
+        const result = {
+          requests,
+          count: requests.length,
+          cleared: clear ?? false,
+        };
+
+        if (output_file) {
+          const resolvedPath = await resolveOutputPath(output_file, deps.config);
+          return await writeOutputFile(resolvedPath, JSON.stringify(result, null, 2));
+        }
+
         return {
           content: [
             {
               type: "text" as const,
-              text: JSON.stringify({
-                requests,
-                count: requests.length,
-                cleared: clear ?? false,
-              }),
+              text: JSON.stringify(result),
             },
           ],
         };

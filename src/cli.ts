@@ -19,20 +19,23 @@ const VALID_GROUPS: ToolGroupName[] = [
 
 export function parseCliArgs(
   argv: string[] = process.argv.slice(2),
-): { profile?: ToolProfile; toolGroups?: ToolGroupName[] } {
+): { profile?: ToolProfile; toolGroups?: ToolGroupName[]; outputDir?: string } {
   const profileArg = argv.find((a) => a.startsWith("--profile="));
   const toolsArg = argv.find((a) => a.startsWith("--tools="));
+  const outputDirArg = argv.find((a) => a.startsWith("--output-dir="));
 
   if (profileArg && toolsArg) {
     logger.warn("Both --profile and --tools provided; --profile takes precedence");
   }
+
+  const outputDir = outputDirArg ? outputDirArg.split("=")[1] : undefined;
 
   if (profileArg) {
     const profile = profileArg.split("=")[1] as ToolProfile;
     if (!VALID_PROFILES.includes(profile)) {
       throw new Error(`Invalid profile: ${profile}. Valid profiles: ${VALID_PROFILES.join(", ")}`);
     }
-    return { profile };
+    return { profile, outputDir };
   }
 
   if (toolsArg) {
@@ -42,9 +45,9 @@ export function parseCliArgs(
         throw new Error(`Invalid tool group: ${group}. Valid groups: ${VALID_GROUPS.join(", ")}`);
       }
     }
-    return { toolGroups: groups };
+    return { toolGroups: groups, outputDir };
   }
 
   // Default: no profile or groups specified — createServer defaults to browse
-  return {};
+  return { outputDir };
 }

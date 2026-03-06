@@ -472,10 +472,17 @@ Drag one element to another using mouse primitives (mousedown → intermediate m
 
 #### `charlotte:key`
 
+Send keyboard input to the page or a specific element. Use for keyboard-driven UIs (games, terminals, code editors) and non-input elements with `keydown` listeners. Distinct from `charlotte:type`, which enters text into form input elements.
+
+Provide exactly one of `key` (single key) or `keys` (sequence). Use `element_id` to focus a specific element before sending keys — without it, keys go to the currently focused element.
+
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `key` | `string` | Yes | — | Key name (e.g., `"Escape"`, `"Tab"`, `"Enter"`, `"ArrowDown"`, or a single character) |
-| `modifiers` | `Array<"ctrl" \| "shift" \| "alt" \| "meta">` | No | `[]` | Modifier keys to hold |
+| `key` | `string` | No | — | Single key to press (e.g., `"Escape"`, `"Tab"`, `"Enter"`, `"ArrowDown"`, `"Space"`, or a single character). Mutually exclusive with `keys`. |
+| `keys` | `Array<string>` | No | — | Sequence of keys to press in order (e.g., `["ArrowDown", "ArrowDown", "Enter"]`). Mutually exclusive with `key`. |
+| `modifiers` | `Array<"ctrl" \| "shift" \| "alt" \| "meta">` | No | `[]` | Modifier keys to hold during a single key press. Only valid with `key`. |
+| `element_id` | `string` | No | — | Element to focus before sending keys. If omitted, keys go to the currently focused element. |
+| `delay` | `number` | No | `0` | Milliseconds between key presses in a sequence. Only valid with `keys`. |
 
 #### `charlotte:wait_for`
 

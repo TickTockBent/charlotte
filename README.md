@@ -65,7 +65,7 @@ Agents receive landmarks, headings, interactive elements with typed metadata, bo
 
 **Observation** — `observe` (3 detail levels), `find` (spatial + semantic search, CSS selector mode), `screenshot`, `diff` (structural comparison against snapshots)
 
-**Interaction** — `click`, `click_at` (coordinate-based), `type`, `select`, `toggle`, `submit`, `scroll`, `hover`, `drag`, `key`, `wait_for` (async condition polling), `upload` (file input), `dialog` (accept/dismiss JS dialogs)
+**Interaction** — `click`, `click_at` (coordinate-based), `type`, `select`, `toggle`, `submit`, `scroll`, `hover`, `drag`, `key` (single/sequence with element targeting), `wait_for` (async condition polling), `upload` (file input), `dialog` (accept/dismiss JS dialogs)
 
 **Monitoring** — `console` (all severity levels, filtering, timestamps), `requests` (full HTTP history, method/status/resource type filtering)
 

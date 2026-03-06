@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Keyboard Test Page</title>
+  <style>
+    .key-target {
+      padding: 20px;
+      border: 1px solid #ccc;
+      margin: 10px 0;
+      cursor: pointer;
+    }
+    .key-target:focus {
+      outline: 2px solid blue;
+    }
+  </style>
+</head>
+<body>
+  <h1>Keyboard Tests</h1>
+
+  <section aria-label="Single key tests">
+    <h2>Single Key</h2>
+    <div id="key-target" tabindex="0" class="key-target" role="application" aria-label="Key target">
+      Press keys here
+    </div>
+    <div id="result"></div>
+  </section>
+
+  <section aria-label="Sequence tests">
+    <h2>Key Sequence</h2>
+    <div id="sequence-target" tabindex="0" class="key-target" role="application" aria-label="Sequence target">
+      Sequence capture
+    </div>
+    <div id="sequence-result"></div>
+  </section>
+
+  <section aria-label="Game grid">
+    <h2>Grid Navigation</h2>
+    <div id="grid" tabindex="0" class="key-target" role="application" aria-label="Game grid">
+      Use arrow keys to move
+    </div>
+    <div id="grid-result">0,0</div>
+  </section>
+
+  <label for="text-input">Text Input</label>
+  <input type="text" id="text-input" />
+
+  <script>
+    // Single key capture
+    const keyTarget = document.getElementById('key-target');
+    const result = document.getElementById('result');
+    keyTarget.addEventListener('keydown', (e) => {
+      e.preventDefault();
+      result.textContent = `key:${e.key} code:${e.code} ctrl:${e.ctrlKey} shift:${e.shiftKey} alt:${e.altKey} meta:${e.metaKey}`;
+    });
+
+    // Sequence capture
+    const seqTarget = document.getElementById('sequence-target');
+    const seqResult = document.getElementById('sequence-result');
+    const capturedKeys = [];
+    seqTarget.addEventListener('keydown', (e) => {
+      e.preventDefault();
+      capturedKeys.push(e.key);
+      seqResult.textContent = capturedKeys.join(',');
+    });
+
+    // Grid navigation (simulates a game)
+    const grid = document.getElementById('grid');
+    const gridResult = document.getElementById('grid-result');
+    let gridX = 0, gridY = 0;
+    grid.addEventListener('keydown', (e) => {
+      e.preventDefault();
+      switch (e.key) {
+        case 'ArrowUp': gridY--; break;
+        case 'ArrowDown': gridY++; break;
+        case 'ArrowLeft': gridX--; break;
+        case 'ArrowRight': gridX++; break;
+      }
+      gridResult.textContent = `${gridX},${gridY}`;
+    });
+  </script>
+</body>
+</html>

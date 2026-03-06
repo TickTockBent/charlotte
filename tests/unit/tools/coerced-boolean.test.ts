@@ -29,6 +29,22 @@ describe("coercedBoolean", () => {
     expect(() => coercedBoolean.parse(0)).toThrow();
   });
 
+  it("rejects null", () => {
+    expect(() => coercedBoolean.parse(null)).toThrow();
+  });
+
+  it("is case-sensitive — rejects capitalized variants", () => {
+    expect(() => coercedBoolean.parse("True")).toThrow();
+    expect(() => coercedBoolean.parse("TRUE")).toThrow();
+    expect(() => coercedBoolean.parse("False")).toThrow();
+    expect(() => coercedBoolean.parse("FALSE")).toThrow();
+  });
+
+  it("rejects objects and arrays", () => {
+    expect(() => coercedBoolean.parse({})).toThrow();
+    expect(() => coercedBoolean.parse([])).toThrow();
+  });
+
   it("works with .optional()", () => {
     const optionalSchema = coercedBoolean.optional();
     expect(optionalSchema.parse(undefined)).toBeUndefined();

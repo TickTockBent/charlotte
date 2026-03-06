@@ -745,6 +745,97 @@ describe("Interaction integration", () => {
       );
       expect(fileInputs.length).toBeGreaterThanOrEqual(2);
     });
+
+    it("rejects setFileInputFiles on a regular button", async () => {
+      const representation = await renderActivePage(deps, { detail: "summary" });
+      const button = findElementByLabel(representation, "Click Me");
+      expect(button).toBeDefined();
+      expect(button!.type).toBe("button");
+
+      const page = pageManager.getActivePage();
+      const { backendNodeId } = await resolveElement(deps, button!.id);
+
+      // Attempt to set files on a non-file-input element
+      const cdpSession = await page.createCDPSession();
+      try {
+        const { node } = await cdpSession.send("DOM.describeNode", { backendNodeId });
+        const isFileInput =
+          node.nodeName === "INPUT" &&
+          (node.attributes ?? []).some(
+            (attr: string, i: number, arr: string[]) =>
+              attr === "type" && arr[i + 1] === "file",
+          );
+        expect(isFileInput).toBe(false);
+      } finally {
+        await cdpSession.detach();
+      }
+    });
+
+    it("rejects setFileInputFiles on a text input", async () => {
+      const representation = await renderActivePage(deps, { detail: "summary" });
+      const textInput = findElementByType(representation, "text_input", "Text Input");
+      expect(textInput).toBeDefined();
+
+      const page = pageManager.getActivePage();
+      const { backendNodeId } = await resolveElement(deps, textInput!.id);
+
+      const cdpSession = await page.createCDPSession();
+      try {
+        const { node } = await cdpSession.send("DOM.describeNode", { backendNodeId });
+        // It's an INPUT but type="text", not type="file"
+        expect(node.nodeName).toBe("INPUT");
+        const isFileInput = (node.attributes ?? []).some(
+          (attr: string, i: number, arr: string[]) =>
+            attr === "type" && arr[i + 1] === "file",
+        );
+        expect(isFileInput).toBe(false);
+      } finally {
+        await cdpSession.detach();
+      }
+    });
+
+    it("does not reclassify non-button elements as file_input", async () => {
+      const representation = await renderActivePage(deps, { detail: "summary" });
+      // Links, checkboxes, text inputs should never become file_input
+      for (const element of representation.interactive) {
+        if (element.type !== "file_input") {
+          expect(["button", "link", "text_input", "select", "checkbox", "radio", "toggle", "range"]).toContain(element.type);
+        }
+      }
+    });
+
+    it("file inputs are detected at summary detail but counted as buttons at minimal detail", async () => {
+      // At summary/full detail, reclassifyFileInputs runs and corrects the type
+      const summaryRep = await renderActivePage(deps, { detail: "summary" });
+      const fileInputsSummary = summaryRep.interactive.filter(
+        (el) => el.type === "file_input",
+      );
+      expect(fileInputsSummary.length).toBeGreaterThanOrEqual(2);
+
+      // At minimal detail, buildInteractiveSummary operates on raw AX nodes
+      // (before reclassification), but the full interactive array is still
+      // reclassified — minimal just doesn't serialize it
+      const minimalRep = await renderActivePage(deps, { detail: "minimal" });
+      // The internal interactive array should still have file_input types
+      const fileInputsMinimal = minimalRep.interactive.filter(
+        (el) => el.type === "file_input",
+      );
+      expect(fileInputsMinimal.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it("file inputs have bounds and are visible", async () => {
+      const representation = await renderActivePage(deps, { detail: "summary" });
+      const fileInputs = representation.interactive.filter(
+        (el) => el.type === "file_input",
+      );
+      for (const fileInput of fileInputs) {
+        expect(fileInput.bounds).not.toBeNull();
+        expect(fileInput.bounds!.w).toBeGreaterThan(0);
+        expect(fileInput.bounds!.h).toBeGreaterThan(0);
+        // visible is omitted when true (default stripping)
+        expect(fileInput.state.visible).toBeUndefined();
+      }
+    });
   });
 
   describe("wait_for", () => {

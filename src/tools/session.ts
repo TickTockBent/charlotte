@@ -8,6 +8,7 @@ import {
   renderActivePage,
   formatPageResponse,
   handleToolError,
+  coercedBoolean,
 } from "./tool-helpers.js";
 
 const CookieSchema = z.object({
@@ -15,8 +16,8 @@ const CookieSchema = z.object({
   value: z.string().describe("Cookie value"),
   domain: z.string().describe("Cookie domain"),
   path: z.string().optional().describe("Cookie path (default: '/')"),
-  secure: z.boolean().optional().describe("Secure flag"),
-  httpOnly: z.boolean().optional().describe("HttpOnly flag"),
+  secure: coercedBoolean.optional().describe("Secure flag"),
+  httpOnly: coercedBoolean.optional().describe("HttpOnly flag"),
   sameSite: z
     .enum(["Strict", "Lax", "None"])
     .optional()

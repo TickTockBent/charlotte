@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { McpServer, RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { logger } from "../utils/logger.js";
 import type { ToolDependencies } from "./tool-helpers.js";
-import { handleToolError } from "./tool-helpers.js";
+import { handleToolError, coercedBoolean } from "./tool-helpers.js";
 
 export function registerMonitoringTools(
   server: McpServer,
@@ -23,8 +23,7 @@ export function registerMonitoringTools(
           .describe(
             'Filter by log level. "all" (default) returns every message.',
           ),
-        clear: z
-          .boolean()
+        clear: coercedBoolean
           .optional()
           .describe(
             "Clear the message buffer after retrieval (default: false).",
@@ -106,8 +105,7 @@ export function registerMonitoringTools(
           .describe(
             "Minimum HTTP status code to include (e.g. 400 for errors only).",
           ),
-        clear: z
-          .boolean()
+        clear: coercedBoolean
           .optional()
           .describe(
             "Clear the request buffer after retrieval (default: false).",

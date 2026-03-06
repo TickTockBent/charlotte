@@ -9,6 +9,10 @@ All notable changes to Charlotte will be documented in this file.
 - **`charlotte:upload`** — Set files on `<input type="file">` elements via CDP `DOM.setFileInputFiles`. Validates file existence and element type before upload. Closes GAP-02 from the Playwright MCP gap analysis.
 - **File input detection** — File inputs (`<input type="file">`) are now correctly identified as `file_input` type in page representations. Previously they appeared as `button` because Chromium's accessibility tree represents them with a button role. A post-extraction reclassification step checks the underlying DOM node.
 
+### Fixed
+
+- **Boolean parameter validation error** — `charlotte:console` and `charlotte:requests` `clear` parameter (and `charlotte:type` `clear_first`/`press_enter`) rejected string-coerced booleans (`"true"`/`"false"`) sent by some MCP clients. All boolean parameters now accept both native booleans and their string representations. Fixes #50.
+
 ## [0.4.1] - 2026-03-05
 
 ### Added

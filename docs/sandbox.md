@@ -7,7 +7,7 @@ Charlotte ships with a self-contained test website that exercises all 30 MCP too
 | Page | File | What It Tests |
 |------|------|---------------|
 | **Home** | `index.html` | Landmarks, headings, table, list, image, blockquote, footer nav. Content extraction at all detail levels. |
-| **Forms** | `forms.html` | Text inputs, email, password, selects, checkboxes, radios, textarea, search, number input, disabled fields, form submission. |
+| **Forms** | `forms.html` | Text inputs, email, password, selects, checkboxes, radios, textarea, search, number input, file upload (single + multiple), disabled fields, form submission. |
 | **Interactive** | `interactive.html` | Counter buttons, dynamic DOM content, hover zone with tooltip, double-click target, keyboard input display, delayed content (2s timeout), hidden element reveal (1s timeout), scroll container (50 items), page title/meta modification. |
 | **About** | `about.html` | Simple content page for back/forward navigation. Cookie display, viewport info, custom header display. |
 
@@ -69,6 +69,7 @@ Charlotte ships with a self-contained test website that exercises all 30 MCP too
 | `hover` | `hover({ element_id: "<hover_zone>" })` on interactive page | Hover state triggered |
 | `key` | `key({ key: "Escape" })` | Key display shows "Escape" (verify with `evaluate`) |
 | `click` (double) | `click({ element_id: "<dblclick_target>", click_type: "double" })` | Target text changes to "Activated!" |
+| `upload` | `upload({ element_id: "<file_input_id>", paths: ["/tmp/test.txt"] })` on forms page | File input shows filename, form data includes file |
 
 ### Async
 

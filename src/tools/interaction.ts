@@ -1,3 +1,4 @@
+import * as fs from "node:fs/promises";
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { Page, KeyInput } from "puppeteer";
@@ -395,6 +396,40 @@ async function submitFormByBackendNodeId(
       functionDeclaration: `function() {
         this.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
       }`,
+    });
+  } finally {
+    await cdpSession.detach();
+  }
+}
+
+/**
+ * Set files on a file input element using CDP DOM.setFileInputFiles.
+ * Validates that the target element is actually an <input type="file">.
+ */
+async function setFileInputFiles(
+  page: Page,
+  backendNodeId: number,
+  filePaths: string[],
+): Promise<void> {
+  const cdpSession = await page.createCDPSession();
+  try {
+    const { node } = await cdpSession.send("DOM.describeNode", { backendNodeId });
+    const isFileInput =
+      node.nodeName === "INPUT" &&
+      (node.attributes ?? []).some(
+        (attr: string, i: number, arr: string[]) =>
+          attr === "type" && arr[i + 1] === "file",
+      );
+    if (!isFileInput) {
+      throw new CharlotteError(
+        CharlotteErrorCode.SESSION_ERROR,
+        "Element is not a file input.",
+        "Use charlotte:find to locate file_input elements.",
+      );
+    }
+    await cdpSession.send("DOM.setFileInputFiles", {
+      files: filePaths,
+      backendNodeId,
     });
   } finally {
     await cdpSession.detach();
@@ -924,6 +959,50 @@ export function registerInteractionTools(
         }
 
         await new Promise((resolve) => setTimeout(resolve, 50));
+
+        const representation = await renderAfterAction(deps);
+        return formatPageResponse(representation);
+      } catch (error: unknown) {
+        return handleToolError(error);
+      }
+    },
+  );
+
+  // ─── charlotte:upload ───
+  tools["charlotte:upload"] = server.registerTool(
+    "charlotte:upload",
+    {
+      description:
+        "Set files on a file input element. Validates that files exist and that the target is a file input. Returns full page representation after upload.",
+      inputSchema: {
+        element_id: z.string().describe("Target file input element ID"),
+        paths: z
+          .array(z.string())
+          .min(1)
+          .describe("Absolute file paths to upload"),
+      },
+    },
+    async ({ element_id, paths }) => {
+      try {
+        await deps.browserManager.ensureConnected();
+        const { page, backendNodeId } = await resolveElement(deps, element_id);
+
+        // Validate all files exist before sending to CDP
+        for (const filePath of paths) {
+          try {
+            await fs.access(filePath);
+          } catch {
+            throw new CharlotteError(
+              CharlotteErrorCode.SESSION_ERROR,
+              `File not found: ${filePath}`,
+              "Provide absolute paths to files that exist on disk.",
+            );
+          }
+        }
+
+        logger.info("Uploading files", { element_id, fileCount: paths.length });
+
+        await setFileInputFiles(page, backendNodeId, paths);
 
         const representation = await renderAfterAction(deps);
         return formatPageResponse(representation);

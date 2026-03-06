@@ -137,6 +137,16 @@
       });
     </script>
 
+    <!-- File upload tests -->
+    <section aria-label="Upload tests">
+      <h2>Upload Tests</h2>
+      <label for="single-upload">Single File</label>
+      <input type="file" id="single-upload" onchange="document.getElementById('result').textContent = 'Uploaded: ' + this.files[0].name">
+
+      <label for="multi-upload">Multiple Files</label>
+      <input type="file" id="multi-upload" multiple onchange="document.getElementById('result').textContent = 'Uploaded: ' + this.files.length + ' files'">
+    </section>
+
     <!-- Form submit test -->
     <section aria-label="Submit tests">
       <h2>Submit Tests</h2>

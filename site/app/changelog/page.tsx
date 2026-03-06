@@ -19,6 +19,26 @@ interface Release {
 
 const releases: Release[] = [
   {
+    version: "0.4.2",
+    date: "2026-03-06",
+    entries: [
+      { type: "added", text: "charlotte:upload — Set files on <input type=\"file\"> elements via CDP. Validates file existence and element type. Closes GAP-02." },
+      { type: "added", text: "File input detection — File inputs now correctly identified as file_input type instead of button." },
+      { type: "added", text: "charlotte:key enhancement — Added keys (sequence), element_id (focus targeting), and delay parameters for keyboard-driven UIs." },
+      { type: "fixed", text: "Boolean parameter validation — All boolean parameters now accept string-coerced values (\"true\"/\"false\") from MCP clients." },
+      { type: "fixed", text: "click_at hover simulation — Moves mouse to coordinates and pauses before clicking, fixing framework-managed link navigation." },
+    ],
+  },
+  {
+    version: "0.4.1",
+    date: "2026-03-05",
+    entries: [
+      { type: "added", text: "charlotte:click_at — Click at specific page coordinates for non-semantic elements (custom widgets, canvas, SVG)." },
+      { type: "added", text: "CSS selector mode for charlotte:find — Query the DOM directly via selector parameter, returning elements with Charlotte IDs." },
+      { type: "fixed", text: "charlotte:evaluate silent null on multi-statement code — Replaced with CDP Runtime.evaluate for correct completion values." },
+    ],
+  },
+  {
     version: "0.4.0",
     date: "2026-03-03",
     entries: [

@@ -4,14 +4,22 @@ All notable changes to Charlotte will be documented in this file.
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-03-06
+
 ### Added
 
 - **`charlotte:upload`** — Set files on `<input type="file">` elements via CDP `DOM.setFileInputFiles`. Validates file existence and element type before upload. Closes GAP-02 from the Playwright MCP gap analysis.
 - **File input detection** — File inputs (`<input type="file">`) are now correctly identified as `file_input` type in page representations. Previously they appeared as `button` because Chromium's accessibility tree represents them with a button role. A post-extraction reclassification step checks the underlying DOM node.
+- **`charlotte:key` enhancement** — Added `keys` (sequence of key presses), `element_id` (focus a specific element before sending keys), and `delay` (milliseconds between sequence presses) parameters. Enables keyboard-driven interaction with non-input elements like game UIs, terminals, and code editors. Closes #49, #51.
 
 ### Fixed
 
 - **Boolean parameter validation error** — `charlotte:console` and `charlotte:requests` `clear` parameter (and `charlotte:type` `clear_first`/`press_enter`) rejected string-coerced booleans (`"true"`/`"false"`) sent by some MCP clients. All boolean parameters now accept both native booleans and their string representations. Fixes #50.
+- **`click_at` skipped hover on framework-managed links** — `click_at` now moves the mouse to target coordinates and pauses 50ms before clicking, matching real user behavior. Previously, framework links (e.g., Next.js `<Link>`) that depend on hover-triggered prefetch would skip client-side navigation. Fixes #48.
+
+### Changed
+
+- Dialog integration tests hardened with MCP end-to-end testing via `InMemoryTransport`, sequential dialog coverage, and dialog-aware action racing tests. Test count 17 → 25. Closes #30, #33, #34.
 
 ## [0.4.1] - 2026-03-05
 

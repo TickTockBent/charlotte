@@ -12,7 +12,7 @@ Charlotte takes a different approach. It decomposes each page into a typed, stru
 
 ### Benchmarks
 
-Charlotte v0.4.1 vs Playwright MCP, measured by characters returned per tool call on real websites:
+Charlotte v0.4.2 vs Playwright MCP, measured by characters returned per tool call on real websites:
 
 **Navigation** (first contact with a page):
 
@@ -83,9 +83,9 @@ Charlotte ships 42 tools, but most workflows only need a subset. Startup profile
 charlotte --profile browse    # 23 tools (default) — navigate, observe, interact, tabs
 charlotte --profile core      # 7 tools — navigate, observe, find, click, type, submit
 charlotte --profile full      # 42 tools — everything
-charlotte --profile interact  # 29 tools — full interaction + dialog + evaluate
-charlotte --profile develop   # 32 tools — interact + dev_serve, dev_inject, dev_audit
-charlotte --profile audit     # 13 tools — navigation + observation + dev_audit + viewport
+charlotte --profile interact  # 30 tools — full interaction + dialog + evaluate
+charlotte --profile develop   # 33 tools — interact + dev_serve, dev_inject, dev_audit
+charlotte --profile audit     # 14 tools — navigation + observation + dev_audit + viewport
 ```
 
 Agents can activate more tools mid-session without restarting:
@@ -362,8 +362,6 @@ Four pages cover navigation, forms, interactive elements, delayed content, scrol
 **Iframe content not captured** — Charlotte reads the main frame's accessibility tree only. Content inside iframes (same-origin or cross-origin) is not included in the page representation. See the Roadmap for planned iframe support.
 
 **Shadow DOM** — Open shadow DOM works transparently. Chromium's accessibility tree pierces open shadow boundaries, so web components (e.g., GitHub's `<relative-time>`, `<tool-tip>`) render their content into Charlotte's representation without special handling. Closed shadow roots are opaque to the accessibility tree and will not be captured.
-
-**`click_at` skips hover on framework-managed links** — `click_at` dispatched mouse events without a preceding hover sequence, which caused Next.js `<Link>` components to skip client-side navigation (they depend on hover-triggered prefetch). Fixed in next release by moving the mouse to the target coordinates and pausing 50ms before clicking, matching real user behavior. ([#48](https://github.com/TickTockBent/charlotte/issues/48))
 
 ## Roadmap
 

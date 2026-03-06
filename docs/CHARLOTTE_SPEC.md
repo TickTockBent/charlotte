@@ -1,6 +1,6 @@
 # Charlotte Technical Specification
 
-**Version:** 0.3.0
+**Version:** 0.4.2
 
 Charlotte is an MCP server that renders web pages into structured, agent-readable `PageRepresentation` objects using headless Chromium and Puppeteer. It communicates over stdio using the Model Context Protocol.
 
@@ -376,10 +376,13 @@ Search for elements matching criteria.
 | `type` | `string` | No | — | Element type filter |
 | `near` | `string` | No | — | Element ID; find elements within ~200px |
 | `within` | `string` | No | — | Element ID; find elements geometrically inside this element's bounds |
+| `selector` | `string` | No | — | CSS selector to query the DOM directly (bypasses accessibility tree) |
+
+When using `selector`, queries the DOM via `DOM.querySelectorAll` and returns lightweight `DOMElementResult` objects with Charlotte IDs (`dom-xxxx`) usable by all interaction tools. Mutually exclusive with accessibility-based filters.
 
 Spatial proximity uses Euclidean distance between element centers, threshold of 200px.
 
-**Returns:** Array of matching `InteractiveElement` objects.
+**Returns:** Array of matching `InteractiveElement` or `DOMElementResult` objects.
 
 #### `charlotte:screenshot`
 
@@ -391,7 +394,31 @@ Capture a visual screenshot.
 | `format` | `"png" \| "jpeg" \| "webp"` | No | `"png"` | Image format |
 | `quality` | `number` | No | — | 1-100 for jpeg/webp |
 
-**Returns:** Base64-encoded image.
+**Returns:** Base64-encoded image. When `screenshot_dir` is configured via `charlotte:configure`, also persists the screenshot as a file artifact.
+
+#### `charlotte:screenshots`
+
+List all persistent screenshot artifacts. No parameters.
+
+**Returns:** Array of `{ id, filename, timestamp, format, size }` objects.
+
+#### `charlotte:screenshot_get`
+
+Retrieve a persistent screenshot artifact by ID.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `id` | `string` | Yes | — | Screenshot artifact ID |
+
+**Returns:** Base64-encoded image data.
+
+#### `charlotte:screenshot_delete`
+
+Delete a persistent screenshot artifact.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `id` | `string` | Yes | — | Screenshot artifact ID |
 
 #### `charlotte:diff`
 
@@ -414,8 +441,22 @@ All interaction tools capture a pre-action snapshot and return a `PageRepresenta
 |-----------|------|----------|---------|-------------|
 | `element_id` | `string` | Yes | — | Target element ID |
 | `click_type` | `"left" \| "right" \| "double"` | No | `"left"` | Click type |
+| `modifiers` | `Array<"ctrl" \| "shift" \| "alt" \| "meta">` | No | `[]` | Modifier keys to hold during click |
 
 Detects navigation triggered by the click and waits for page load if so.
+
+#### `charlotte:click_at`
+
+Click at specific page coordinates. For non-semantic elements (custom widgets, canvas regions, SVG graphics) that don't appear in the accessibility tree.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `x` | `number` | Yes | — | X coordinate in page pixels |
+| `y` | `number` | Yes | — | Y coordinate in page pixels |
+| `click_type` | `"left" \| "right" \| "double"` | No | `"left"` | Click type |
+| `modifiers` | `Array<"ctrl" \| "shift" \| "alt" \| "meta">` | No | `[]` | Modifier keys to hold during click |
+
+Moves the mouse to target coordinates and pauses 50ms before clicking, matching real user hover behavior.
 
 #### `charlotte:type`
 
@@ -498,6 +539,17 @@ Wait for a condition to be met on the page. At least one condition parameter is 
 | `timeout` | `number` | No | `10000` | Max wait in ms |
 
 Polls every 100ms until the condition is met or timeout is reached.
+
+#### `charlotte:upload`
+
+Set files on a file input element.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `element_id` | `string` | Yes | — | Target file input element ID |
+| `paths` | `Array<string>` | Yes | — | Absolute paths to files to upload |
+
+Validates that the element is `<input type="file">` and that all files exist before setting them via CDP `DOM.setFileInputFiles`. File inputs are identified as `file_input` type in page representations (reclassified from the AX tree's `button` role).
 
 ### Dialog Handling Tools
 

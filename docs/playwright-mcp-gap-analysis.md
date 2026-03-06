@@ -80,7 +80,7 @@ where Charlotte has capabilities Playwright MCP does not**, for completeness.
 | **Suggested Tool Name** | `charlotte:drag` |
 | **Implementation Notes** | Puppeteer supports drag via `page.mouse.move()`, `page.mouse.down()`, `page.mouse.up()` sequences. Could also use CDP `Input.dispatchDragEvent`. |
 
-### GAP-02: File Upload — *remediated*
+### GAP-02: File Upload — *remediated in v0.4.2*
 
 | Attribute | Detail |
 |-----------|--------|
@@ -584,7 +584,7 @@ Features Charlotte provides that Playwright MCP **does not** have as dedicated t
 | ID | Category | Gap | Playwright Tool/Feature | Charlotte Status | Impact |
 |----|----------|-----|-------------------------|------------------|--------|
 | GAP-01 | Interaction | Drag and drop | `browser_drag` | Remediated in v0.4.0 | High |
-| GAP-02 | Interaction | File upload | `browser_file_upload` | Missing | High |
+| GAP-02 | Interaction | File upload | `browser_file_upload` | Remediated in v0.4.2 | High |
 | GAP-03 | Interaction | Dialog handling | `browser_handle_dialog` | Remediated in v0.3.0 | High |
 | GAP-04 | Interaction | Batch form fill | `browser_fill_form` | Missing | Medium |
 | GAP-05 | Interaction | Slow typing | `slowly` param | Missing | Medium |

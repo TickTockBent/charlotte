@@ -15,6 +15,8 @@
 
   <button id="delayed-alert" onclick="setTimeout(() => alert('Delayed'), 200)">Delayed Alert</button>
 
+  <button id="double-confirm" onclick="handleDoubleConfirm()">Double Confirm</button>
+
   <button id="beforeunload-btn" onclick="registerBeforeUnload()">Register Beforeunload</button>
 
   <div id="result"></div>
@@ -28,6 +30,13 @@
     function handlePrompt() {
       const result = prompt('Enter name', 'default-name');
       document.getElementById('result').textContent = result === null ? 'null' : result;
+    }
+
+    function handleDoubleConfirm() {
+      const first = confirm('First question?');
+      document.getElementById('result').textContent = first ? 'first:yes' : 'first:no';
+      const second = confirm('Second question?');
+      document.getElementById('result').textContent += ',' + (second ? 'second:yes' : 'second:no');
     }
 
     function registerBeforeUnload() {

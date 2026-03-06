@@ -98,7 +98,7 @@ async function clickElementByBackendNodeId(
  * (alert, confirm, prompt, beforeunload), the action promise will block indefinitely.
  * This function detects that and returns early so the caller can surface `pending_dialog`.
  */
-async function waitForPossibleNavigation(
+export async function waitForPossibleNavigation(
   page: Page,
   action: () => Promise<void>,
   { detectionWindowMs = 500, loadTimeoutMs = 10000, settleMs = 50 } = {},

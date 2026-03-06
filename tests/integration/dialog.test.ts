@@ -13,7 +13,13 @@ import type { CharlotteConfig } from "../../src/types/config.js";
 import type { ToolDependencies } from "../../src/tools/tool-helpers.js";
 import {
   renderActivePage,
+  renderAfterAction,
+  resolveElement,
 } from "../../src/tools/tool-helpers.js";
+import { waitForPossibleNavigation } from "../../src/tools/interaction.js";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import { createServer } from "../../src/server.js";
 
 const DIALOG_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/dialog.html")}`;
 
@@ -369,94 +375,368 @@ describe("Dialog integration", () => {
     });
   });
 
-  describe("response metadata", () => {
+  // ─── #34: Test charlotte:dialog tool response through MCP ───
+  describe("dialog tool response via MCP (#34)", () => {
+    let mcpClient: Client;
+    let closeTransport: () => Promise<void>;
+
+    beforeAll(async () => {
+      const { server } = createServer(
+        {
+          browserManager: deps.browserManager,
+          pageManager: deps.pageManager,
+          rendererPipeline: deps.rendererPipeline,
+          elementIdGenerator: deps.elementIdGenerator,
+          snapshotStore: deps.snapshotStore,
+          artifactStore: deps.artifactStore,
+          config: deps.config,
+        },
+        { profile: "full" },
+      );
+
+      const [clientTransport, serverTransport] =
+        InMemoryTransport.createLinkedPair();
+      await server.connect(serverTransport);
+
+      mcpClient = new Client({ name: "dialog-test", version: "1.0.0" });
+      await mcpClient.connect(clientTransport);
+
+      closeTransport = async () => {
+        await mcpClient.close();
+        await server.close();
+      };
+    });
+
+    afterAll(async () => {
+      await closeTransport();
+    });
+
     beforeEach(async () => {
       await cleanNavigate();
     });
 
-    it("dialog_handled metadata is available after handling", async () => {
+    it("charlotte:dialog accept returns dialog_handled with correct type, message, and action", async () => {
+      const page = pageManager.getActivePage();
+
+      // Trigger confirm dialog
+      const clickPromise = page.click("#confirm-btn");
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      // Call charlotte:dialog through MCP
+      const result = await mcpClient.callTool({
+        name: "charlotte:dialog",
+        arguments: { accept: true },
+      });
+
+      await clickPromise;
+
+      // Parse the actual tool response
+      expect(result.content).toHaveLength(1);
+      const responsePayload = JSON.parse(
+        (result.content as Array<{ type: string; text: string }>)[0].text,
+      );
+
+      // Validate dialog_handled metadata
+      expect(responsePayload.dialog_handled).toBeDefined();
+      expect(responsePayload.dialog_handled.type).toBe("confirm");
+      expect(responsePayload.dialog_handled.message).toBe("Do you agree?");
+      expect(responsePayload.dialog_handled.action).toBe("accepted");
+
+      // Validate page representation is included
+      expect(responsePayload.page).toBeDefined();
+      expect(responsePayload.page.url).toBeTruthy();
+    });
+
+    it("charlotte:dialog dismiss returns action 'dismissed'", async () => {
       const page = pageManager.getActivePage();
 
       const clickPromise = page.click("#confirm-btn");
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
-      const dialogInfo = pageManager.getPendingDialogInfo();
-      expect(dialogInfo).not.toBeNull();
+      const result = await mcpClient.callTool({
+        name: "charlotte:dialog",
+        arguments: { accept: false },
+      });
 
-      // Capture what dialog_handled should contain
-      const expectedHandled = {
-        type: dialogInfo!.type,
-        message: dialogInfo!.message,
-        action: "accepted",
-      };
-
-      const rawDialog = pageManager.getPendingDialog()!;
-      await rawDialog.accept();
-      pageManager.clearPendingDialog();
       await clickPromise;
 
-      expect(expectedHandled.type).toBe("confirm");
-      expect(expectedHandled.message).toBe("Do you agree?");
-      expect(expectedHandled.action).toBe("accepted");
+      const responsePayload = JSON.parse(
+        (result.content as Array<{ type: string; text: string }>)[0].text,
+      );
+
+      expect(responsePayload.dialog_handled.action).toBe("dismissed");
+      expect(responsePayload.dialog_handled.type).toBe("confirm");
+    });
+
+    it("charlotte:dialog with prompt_text includes text in accept", async () => {
+      const page = pageManager.getActivePage();
+
+      const clickPromise = page.click("#prompt-btn");
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      const result = await mcpClient.callTool({
+        name: "charlotte:dialog",
+        arguments: { accept: true, prompt_text: "Test Name" },
+      });
+
+      await clickPromise;
+
+      const responsePayload = JSON.parse(
+        (result.content as Array<{ type: string; text: string }>)[0].text,
+      );
+
+      expect(responsePayload.dialog_handled.type).toBe("prompt");
+      expect(responsePayload.dialog_handled.message).toBe("Enter name");
+      expect(responsePayload.dialog_handled.action).toBe("accepted");
+
+      // Verify the prompt text was passed through to the page
+      const resultText = await getResultText();
+      expect(resultText).toBe("Test Name");
+    });
+
+    it("charlotte:dialog returns error when no dialog is pending", async () => {
+      const result = await mcpClient.callTool({
+        name: "charlotte:dialog",
+        arguments: { accept: true },
+      });
+
+      expect(result.isError).toBe(true);
+      const errorPayload = JSON.parse(
+        (result.content as Array<{ type: string; text: string }>)[0].text,
+      );
+      expect(errorPayload.error.code).toBe("SESSION_ERROR");
+      expect(errorPayload.error.message).toBe("No pending dialog to handle.");
     });
   });
 
-  describe("dialog-aware action racing", () => {
+  // ─── #30: End-to-end dialog-aware action racing ───
+  describe("dialog-aware action racing end-to-end (#30)", () => {
     beforeEach(async () => {
       await cleanNavigate();
     });
 
-    it("click that triggers alert does not hang and surfaces pending_dialog", async () => {
+    it("waitForPossibleNavigation returns early when click triggers alert", async () => {
       const page = pageManager.getActivePage();
 
-      // Use a timed race to ensure we don't hang.
-      // The click + render should complete quickly because the dialog-aware
-      // racing detects the dialog and returns early.
+      // Render to get element IDs, then resolve the alert button
+      await renderActivePage(deps, { detail: "summary" });
+      const alertButton = deps.elementIdGenerator.findSimilar("btn-", []);
+
+      // Use waitForPossibleNavigation with a real click action (same as charlotte:click)
       const timeoutPromise = new Promise<"timeout">((resolve) =>
         setTimeout(() => resolve("timeout"), 5000),
       );
 
       const actionPromise = (async () => {
-        // Simulate what the click tool does: action + render
-        const clickAction = page.click("#alert-btn");
-        // Race click against dialog detection
-        const dialogAppeared = new Promise<void>((resolve) => {
-          const handler = () => {
-            page.off("dialog", handler);
-            resolve();
-          };
-          page.on("dialog", handler);
-        });
-
-        await Promise.race([
-          clickAction.then(() => "click" as const),
-          dialogAppeared.then(() => "dialog" as const),
-        ]);
-
-        // Suppress potential rejection from the click promise
-        clickAction.catch(() => {});
-
-        // Now render — should return stub with pending_dialog
-        const representation = await renderActivePage(deps, { source: "action" });
-        return representation;
+        await waitForPossibleNavigation(page, () => page.click("#alert-btn"));
+        return "completed" as const;
       })();
 
-      const result = await Promise.race([actionPromise, timeoutPromise]);
+      const raceResult = await Promise.race([actionPromise, timeoutPromise]);
+      expect(raceResult).toBe("completed");
 
-      expect(result).not.toBe("timeout");
-      if (result !== "timeout") {
-        expect(result.pending_dialog).toBeDefined();
-        expect(result.pending_dialog!.type).toBe("alert");
-      }
+      // renderAfterAction should return stub with pending_dialog
+      const representation = await renderAfterAction(deps);
+      expect(representation.pending_dialog).toBeDefined();
+      expect(representation.pending_dialog!.type).toBe("alert");
+      expect(representation.pending_dialog!.message).toBe("Hello from alert");
+      expect(representation.title).toBe("(dialog blocking)");
 
-      // Clean up: accept the dialog
+      // Clean up
       const rawDialog = pageManager.getPendingDialog();
       if (rawDialog) {
         await rawDialog.accept();
         pageManager.clearPendingDialog();
       }
-      // Let the original click promise settle
       await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    it("waitForPossibleNavigation returns early when click triggers confirm", async () => {
+      const page = pageManager.getActivePage();
+
+      const actionPromise = (async () => {
+        await waitForPossibleNavigation(page, () => page.click("#confirm-btn"));
+        return "completed" as const;
+      })();
+
+      const timeoutPromise = new Promise<"timeout">((resolve) =>
+        setTimeout(() => resolve("timeout"), 5000),
+      );
+
+      const raceResult = await Promise.race([actionPromise, timeoutPromise]);
+      expect(raceResult).toBe("completed");
+
+      // Dialog should be pending
+      const dialogInfo = pageManager.getPendingDialogInfo();
+      expect(dialogInfo).not.toBeNull();
+      expect(dialogInfo!.type).toBe("confirm");
+
+      // Clean up
+      const rawDialog = pageManager.getPendingDialog()!;
+      await rawDialog.accept();
+      pageManager.clearPendingDialog();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    it("full click→dialog→render path produces correct response", async () => {
+      // This tests the exact sequence charlotte:click uses:
+      // resolveElement → waitForPossibleNavigation(click) → renderAfterAction
+      const representation = await renderActivePage(deps, { detail: "summary" });
+      const alertButton = representation.interactive.find(
+        (el) => el.label === "Alert",
+      );
+      expect(alertButton).toBeDefined();
+
+      const { page, backendNodeId } = await resolveElement(deps, alertButton!.id);
+
+      // Execute the click through waitForPossibleNavigation
+      await waitForPossibleNavigation(page, async () => {
+        const cdpSession = await page.createCDPSession();
+        try {
+          await cdpSession.send("DOM.scrollIntoViewIfNeeded", { backendNodeId });
+          const { model } = await cdpSession.send("DOM.getBoxModel", { backendNodeId });
+          const contentQuad = model.content;
+          const centerX = (contentQuad[0] + contentQuad[2] + contentQuad[4] + contentQuad[6]) / 4;
+          const centerY = (contentQuad[1] + contentQuad[3] + contentQuad[5] + contentQuad[7]) / 4;
+          await page.mouse.click(centerX, centerY);
+        } finally {
+          await cdpSession.detach();
+        }
+      });
+
+      // renderAfterAction — the same call charlotte:click makes
+      const afterAction = await renderAfterAction(deps);
+      expect(afterAction.pending_dialog).toBeDefined();
+      expect(afterAction.pending_dialog!.type).toBe("alert");
+
+      // Clean up
+      const rawDialog = pageManager.getPendingDialog();
+      if (rawDialog) {
+        await rawDialog.accept();
+        pageManager.clearPendingDialog();
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+  });
+
+  // ─── #33: Sequential/rapid-fire dialogs ───
+  describe("sequential dialogs (#33)", () => {
+    beforeEach(async () => {
+      await cleanNavigate();
+    });
+
+    it("handles two confirm dialogs in sequence", async () => {
+      const page = pageManager.getActivePage();
+
+      // Click triggers: confirm('First question?') then confirm('Second question?')
+      const clickPromise = page.click("#double-confirm");
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      // First dialog should be captured
+      const firstDialogInfo = pageManager.getPendingDialogInfo();
+      expect(firstDialogInfo).not.toBeNull();
+      expect(firstDialogInfo!.type).toBe("confirm");
+      expect(firstDialogInfo!.message).toBe("First question?");
+
+      // Accept the first dialog
+      const firstDialog = pageManager.getPendingDialog()!;
+      await firstDialog.accept();
+      pageManager.clearPendingDialog();
+
+      // Wait for the second dialog to appear (JS continues synchronously after first is handled)
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      // Second dialog should now be captured
+      const secondDialogInfo = pageManager.getPendingDialogInfo();
+      expect(secondDialogInfo).not.toBeNull();
+      expect(secondDialogInfo!.type).toBe("confirm");
+      expect(secondDialogInfo!.message).toBe("Second question?");
+
+      // Accept the second dialog
+      const secondDialog = pageManager.getPendingDialog()!;
+      await secondDialog.accept();
+      pageManager.clearPendingDialog();
+      await clickPromise;
+
+      // Verify both dialogs were processed correctly
+      const resultText = await getResultText();
+      expect(resultText).toBe("first:yes,second:yes");
+    });
+
+    it("handles mixed accept/dismiss in sequential dialogs", async () => {
+      const page = pageManager.getActivePage();
+
+      const clickPromise = page.click("#double-confirm");
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      // Dismiss the first dialog
+      const firstDialog = pageManager.getPendingDialog()!;
+      await firstDialog.dismiss();
+      pageManager.clearPendingDialog();
+
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      // Accept the second dialog
+      const secondDialog = pageManager.getPendingDialog()!;
+      expect(secondDialog).not.toBeNull();
+      await secondDialog.accept();
+      pageManager.clearPendingDialog();
+      await clickPromise;
+
+      const resultText = await getResultText();
+      expect(resultText).toBe("first:no,second:yes");
+    });
+
+    it("clearPendingDialog does not lose a subsequent dialog", async () => {
+      const page = pageManager.getActivePage();
+
+      // Trigger double confirm — two synchronous dialogs
+      const clickPromise = page.click("#double-confirm");
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      // First dialog present
+      expect(pageManager.getPendingDialogInfo()!.message).toBe("First question?");
+
+      // Accept and clear
+      await pageManager.getPendingDialog()!.accept();
+      pageManager.clearPendingDialog();
+
+      // After clearing first, second should arrive
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      const secondInfo = pageManager.getPendingDialogInfo();
+      expect(secondInfo).not.toBeNull();
+      expect(secondInfo!.message).toBe("Second question?");
+
+      // Clean up
+      await pageManager.getPendingDialog()!.accept();
+      pageManager.clearPendingDialog();
+      await clickPromise;
+    });
+
+    it("dialog state is clean after handling all sequential dialogs", async () => {
+      const page = pageManager.getActivePage();
+
+      const clickPromise = page.click("#double-confirm");
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      // Handle first
+      await pageManager.getPendingDialog()!.accept();
+      pageManager.clearPendingDialog();
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      // Handle second
+      await pageManager.getPendingDialog()!.accept();
+      pageManager.clearPendingDialog();
+      await clickPromise;
+
+      // State should be fully clean
+      expect(pageManager.getPendingDialog()).toBeNull();
+      expect(pageManager.getPendingDialogInfo()).toBeNull();
+
+      // renderActivePage should produce a normal response (no stub)
+      const representation = await renderActivePage(deps, { source: "action" });
+      expect(representation.pending_dialog).toBeUndefined();
+      expect(representation.title).not.toBe("(dialog blocking)");
     });
   });
 });

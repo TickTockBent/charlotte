@@ -264,7 +264,7 @@ export function getToolGroup(toolName: string): ToolGroupName | undefined {
 export const GROUP_DESCRIPTIONS: Record<ToolGroupName, string> = {
   navigation: "Page navigation (navigate, back, forward, reload)",
   observation: "Page inspection (observe, find, screenshot, diff)",
-  interaction: "DOM interaction (click, click_at, type, select, toggle, submit, scroll, hover, drag, key, wait_for, upload)",
+  interaction: "DOM interaction (click, click_at, type, select, toggle, submit, scroll, hover, drag, key/sequences, wait_for, upload)",
   session: "Session management (cookies, headers, configure, tabs, viewport, network)",
   dev_mode: "Development tools (dev_serve, dev_inject, dev_audit)",
   dialog: "JavaScript dialog handling",

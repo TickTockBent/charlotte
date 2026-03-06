@@ -921,40 +921,86 @@ export function registerInteractionTools(
     "charlotte:key",
     {
       description:
-        'Press a keyboard key, optionally with modifiers. Returns full page representation after keypress.',
+        'Send keyboard input to the page or a specific element. Supports single key with modifiers, or a sequence of keys. Use for keyboard-driven UIs (games, terminals, code editors) and non-input elements with keydown listeners.',
       inputSchema: {
         key: z
           .string()
+          .optional()
           .describe(
-            'Key name: "Escape", "Tab", "Enter", "ArrowDown", "ArrowUp", "ArrowLeft", "ArrowRight", "Backspace", "Delete", "Home", "End", "PageUp", "PageDown", or a single character',
+            'Single key to press: "Escape", "Tab", "Enter", "ArrowDown", "ArrowUp", "ArrowLeft", "ArrowRight", "Backspace", "Delete", "Home", "End", "PageUp", "PageDown", "Space", or a single character. Mutually exclusive with keys.',
+          ),
+        keys: z
+          .array(z.string())
+          .optional()
+          .describe(
+            'Sequence of keys to press in order: ["ArrowDown", "ArrowDown", "Enter"]. Each key is pressed and released before the next. Mutually exclusive with key.',
           ),
         modifiers: z
           .array(z.enum(["ctrl", "shift", "alt", "meta"]))
           .optional()
-          .describe('Modifier keys to hold: ["ctrl"], ["shift"], ["alt"], ["meta"]'),
+          .describe('Modifier keys to hold during a single key press. Only valid with key, not keys.'),
+        element_id: z
+          .string()
+          .optional()
+          .describe("Element to focus before sending keys. If omitted, keys go to the currently focused element."),
+        delay: z
+          .number()
+          .optional()
+          .describe("Milliseconds between key presses in a sequence (default: 0). Only valid with keys."),
       },
     },
-    async ({ key, modifiers }) => {
+    async ({ key, keys, modifiers, element_id, delay }) => {
       try {
         await deps.browserManager.ensureConnected();
         const page = deps.pageManager.getActivePage();
 
-        logger.info("Pressing key", { key, modifiers });
-
-        // Hold down modifiers
-        const activeModifiers = modifiers ?? [];
-        for (const modifier of activeModifiers) {
-          const modifierKey = MODIFIER_KEY_MAP[modifier];
-          await page.keyboard.down(modifierKey as KeyInput);
+        // Validate: exactly one of key or keys must be provided
+        if (key && keys) {
+          throw new CharlotteError(
+            CharlotteErrorCode.SESSION_ERROR,
+            "Provide either key or keys, not both.",
+          );
+        }
+        if (!key && !keys) {
+          throw new CharlotteError(
+            CharlotteErrorCode.SESSION_ERROR,
+            "Provide either key (single) or keys (sequence).",
+          );
         }
 
-        // Press the key
-        await page.keyboard.press(key as KeyInput);
+        // Focus target element if specified
+        if (element_id) {
+          const { page: resolvedPage, backendNodeId } = await resolveElement(deps, element_id);
+          await focusElementByBackendNodeId(resolvedPage, backendNodeId);
+        }
 
-        // Release modifiers in reverse order
-        for (const modifier of [...activeModifiers].reverse()) {
-          const modifierKey = MODIFIER_KEY_MAP[modifier];
-          await page.keyboard.up(modifierKey as KeyInput);
+        if (key) {
+          // Single key with optional modifiers
+          logger.info("Pressing key", { key, modifiers, element_id });
+
+          const activeModifiers = modifiers ?? [];
+          for (const modifier of activeModifiers) {
+            const modifierKey = MODIFIER_KEY_MAP[modifier];
+            await page.keyboard.down(modifierKey as KeyInput);
+          }
+
+          await page.keyboard.press(key as KeyInput);
+
+          for (const modifier of [...activeModifiers].reverse()) {
+            const modifierKey = MODIFIER_KEY_MAP[modifier];
+            await page.keyboard.up(modifierKey as KeyInput);
+          }
+        } else if (keys) {
+          // Key sequence
+          logger.info("Pressing key sequence", { keys, element_id, delay });
+
+          const delayMs = delay ?? 0;
+          for (let i = 0; i < keys.length; i++) {
+            await page.keyboard.press(keys[i] as KeyInput);
+            if (delayMs > 0 && i < keys.length - 1) {
+              await new Promise((resolve) => setTimeout(resolve, delayMs));
+            }
+          }
         }
 
         await new Promise((resolve) => setTimeout(resolve, 50));

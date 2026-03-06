@@ -3,7 +3,7 @@ import type { CDPSessionManager } from "../browser/cdp-session.js";
 import { AccessibilityExtractor, isLandmarkRole, isHeadingRole, isInteractiveRole } from "./accessibility-extractor.js";
 import type { ParsedAXNode } from "./accessibility-extractor.js";
 import { LayoutExtractor, ZERO_BOUNDS } from "./layout-extractor.js";
-import { InteractiveExtractor, ROLE_TO_ELEMENT_TYPE } from "./interactive-extractor.js";
+import { InteractiveExtractor, ROLE_TO_ELEMENT_TYPE, reclassifyFileInputs } from "./interactive-extractor.js";
 import { ContentExtractor } from "./content-extractor.js";
 import { ElementIdGenerator } from "./element-id-generator.js";
 import { computeDOMPathSignature } from "./dom-path.js";
@@ -75,6 +75,9 @@ export class RendererPipeline {
         boundsMap,
         freshIdGenerator,
       );
+
+    // Step 7.5: Reclassify file inputs from "button" to "file_input"
+    await reclassifyFileInputs(elements, session, freshIdGenerator);
 
     // Step 8: Extract content based on detail level
     let contentSummary: string | undefined;

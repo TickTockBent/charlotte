@@ -80,12 +80,12 @@ where Charlotte has capabilities Playwright MCP does not**, for completeness.
 | **Suggested Tool Name** | `charlotte:drag` |
 | **Implementation Notes** | Puppeteer supports drag via `page.mouse.move()`, `page.mouse.down()`, `page.mouse.up()` sequences. Could also use CDP `Input.dispatchDragEvent`. |
 
-### GAP-02: File Upload
+### GAP-02: File Upload — *remediated*
 
 | Attribute | Detail |
 |-----------|--------|
 | **Playwright Tool** | `browser_file_upload` |
-| **Charlotte Status** | Not implemented. `file_input` is listed as an interactive element type but no tool handles it |
+| **Charlotte Status** | Implemented as `charlotte:upload` with `element_id` and `paths` parameters. Uses CDP `DOM.setFileInputFiles`. File inputs now correctly detected as `file_input` type via post-extraction DOM reclassification. |
 | **Impact** | High — blocks automation of any file upload workflow |
 | **Parameters (Playwright)** | `paths` (array of file paths) |
 | **Suggested Tool Name** | `charlotte:upload` |

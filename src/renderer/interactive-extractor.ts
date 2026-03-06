@@ -1,3 +1,4 @@
+import type { CDPSession } from "puppeteer";
 import type { ParsedAXNode } from "./accessibility-extractor.js";
 import { isInteractiveRole } from "./accessibility-extractor.js";
 import type { ElementIdGenerator } from "./element-id-generator.js";
@@ -231,5 +232,36 @@ export class InteractiveExtractor {
     }
 
     return forms;
+  }
+}
+
+/**
+ * Post-extraction step: reclassify button-typed elements that are actually
+ * `<input type="file">` in the DOM. The AX tree represents file inputs as
+ * buttons, so we check the underlying DOM node via CDP.
+ */
+export async function reclassifyFileInputs(
+  elements: InteractiveElement[],
+  session: CDPSession,
+  idGenerator: ElementIdGenerator,
+): Promise<void> {
+  for (const element of elements) {
+    if (element.type !== "button") continue;
+    const backendNodeId = idGenerator.resolveId(element.id);
+    if (backendNodeId === null) continue;
+    try {
+      const { node } = await session.send("DOM.describeNode", { backendNodeId });
+      if (node.nodeName === "INPUT") {
+        const attrs = node.attributes ?? [];
+        for (let i = 0; i < attrs.length; i += 2) {
+          if (attrs[i] === "type" && attrs[i + 1] === "file") {
+            element.type = "file_input";
+            break;
+          }
+        }
+      }
+    } catch {
+      // Node may have been detached — skip
+    }
   }
 }

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import * as path from "node:path";
 import * as os from "node:os";
+import * as fs from "node:fs";
 import { BrowserManager } from "../../src/browser/browser-manager.js";
 import { PageManager } from "../../src/browser/page-manager.js";
 import { CDPSessionManager } from "../../src/browser/cdp-session.js";
@@ -660,6 +661,89 @@ describe("Interaction integration", () => {
 
       const resultText = await getResultText();
       expect(resultText).toBe("Double clicked");
+    });
+  });
+
+  describe("upload", () => {
+    const tempFiles: string[] = [];
+
+    beforeAll(() => {
+      // Create temp files for upload tests
+      const tempDir = os.tmpdir();
+      const singleFile = path.join(tempDir, "charlotte-test-upload.txt");
+      fs.writeFileSync(singleFile, "test content");
+      tempFiles.push(singleFile);
+
+      const multiFile1 = path.join(tempDir, "charlotte-test-upload-1.txt");
+      const multiFile2 = path.join(tempDir, "charlotte-test-upload-2.txt");
+      fs.writeFileSync(multiFile1, "file 1");
+      fs.writeFileSync(multiFile2, "file 2");
+      tempFiles.push(multiFile1, multiFile2);
+    });
+
+    afterAll(() => {
+      for (const filePath of tempFiles) {
+        try { fs.unlinkSync(filePath); } catch { /* ignore */ }
+      }
+    });
+
+    beforeEach(async () => {
+      const page = pageManager.getActivePage();
+      await page.goto(INTERACTION_FIXTURE, { waitUntil: "load" });
+    });
+
+    it("uploads a single file to a file input", async () => {
+      const representation = await renderActivePage(deps, { detail: "summary" });
+      const fileInput = findElementByType(representation, "file_input", "Single File");
+      expect(fileInput).toBeDefined();
+
+      const page = pageManager.getActivePage();
+      const { backendNodeId } = await resolveElement(deps, fileInput!.id);
+
+      // Use CDP to set the file
+      const cdpSession = await page.createCDPSession();
+      try {
+        await cdpSession.send("DOM.setFileInputFiles", {
+          files: [tempFiles[0]],
+          backendNodeId,
+        });
+      } finally {
+        await cdpSession.detach();
+      }
+
+      // Verify onchange fired
+      const resultText = await getResultText();
+      expect(resultText).toBe("Uploaded: charlotte-test-upload.txt");
+    });
+
+    it("uploads multiple files to a multi-file input", async () => {
+      const representation = await renderActivePage(deps, { detail: "summary" });
+      const fileInput = findElementByType(representation, "file_input", "Multiple Files");
+      expect(fileInput).toBeDefined();
+
+      const page = pageManager.getActivePage();
+      const { backendNodeId } = await resolveElement(deps, fileInput!.id);
+
+      const cdpSession = await page.createCDPSession();
+      try {
+        await cdpSession.send("DOM.setFileInputFiles", {
+          files: [tempFiles[1], tempFiles[2]],
+          backendNodeId,
+        });
+      } finally {
+        await cdpSession.detach();
+      }
+
+      const resultText = await getResultText();
+      expect(resultText).toBe("Uploaded: 2 files");
+    });
+
+    it("detects file inputs as type file_input in page representation", async () => {
+      const representation = await renderActivePage(deps, { detail: "summary" });
+      const fileInputs = representation.interactive.filter(
+        (el) => el.type === "file_input",
+      );
+      expect(fileInputs.length).toBeGreaterThanOrEqual(2);
     });
   });
 

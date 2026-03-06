@@ -29,11 +29,11 @@ Charlotte's `navigate` returns minimal detail by default — landmarks, headings
 
 | Profile | Tools | Def. tokens/call | Savings vs full |
 |:---|---:|---:|---:|
-| full | 41 | ~7,400 | — |
+| full | 42 | ~7,400 | — |
 | browse (default) | 23 | ~3,900 | **~47%** |
 | core | 7 | 1,677 | **~77%** |
 
-Tool definitions are sent on every API round-trip. With the default `browse` profile, Charlotte carries ~47% less definition overhead than loading all 41 tools. Over a 20-call browsing session, that's **~38% fewer total tokens**. See the [profile benchmark report](docs/charlotte-profile-benchmark-report.md) for full results.
+Tool definitions are sent on every API round-trip. With the default `browse` profile, Charlotte carries ~47% less definition overhead than loading all 42 tools. Over a 20-call browsing session, that's **~38% fewer total tokens**. See the [profile benchmark report](docs/charlotte-profile-benchmark-report.md) for full results.
 
 **The workflow difference:** Playwright agents receive 61K+ characters every time they look at Hacker News, whether they're reading headlines or looking for a login button. Charlotte agents get 336 characters on arrival, call `find({ type: "link", text: "login" })` to get exactly what they need, and never pay for the rest.
 
@@ -65,7 +65,7 @@ Agents receive landmarks, headings, interactive elements with typed metadata, bo
 
 **Observation** — `observe` (3 detail levels), `find` (spatial + semantic search, CSS selector mode), `screenshot`, `diff` (structural comparison against snapshots)
 
-**Interaction** — `click`, `click_at` (coordinate-based), `type`, `select`, `toggle`, `submit`, `scroll`, `hover`, `drag`, `key`, `wait_for` (async condition polling), `dialog` (accept/dismiss JS dialogs)
+**Interaction** — `click`, `click_at` (coordinate-based), `type`, `select`, `toggle`, `submit`, `scroll`, `hover`, `drag`, `key`, `wait_for` (async condition polling), `upload` (file input), `dialog` (accept/dismiss JS dialogs)
 
 **Monitoring** — `console` (all severity levels, filtering, timestamps), `requests` (full HTTP history, method/status/resource type filtering)
 
@@ -77,14 +77,14 @@ Agents receive landmarks, headings, interactive elements with typed metadata, bo
 
 ## Tool Profiles
 
-Charlotte ships 41 tools, but most workflows only need a subset. Startup profiles control which tools load into the agent's context, reducing definition overhead by up to 77%.
+Charlotte ships 42 tools, but most workflows only need a subset. Startup profiles control which tools load into the agent's context, reducing definition overhead by up to 77%.
 
 ```bash
 charlotte --profile browse    # 23 tools (default) — navigate, observe, interact, tabs
 charlotte --profile core      # 7 tools — navigate, observe, find, click, type, submit
-charlotte --profile full      # 41 tools — everything
-charlotte --profile interact  # 28 tools — full interaction + dialog + evaluate
-charlotte --profile develop   # 31 tools — interact + dev_serve, dev_inject, dev_audit
+charlotte --profile full      # 42 tools — everything
+charlotte --profile interact  # 29 tools — full interaction + dialog + evaluate
+charlotte --profile develop   # 32 tools — interact + dev_serve, dev_inject, dev_audit
 charlotte --profile audit     # 13 tools — navigation + observation + dev_audit + viewport
 ```
 
@@ -347,7 +347,7 @@ All tools go through `renderActivePage()` which handles snapshots, reload events
 
 ## Sandbox
 
-Charlotte includes a test website in `tests/sandbox/` that exercises all 41 tools without touching the public internet. Serve it locally with:
+Charlotte includes a test website in `tests/sandbox/` that exercises all 42 tools without touching the public internet. Serve it locally with:
 
 ```
 dev_serve({ path: "tests/sandbox" })
@@ -363,15 +363,11 @@ Four pages cover navigation, forms, interactive elements, delayed content, scrol
 
 **Shadow DOM** — Open shadow DOM works transparently. Chromium's accessibility tree pierces open shadow boundaries, so web components (e.g., GitHub's `<relative-time>`, `<tool-tip>`) render their content into Charlotte's representation without special handling. Closed shadow roots are opaque to the accessibility tree and will not be captured.
 
-**No file upload support** — Charlotte identifies `file_input` elements in the page representation but provides no tool to set file paths on them. Workflows that require file uploads cannot be completed.
-
 **`click_at` skips hover on framework-managed links** — `click_at` dispatched mouse events without a preceding hover sequence, which caused Next.js `<Link>` components to skip client-side navigation (they depend on hover-triggered prefetch). Fixed in next release by moving the mouse to the target coordinates and pausing 50ms before clicking, matching real user behavior. ([#48](https://github.com/TickTockBent/charlotte/issues/48))
 
 ## Roadmap
 
 ### Interaction Gaps
-
-**File Upload** — Add a `charlotte:upload` tool to set file paths on `file_input` elements via Puppeteer's `elementHandle.uploadFile()`. Charlotte already identifies file inputs but cannot act on them.
 
 **Batch Form Fill** — Add a `charlotte:fill_form` tool that accepts an array of `{element_id, value}` pairs and fills an entire form in a single tool call, reducing N sequential `type`/`select`/`toggle` calls to one.
 

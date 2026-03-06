@@ -12,8 +12,19 @@ import type {
   InteractiveElement,
 } from "../types/page-representation.js";
 import type { DetailLevel } from "../renderer/renderer-pipeline.js";
+import { z } from "zod";
 import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 import { diffRepresentations } from "../state/differ.js";
+
+/**
+ * Boolean schema that accepts both native booleans and string representations
+ * ("true"/"false"). Some MCP clients send boolean parameters as strings,
+ * causing Zod validation to reject them. This handles the coercion.
+ */
+export const coercedBoolean = z.preprocess(
+  (val) => (val === "true" ? true : val === "false" ? false : val),
+  z.boolean(),
+);
 
 export interface ToolDependencies {
   browserManager: BrowserManager;

@@ -12,6 +12,7 @@ import {
   resolveElement,
   formatPageResponse,
   handleToolError,
+  coercedBoolean,
 } from "./tool-helpers.js";
 
 /** Maps short modifier names to Puppeteer KeyInput values. */
@@ -574,12 +575,10 @@ export function registerInteractionTools(
       inputSchema: {
         element_id: z.string().describe("Target input element ID"),
         text: z.string().describe("Text to enter"),
-        clear_first: z
-          .boolean()
+        clear_first: coercedBoolean
           .optional()
           .describe("Clear existing value before typing (default: true)"),
-        press_enter: z
-          .boolean()
+        press_enter: coercedBoolean
           .optional()
           .describe("Press Enter after typing (default: false)"),
       },

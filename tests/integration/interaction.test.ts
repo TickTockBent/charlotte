@@ -11,13 +11,10 @@ import { SnapshotStore } from "../../src/state/snapshot-store.js";
 import { ArtifactStore } from "../../src/state/artifact-store.js";
 import { createDefaultConfig } from "../../src/types/config.js";
 import type { ToolDependencies } from "../../src/tools/tool-helpers.js";
-import {
-  renderActivePage,
-  resolveElement,
-} from "../../src/tools/tool-helpers.js";
+import { renderActivePage, resolveElement } from "../../src/tools/tool-helpers.js";
 
 const INTERACTION_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/interaction.html")}`;
-const FORM_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/form.html")}`;
+const _FORM_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/form.html")}`;
 
 describe("Interaction integration", () => {
   let browserManager: BrowserManager;
@@ -88,8 +85,7 @@ describe("Interaction integration", () => {
     return representation.interactive.find(
       (el) =>
         el.type === type &&
-        (!labelSubstring ||
-          el.label.toLowerCase().includes(labelSubstring.toLowerCase())),
+        (!labelSubstring || el.label.toLowerCase().includes(labelSubstring.toLowerCase())),
     );
   }
 
@@ -106,10 +102,8 @@ describe("Interaction integration", () => {
       });
       if (!model) throw new Error("No box model");
       const contentQuad = model.content;
-      const centerX =
-        (contentQuad[0] + contentQuad[2] + contentQuad[4] + contentQuad[6]) / 4;
-      const centerY =
-        (contentQuad[1] + contentQuad[3] + contentQuad[5] + contentQuad[7]) / 4;
+      const centerX = (contentQuad[0] + contentQuad[2] + contentQuad[4] + contentQuad[6]) / 4;
+      const centerY = (contentQuad[1] + contentQuad[3] + contentQuad[5] + contentQuad[7]) / 4;
       await page.mouse.click(centerX, centerY);
     } finally {
       await cdpSession.detach();
@@ -132,10 +126,7 @@ describe("Interaction integration", () => {
   /**
    * Helper: select an option in a <select> element via CDP
    */
-  async function selectOptionByBackendNodeId(
-    backendNodeId: number,
-    value: string,
-  ): Promise<void> {
+  async function selectOptionByBackendNodeId(backendNodeId: number, value: string): Promise<void> {
     const page = pageManager.getActivePage();
     const cdpSession = await page.createCDPSession();
     try {
@@ -196,10 +187,8 @@ describe("Interaction integration", () => {
           backendNodeId,
         });
         const contentQuad = model!.content;
-        const centerX =
-          (contentQuad[0] + contentQuad[2] + contentQuad[4] + contentQuad[6]) / 4;
-        const centerY =
-          (contentQuad[1] + contentQuad[3] + contentQuad[5] + contentQuad[7]) / 4;
+        const centerX = (contentQuad[0] + contentQuad[2] + contentQuad[4] + contentQuad[6]) / 4;
+        const centerY = (contentQuad[1] + contentQuad[3] + contentQuad[5] + contentQuad[7]) / 4;
         await page.mouse.click(centerX, centerY, { clickCount: 2 });
       } finally {
         await cdpSession.detach();
@@ -224,10 +213,8 @@ describe("Interaction integration", () => {
           backendNodeId,
         });
         const contentQuad = model!.content;
-        const centerX =
-          (contentQuad[0] + contentQuad[2] + contentQuad[4] + contentQuad[6]) / 4;
-        const centerY =
-          (contentQuad[1] + contentQuad[3] + contentQuad[5] + contentQuad[7]) / 4;
+        const centerX = (contentQuad[0] + contentQuad[2] + contentQuad[4] + contentQuad[6]) / 4;
+        const centerY = (contentQuad[1] + contentQuad[3] + contentQuad[5] + contentQuad[7]) / 4;
         await page.mouse.click(centerX, centerY, { button: "right" });
       } finally {
         await cdpSession.detach();
@@ -247,9 +234,7 @@ describe("Interaction integration", () => {
 
       // Re-render to verify state is captured
       const updatedRepresentation = await renderActivePage(deps, { detail: "full" });
-      expect(updatedRepresentation.structure.full_content).toContain(
-        "Button clicked",
-      );
+      expect(updatedRepresentation.structure.full_content).toContain("Button clicked");
     });
   });
 
@@ -396,22 +381,14 @@ describe("Interaction integration", () => {
 
       // Re-render and verify checked state
       const updatedRepresentation = await renderActivePage(deps, { detail: "minimal" });
-      const updatedCheckbox = findElementByType(
-        updatedRepresentation,
-        "checkbox",
-        "agree",
-      );
+      const updatedCheckbox = findElementByType(updatedRepresentation, "checkbox", "agree");
       expect(updatedCheckbox).toBeDefined();
       expect(updatedCheckbox!.state.checked).toBe(true);
     });
 
     it("toggles a checked checkbox to unchecked", async () => {
       const representation = await renderActivePage(deps, { detail: "minimal" });
-      const checkbox = findElementByType(
-        representation,
-        "checkbox",
-        "Already checked",
-      );
+      const checkbox = findElementByType(representation, "checkbox", "Already checked");
       expect(checkbox).toBeDefined();
       expect(checkbox!.state.checked).toBe(true);
 
@@ -451,10 +428,8 @@ describe("Interaction integration", () => {
           backendNodeId,
         });
         const contentQuad = model!.content;
-        const centerX =
-          (contentQuad[0] + contentQuad[2] + contentQuad[4] + contentQuad[6]) / 4;
-        const centerY =
-          (contentQuad[1] + contentQuad[3] + contentQuad[5] + contentQuad[7]) / 4;
+        const centerX = (contentQuad[0] + contentQuad[2] + contentQuad[4] + contentQuad[6]) / 4;
+        const centerY = (contentQuad[1] + contentQuad[3] + contentQuad[5] + contentQuad[7]) / 4;
         await page.mouse.move(centerX, centerY);
       } finally {
         await cdpSession.detach();
@@ -476,9 +451,8 @@ describe("Interaction integration", () => {
       const representation = await renderActivePage(deps, { detail: "minimal" });
       const keyInput = findElementByType(representation, "text_input", "key");
       // The key input might be found with various labels
-      const anyInput = keyInput ?? representation.interactive.find(
-        (el) => el.type === "text_input",
-      );
+      const anyInput =
+        keyInput ?? representation.interactive.find((el) => el.type === "text_input");
       expect(anyInput).toBeDefined();
 
       const page = pageManager.getActivePage();
@@ -571,9 +545,7 @@ describe("Interaction integration", () => {
       const representation = await renderActivePage(deps, { detail: "minimal" });
 
       const submitForm = representation.forms.find((f) =>
-        representation.interactive.some(
-          (el) => el.id === f.submit && el.label.includes("Submit"),
-        ),
+        representation.interactive.some((el) => el.id === f.submit && el.label.includes("Submit")),
       );
 
       // Should find the submit form
@@ -683,7 +655,11 @@ describe("Interaction integration", () => {
 
     afterAll(() => {
       for (const filePath of tempFiles) {
-        try { fs.unlinkSync(filePath); } catch { /* ignore */ }
+        try {
+          fs.unlinkSync(filePath);
+        } catch {
+          /* ignore */
+        }
       }
     });
 
@@ -740,9 +716,7 @@ describe("Interaction integration", () => {
 
     it("detects file inputs as type file_input in page representation", async () => {
       const representation = await renderActivePage(deps, { detail: "summary" });
-      const fileInputs = representation.interactive.filter(
-        (el) => el.type === "file_input",
-      );
+      const fileInputs = representation.interactive.filter((el) => el.type === "file_input");
       expect(fileInputs.length).toBeGreaterThanOrEqual(2);
     });
 
@@ -762,8 +736,7 @@ describe("Interaction integration", () => {
         const isFileInput =
           node.nodeName === "INPUT" &&
           (node.attributes ?? []).some(
-            (attr: string, i: number, arr: string[]) =>
-              attr === "type" && arr[i + 1] === "file",
+            (attr: string, i: number, arr: string[]) => attr === "type" && arr[i + 1] === "file",
           );
         expect(isFileInput).toBe(false);
       } finally {
@@ -785,8 +758,7 @@ describe("Interaction integration", () => {
         // It's an INPUT but type="text", not type="file"
         expect(node.nodeName).toBe("INPUT");
         const isFileInput = (node.attributes ?? []).some(
-          (attr: string, i: number, arr: string[]) =>
-            attr === "type" && arr[i + 1] === "file",
+          (attr: string, i: number, arr: string[]) => attr === "type" && arr[i + 1] === "file",
         );
         expect(isFileInput).toBe(false);
       } finally {
@@ -799,7 +771,16 @@ describe("Interaction integration", () => {
       // Links, checkboxes, text inputs should never become file_input
       for (const element of representation.interactive) {
         if (element.type !== "file_input") {
-          expect(["button", "link", "text_input", "select", "checkbox", "radio", "toggle", "range"]).toContain(element.type);
+          expect([
+            "button",
+            "link",
+            "text_input",
+            "select",
+            "checkbox",
+            "radio",
+            "toggle",
+            "range",
+          ]).toContain(element.type);
         }
       }
     });
@@ -807,9 +788,7 @@ describe("Interaction integration", () => {
     it("file inputs are detected at summary detail but counted as buttons at minimal detail", async () => {
       // At summary/full detail, reclassifyFileInputs runs and corrects the type
       const summaryRep = await renderActivePage(deps, { detail: "summary" });
-      const fileInputsSummary = summaryRep.interactive.filter(
-        (el) => el.type === "file_input",
-      );
+      const fileInputsSummary = summaryRep.interactive.filter((el) => el.type === "file_input");
       expect(fileInputsSummary.length).toBeGreaterThanOrEqual(2);
 
       // At minimal detail, buildInteractiveSummary operates on raw AX nodes
@@ -817,17 +796,13 @@ describe("Interaction integration", () => {
       // reclassified — minimal just doesn't serialize it
       const minimalRep = await renderActivePage(deps, { detail: "minimal" });
       // The internal interactive array should still have file_input types
-      const fileInputsMinimal = minimalRep.interactive.filter(
-        (el) => el.type === "file_input",
-      );
+      const fileInputsMinimal = minimalRep.interactive.filter((el) => el.type === "file_input");
       expect(fileInputsMinimal.length).toBeGreaterThanOrEqual(2);
     });
 
     it("file inputs have bounds and are visible", async () => {
       const representation = await renderActivePage(deps, { detail: "summary" });
-      const fileInputs = representation.interactive.filter(
-        (el) => el.type === "file_input",
-      );
+      const fileInputs = representation.interactive.filter((el) => el.type === "file_input");
       for (const fileInput of fileInputs) {
         expect(fileInput.bounds).not.toBeNull();
         expect(fileInput.bounds!.w).toBeGreaterThan(0);
@@ -867,11 +842,7 @@ describe("Interaction integration", () => {
       await page.click("#delayed-btn");
 
       // Wait for the element to become visible (hidden class removed)
-      const satisfied = await pollForSelector(
-        page,
-        "#delayed-result:not(.hidden)",
-        5000,
-      );
+      const satisfied = await pollForSelector(page, "#delayed-result:not(.hidden)", 5000);
       expect(satisfied).toBe(true);
     });
 
@@ -901,11 +872,7 @@ describe("Interaction integration", () => {
 
 // ─── Polling helpers for wait_for tests ───
 
-async function pollForText(
-  page: any,
-  text: string,
-  timeoutMs: number,
-): Promise<boolean> {
+async function pollForText(page: any, text: string, timeoutMs: number): Promise<boolean> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const found = await page.evaluate((searchText: string) => {
@@ -917,11 +884,7 @@ async function pollForText(
   return false;
 }
 
-async function pollForSelector(
-  page: any,
-  selector: string,
-  timeoutMs: number,
-): Promise<boolean> {
+async function pollForSelector(page: any, selector: string, timeoutMs: number): Promise<boolean> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const element = await page.$(selector);

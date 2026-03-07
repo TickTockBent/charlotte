@@ -5,10 +5,7 @@ import { logger } from "../utils/logger.js";
 export const ZERO_BOUNDS: Bounds = { x: 0, y: 0, w: 0, h: 0 };
 
 export class LayoutExtractor {
-  async getBounds(
-    session: CDPSession,
-    backendNodeId: number,
-  ): Promise<Bounds | null> {
+  async getBounds(session: CDPSession, backendNodeId: number): Promise<Bounds | null> {
     try {
       const result = await session.send("DOM.getBoxModel" as any, {
         backendNodeId,
@@ -58,9 +55,7 @@ export class LayoutExtractor {
       }
     }
 
-    logger.debug(
-      `Extracted bounds for ${boundsMap.size}/${backendNodeIds.length} nodes`,
-    );
+    logger.debug(`Extracted bounds for ${boundsMap.size}/${backendNodeIds.length} nodes`);
     return boundsMap;
   }
 }

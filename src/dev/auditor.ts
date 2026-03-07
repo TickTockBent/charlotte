@@ -1,12 +1,7 @@
 import type { Page, CDPSession } from "puppeteer";
 import { logger } from "../utils/logger.js";
 
-export type AuditCategory =
-  | "a11y"
-  | "performance"
-  | "seo"
-  | "contrast"
-  | "links";
+export type AuditCategory = "a11y" | "performance" | "seo" | "contrast" | "links";
 
 export interface AuditFinding {
   category: AuditCategory;
@@ -22,13 +17,7 @@ export interface AuditResult {
   summary: string;
 }
 
-const ALL_CATEGORIES: AuditCategory[] = [
-  "a11y",
-  "performance",
-  "seo",
-  "contrast",
-  "links",
-];
+const ALL_CATEGORIES: AuditCategory[] = ["a11y", "performance", "seo", "contrast", "links"];
 
 /**
  * Compute relative luminance of a color per WCAG 2.1.
@@ -36,9 +25,7 @@ const ALL_CATEGORIES: AuditCategory[] = [
  */
 export function relativeLuminance(r: number, g: number, b: number): number {
   const [rs, gs, bs] = [r / 255, g / 255, b / 255].map((channel) =>
-    channel <= 0.03928
-      ? channel / 12.92
-      : Math.pow((channel + 0.055) / 1.055, 2.4),
+    channel <= 0.03928 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4),
   );
   return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
 }
@@ -62,18 +49,10 @@ export function contrastRatio(
  * Parse a CSS color string like "rgb(255, 0, 0)" or "rgba(255, 0, 0, 1)" to [r, g, b].
  * Returns null if unparseable.
  */
-export function parseRgbColor(
-  colorString: string,
-): [number, number, number] | null {
-  const rgbMatch = colorString.match(
-    /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/,
-  );
+export function parseRgbColor(colorString: string): [number, number, number] | null {
+  const rgbMatch = colorString.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
   if (rgbMatch) {
-    return [
-      parseInt(rgbMatch[1], 10),
-      parseInt(rgbMatch[2], 10),
-      parseInt(rgbMatch[3], 10),
-    ];
+    return [parseInt(rgbMatch[1], 10), parseInt(rgbMatch[2], 10), parseInt(rgbMatch[3], 10)];
   }
   return null;
 }
@@ -96,24 +75,14 @@ function buildSummary(findings: AuditFinding[]): string {
 }
 
 export class Auditor {
-  async audit(
-    page: Page,
-    session: CDPSession,
-    categories?: AuditCategory[],
-  ): Promise<AuditResult> {
-    const categoriesToCheck = categories && categories.length > 0
-      ? categories
-      : ALL_CATEGORIES;
+  async audit(page: Page, session: CDPSession, categories?: AuditCategory[]): Promise<AuditResult> {
+    const categoriesToCheck = categories && categories.length > 0 ? categories : ALL_CATEGORIES;
 
     const allFindings: AuditFinding[] = [];
 
     for (const category of categoriesToCheck) {
       try {
-        const categoryFindings = await this.runCategoryAudit(
-          category,
-          page,
-          session,
-        );
+        const categoryFindings = await this.runCategoryAudit(category, page, session);
         allFindings.push(...categoryFindings);
       } catch (error: unknown) {
         logger.warn(`Audit category '${category}' failed`, error);
@@ -152,9 +121,7 @@ export class Auditor {
     }
   }
 
-  private async auditAccessibility(
-    session: CDPSession,
-  ): Promise<AuditFinding[]> {
+  private async auditAccessibility(session: CDPSession): Promise<AuditFinding[]> {
     const findings: AuditFinding[] = [];
 
     const { nodes } = await session.send("Accessibility.getFullAXTree");
@@ -174,7 +141,7 @@ export class Auditor {
           message: "Image has no accessible name (missing alt text).",
           element: `backendNodeId:${node.backendDOMNodeId}`,
           recommendation:
-            "Add an alt attribute describing the image, or alt=\"\" for decorative images.",
+            'Add an alt attribute describing the image, or alt="" for decorative images.',
         });
       }
 
@@ -185,8 +152,7 @@ export class Auditor {
           severity: "error",
           message: "Button has no accessible name.",
           element: `backendNodeId:${node.backendDOMNodeId}`,
-          recommendation:
-            "Add text content, aria-label, or aria-labelledby to the button.",
+          recommendation: "Add text content, aria-label, or aria-labelledby to the button.",
         });
       }
 
@@ -197,8 +163,7 @@ export class Auditor {
           severity: "error",
           message: "Link has no accessible name.",
           element: `backendNodeId:${node.backendDOMNodeId}`,
-          recommendation:
-            "Add text content, aria-label, or aria-labelledby to the link.",
+          recommendation: "Add text content, aria-label, or aria-labelledby to the link.",
         });
       }
 
@@ -217,16 +182,14 @@ export class Auditor {
           severity: "error",
           message: `Form input (${role}) has no accessible name.`,
           element: `backendNodeId:${node.backendDOMNodeId}`,
-          recommendation:
-            "Add a <label> element, aria-label, or aria-labelledby.",
+          recommendation: "Add a <label> element, aria-label, or aria-labelledby.",
         });
       }
 
       // Track heading levels for hierarchy check
       if (role === "heading") {
-        const level = node.properties?.find(
-          (p: { name: string }) => p.name === "level",
-        )?.value?.value;
+        const level = node.properties?.find((p: { name: string }) => p.name === "level")?.value
+          ?.value;
         if (typeof level === "number") {
           headingLevels.push(level);
         }
@@ -250,9 +213,7 @@ export class Auditor {
     return findings;
   }
 
-  private async auditPerformance(
-    session: CDPSession,
-  ): Promise<AuditFinding[]> {
+  private async auditPerformance(session: CDPSession): Promise<AuditFinding[]> {
     const findings: AuditFinding[] = [];
 
     await session.send("Performance.enable");
@@ -280,8 +241,7 @@ export class Auditor {
           category: "performance",
           severity: "warning",
           message: `DOM has ${domNodeCount} nodes (exceeds 1500).`,
-          recommendation:
-            "Consider simplifying the DOM structure for better performance.",
+          recommendation: "Consider simplifying the DOM structure for better performance.",
         });
       }
     }
@@ -296,8 +256,7 @@ export class Auditor {
           category: "performance",
           severity: "warning",
           message: `JS heap usage is ${heapPercent.toFixed(1)}% (${(heapUsed / 1024 / 1024).toFixed(1)}MB / ${(heapTotal / 1024 / 1024).toFixed(1)}MB).`,
-          recommendation:
-            "Investigate memory usage and potential memory leaks.",
+          recommendation: "Investigate memory usage and potential memory leaks.",
         });
       }
     }
@@ -311,8 +270,10 @@ export class Auditor {
     const performanceStats: string[] = [];
     if (layoutCount !== undefined) performanceStats.push(`layouts: ${layoutCount}`);
     if (recalcStyleCount !== undefined) performanceStats.push(`style recalcs: ${recalcStyleCount}`);
-    if (scriptDuration !== undefined) performanceStats.push(`script: ${(scriptDuration * 1000).toFixed(0)}ms`);
-    if (taskDuration !== undefined) performanceStats.push(`total tasks: ${(taskDuration * 1000).toFixed(0)}ms`);
+    if (scriptDuration !== undefined)
+      performanceStats.push(`script: ${(scriptDuration * 1000).toFixed(0)}ms`);
+    if (taskDuration !== undefined)
+      performanceStats.push(`total tasks: ${(taskDuration * 1000).toFixed(0)}ms`);
 
     if (performanceStats.length > 0) {
       findings.push({
@@ -334,14 +295,12 @@ export class Auditor {
       const metaDescription = document
         .querySelector('meta[name="description"]')
         ?.getAttribute("content");
-      const metaViewport = document
-        .querySelector('meta[name="viewport"]')
-        ?.getAttribute("content");
+      const metaViewport = document.querySelector('meta[name="viewport"]')?.getAttribute("content");
       const htmlLang = document.documentElement.getAttribute("lang");
       const h1Elements = document.querySelectorAll("h1");
-      const headings = Array.from(
-        document.querySelectorAll("h1, h2, h3, h4, h5, h6"),
-      ).map((heading) => parseInt(heading.tagName.substring(1), 10));
+      const headings = Array.from(document.querySelectorAll("h1, h2, h3, h4, h5, h6")).map(
+        (heading) => parseInt(heading.tagName.substring(1), 10),
+      );
 
       return {
         title: title || "",
@@ -366,9 +325,8 @@ export class Auditor {
       findings.push({
         category: "seo",
         severity: "warning",
-        message: "Page has no <meta name=\"description\"> tag.",
-        recommendation:
-          "Add a meta description for search engine summaries.",
+        message: 'Page has no <meta name="description"> tag.',
+        recommendation: "Add a meta description for search engine summaries.",
       });
     } else if (seoData.metaDescription.trim() === "") {
       findings.push({
@@ -383,7 +341,7 @@ export class Auditor {
       findings.push({
         category: "seo",
         severity: "warning",
-        message: "Page has no <meta name=\"viewport\"> tag.",
+        message: 'Page has no <meta name="viewport"> tag.',
         recommendation:
           'Add <meta name="viewport" content="width=device-width, initial-scale=1.0">.',
       });
@@ -394,8 +352,7 @@ export class Auditor {
         category: "seo",
         severity: "warning",
         message: "HTML element has no lang attribute.",
-        recommendation:
-          'Add lang attribute to the <html> element, e.g. <html lang="en">.',
+        recommendation: 'Add lang attribute to the <html> element, e.g. <html lang="en">.',
       });
     }
 
@@ -433,74 +390,60 @@ export class Auditor {
     return findings;
   }
 
-  private async auditContrast(
-    page: Page,
-    session: CDPSession,
-  ): Promise<AuditFinding[]> {
+  private async auditContrast(page: Page, _session: CDPSession): Promise<AuditFinding[]> {
     const findings: AuditFinding[] = [];
     const MAX_TEXT_ELEMENTS_TO_CHECK = 50;
 
     // Get text elements with their computed styles via page.evaluate
-    const textElementData = await page.evaluate(
-      (maxElements: number) => {
-        const elements: Array<{
-          text: string;
-          color: string;
-          backgroundColor: string;
-          fontSize: string;
-          fontWeight: string;
-          selector: string;
-        }> = [];
+    const textElementData = await page.evaluate((maxElements: number) => {
+      const elements: Array<{
+        text: string;
+        color: string;
+        backgroundColor: string;
+        fontSize: string;
+        fontWeight: string;
+        selector: string;
+      }> = [];
 
-        const walker = document.createTreeWalker(
-          document.body,
-          NodeFilter.SHOW_TEXT,
-          {
-            acceptNode: (node) => {
-              const text = node.textContent?.trim();
-              if (!text || text.length === 0) return NodeFilter.FILTER_REJECT;
-              return NodeFilter.FILTER_ACCEPT;
-            },
-          },
-        );
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+        acceptNode: (node) => {
+          const text = node.textContent?.trim();
+          if (!text || text.length === 0) return NodeFilter.FILTER_REJECT;
+          return NodeFilter.FILTER_ACCEPT;
+        },
+      });
 
-        let count = 0;
-        while (walker.nextNode() && count < maxElements) {
-          const textNode = walker.currentNode;
-          const parentElement = textNode.parentElement;
-          if (!parentElement) continue;
+      let count = 0;
+      while (walker.nextNode() && count < maxElements) {
+        const textNode = walker.currentNode;
+        const parentElement = textNode.parentElement;
+        if (!parentElement) continue;
 
-          const computedStyle = window.getComputedStyle(parentElement);
-          const color = computedStyle.color;
-          const backgroundColor = computedStyle.backgroundColor;
+        const computedStyle = window.getComputedStyle(parentElement);
+        const color = computedStyle.color;
+        const backgroundColor = computedStyle.backgroundColor;
 
-          // Skip transparent backgrounds (they inherit from parent)
-          if (
-            backgroundColor === "rgba(0, 0, 0, 0)" ||
-            backgroundColor === "transparent"
-          ) {
-            continue;
-          }
-
-          elements.push({
-            text: (textNode.textContent?.trim() ?? "").substring(0, 50),
-            color,
-            backgroundColor,
-            fontSize: computedStyle.fontSize,
-            fontWeight: computedStyle.fontWeight,
-            selector: parentElement.tagName.toLowerCase() +
-              (parentElement.id ? `#${parentElement.id}` : "") +
-              (parentElement.className
-                ? `.${parentElement.className.split(" ").join(".")}`
-                : ""),
-          });
-          count++;
+        // Skip transparent backgrounds (they inherit from parent)
+        if (backgroundColor === "rgba(0, 0, 0, 0)" || backgroundColor === "transparent") {
+          continue;
         }
 
-        return elements;
-      },
-      MAX_TEXT_ELEMENTS_TO_CHECK,
-    );
+        elements.push({
+          text: (textNode.textContent?.trim() ?? "").substring(0, 50),
+          color,
+          backgroundColor,
+          fontSize: computedStyle.fontSize,
+          fontWeight: computedStyle.fontWeight,
+          selector:
+            parentElement.tagName.toLowerCase() +
+            (parentElement.id ? `#${parentElement.id}` : "") +
+            (parentElement.className ? `.${parentElement.className.split(" ").join(".")}` : ""),
+        });
+        count++;
+      }
+
+      return elements;
+    }, MAX_TEXT_ELEMENTS_TO_CHECK);
 
     for (const elementData of textElementData) {
       const foregroundRgb = parseRgbColor(elementData.color);
@@ -513,11 +456,8 @@ export class Auditor {
       // Determine if text is "large" per WCAG
       const fontSizePx = parseFloat(elementData.fontSize);
       const fontWeightNumeric =
-        elementData.fontWeight === "bold"
-          ? 700
-          : parseInt(elementData.fontWeight, 10) || 400;
-      const isLargeText =
-        fontSizePx >= 24 || (fontSizePx >= 18.66 && fontWeightNumeric >= 700);
+        elementData.fontWeight === "bold" ? 700 : parseInt(elementData.fontWeight, 10) || 400;
+      const isLargeText = fontSizePx >= 24 || (fontSizePx >= 18.66 && fontWeightNumeric >= 700);
 
       const minimumRatio = isLargeText ? 3 : 4.5;
 
@@ -545,8 +485,7 @@ export class Auditor {
       const anchors = document.querySelectorAll("a[href]");
       return Array.from(anchors).map((anchor) => ({
         href: (anchor as HTMLAnchorElement).href,
-        text:
-          anchor.textContent?.trim().substring(0, 50) || "(no text)",
+        text: anchor.textContent?.trim().substring(0, 50) || "(no text)",
       }));
     });
 
@@ -558,10 +497,7 @@ export class Auditor {
       if (linksToCheck.length >= MAX_LINKS_TO_CHECK) break;
 
       // Skip non-HTTP links
-      if (
-        !link.href.startsWith("http://") &&
-        !link.href.startsWith("https://")
-      ) {
+      if (!link.href.startsWith("http://") && !link.href.startsWith("https://")) {
         continue;
       }
 
@@ -576,10 +512,7 @@ export class Auditor {
     const checkResults = await Promise.allSettled(
       linksToCheck.map(async (link) => {
         const controller = new AbortController();
-        const timeoutId = setTimeout(
-          () => controller.abort(),
-          LINK_TIMEOUT_MS,
-        );
+        const timeoutId = setTimeout(() => controller.abort(), LINK_TIMEOUT_MS);
 
         try {
           const response = await fetch(link.href, {

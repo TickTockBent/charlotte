@@ -2,9 +2,7 @@ import { describe, it, expect } from "vitest";
 import { SnapshotStore } from "../../../src/state/snapshot-store.js";
 import type { PageRepresentation } from "../../../src/types/page-representation.js";
 
-function createMockRepresentation(
-  overrides?: Partial<PageRepresentation>,
-): PageRepresentation {
+function createMockRepresentation(overrides?: Partial<PageRepresentation>): PageRepresentation {
   return {
     url: "https://example.com",
     title: "Test Page",

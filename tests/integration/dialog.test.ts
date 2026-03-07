@@ -394,8 +394,7 @@ describe("Dialog integration", () => {
         { profile: "full" },
       );
 
-      const [clientTransport, serverTransport] =
-        InMemoryTransport.createLinkedPair();
+      const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
       await server.connect(serverTransport);
 
       mcpClient = new Client({ name: "dialog-test", version: "1.0.0" });
@@ -520,7 +519,7 @@ describe("Dialog integration", () => {
 
       // Render to get element IDs, then resolve the alert button
       await renderActivePage(deps, { detail: "summary" });
-      const alertButton = deps.elementIdGenerator.findSimilar("btn-", []);
+      const _alertButton = deps.elementIdGenerator.findSimilar("btn-", []);
 
       // Use waitForPossibleNavigation with a real click action (same as charlotte:click)
       const timeoutPromise = new Promise<"timeout">((resolve) =>
@@ -582,9 +581,7 @@ describe("Dialog integration", () => {
       // This tests the exact sequence charlotte:click uses:
       // resolveElement → waitForPossibleNavigation(click) → renderAfterAction
       const representation = await renderActivePage(deps, { detail: "summary" });
-      const alertButton = representation.interactive.find(
-        (el) => el.label === "Alert",
-      );
+      const alertButton = representation.interactive.find((el) => el.label === "Alert");
       expect(alertButton).toBeDefined();
 
       const { page, backendNodeId } = await resolveElement(deps, alertButton!.id);

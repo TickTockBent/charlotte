@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { createServer, type ServerDeps } from "../../../src/server.js";
-import { ALL_TOOL_NAMES, TOOL_GROUPS, resolveProfile, resolveGroups } from "../../../src/tools/tool-groups.js";
+import { ALL_TOOL_NAMES, resolveProfile, resolveGroups } from "../../../src/tools/tool-groups.js";
 
 /**
  * Minimal mock ServerDeps. Tool handlers are never invoked in these tests,

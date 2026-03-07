@@ -1,13 +1,7 @@
 import type { Page, CDPSession } from "puppeteer";
 import { logger } from "../utils/logger.js";
 
-const REQUIRED_DOMAINS = [
-  "Accessibility",
-  "DOM",
-  "CSS",
-  "Page",
-  "Network",
-] as const;
+const REQUIRED_DOMAINS = ["Accessibility", "DOM", "CSS", "Page", "Network"] as const;
 
 export class CDPSessionManager {
   private sessions: WeakMap<Page, CDPSession> = new WeakMap();

@@ -9,7 +9,6 @@ import {
   getToolGroup,
   GROUP_DESCRIPTIONS,
   type ToolProfile,
-  type ToolGroupName,
 } from "../../../src/tools/tool-groups.js";
 
 describe("tool-groups", () => {

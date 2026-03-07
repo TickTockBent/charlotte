@@ -47,10 +47,7 @@ export interface CreateServerResult {
   registry: ToolRegistry;
 }
 
-export function createServer(
-  deps: ServerDeps,
-  options: ServerOptions = {},
-): CreateServerResult {
+export function createServer(deps: ServerDeps, options: ServerOptions = {}): CreateServerResult {
   // Resolve which tools should be enabled
   const profileName = options.toolGroups ? undefined : (options.profile ?? "browse");
   const enabledTools = options.toolGroups
@@ -66,19 +63,13 @@ export function createServer(
   const activeLabel = profileName
     ? `Active profile: ${profileName}.`
     : `Active groups: ${options.toolGroups!.join(", ")}.`;
-  const instructionLines = [
-    `Charlotte browser automation server. ${activeLabel}`,
-  ];
+  const instructionLines = [`Charlotte browser automation server. ${activeLabel}`];
   if (fullyDisabledGroups.length > 0) {
-    instructionLines.push(
-      "Additional tool groups available via charlotte:tools:",
-    );
+    instructionLines.push("Additional tool groups available via charlotte:tools:");
     for (const group of fullyDisabledGroups) {
       instructionLines.push(`  - ${group}: ${GROUP_DESCRIPTIONS[group]}`);
     }
-    instructionLines.push(
-      "Call charlotte:tools to list groups or enable/disable them.",
-    );
+    instructionLines.push("Call charlotte:tools to list groups or enable/disable them.");
   }
 
   const server = new McpServer(

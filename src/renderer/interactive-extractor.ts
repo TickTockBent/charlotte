@@ -3,7 +3,6 @@ import type { ParsedAXNode } from "./accessibility-extractor.js";
 import { isInteractiveRole } from "./accessibility-extractor.js";
 import type { ElementIdGenerator } from "./element-id-generator.js";
 import { computeDOMPathSignature } from "./dom-path.js";
-import { ZERO_BOUNDS } from "./layout-extractor.js";
 import type {
   Bounds,
   InteractiveElement,
@@ -135,10 +134,7 @@ export class InteractiveExtractor {
         if (elementType === "select") {
           const options: string[] = [];
           const collectOptions = (optionNode: ParsedAXNode) => {
-            if (
-              optionNode.role === "option" ||
-              optionNode.role === "listitem"
-            ) {
+            if (optionNode.role === "option" || optionNode.role === "listitem") {
               options.push(optionNode.name || optionNode.value || "");
             }
             for (const child of optionNode.children) {
@@ -175,7 +171,7 @@ export class InteractiveExtractor {
     formNodes: ParsedAXNode[],
     interactiveElements: InteractiveElement[],
     idGenerator: ElementIdGenerator,
-    boundsMap: Map<number, Bounds>,
+    _boundsMap: Map<number, Bounds>,
   ): FormRepresentation[] {
     const forms: FormRepresentation[] = [];
 
@@ -205,8 +201,7 @@ export class InteractiveExtractor {
           if (matchingElement) {
             if (
               node.role === "button" &&
-              (node.properties["type"] === "submit" ||
-                node.name?.toLowerCase().includes("submit"))
+              (node.properties["type"] === "submit" || node.name?.toLowerCase().includes("submit"))
             ) {
               submitButtonId = matchingElement.id;
             } else {

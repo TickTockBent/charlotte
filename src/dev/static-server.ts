@@ -27,11 +27,15 @@ export class StaticServer {
     }
 
     const resolvedDirPath = path.resolve(options.directoryPath);
-    const absoluteDirectoryPath = fs.existsSync(resolvedDirPath) ? fs.realpathSync(resolvedDirPath) : resolvedDirPath;
-    
+    const absoluteDirectoryPath = fs.existsSync(resolvedDirPath)
+      ? fs.realpathSync(resolvedDirPath)
+      : resolvedDirPath;
+
     const configuredRoot = options.allowedRoot ? path.resolve(options.allowedRoot) : process.cwd();
-    const rootPath = fs.existsSync(configuredRoot) ? fs.realpathSync(configuredRoot) : configuredRoot;
-    
+    const rootPath = fs.existsSync(configuredRoot)
+      ? fs.realpathSync(configuredRoot)
+      : configuredRoot;
+
     if (!absoluteDirectoryPath.startsWith(rootPath)) {
       throw new Error(`Directory traversal blocked. Path must be within ${rootPath}`);
     }

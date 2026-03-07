@@ -138,10 +138,7 @@ export class AccessibilityExtractor {
       const name = raw.name?.value ?? "";
       const description = raw.description?.value ?? "";
       const rawValue = raw.value?.value;
-      const value =
-        rawValue !== undefined && rawValue !== null
-          ? String(rawValue)
-          : null;
+      const value = rawValue !== undefined && rawValue !== null ? String(rawValue) : null;
 
       const parsed: ParsedAXNode = {
         nodeId: raw.nodeId,

@@ -170,9 +170,7 @@ describe("FileWatcher", () => {
       ...POLLING_OPTIONS,
     });
 
-    const secondTempDir = fs.mkdtempSync(
-      path.join(os.tmpdir(), "charlotte-fw-test2-"),
-    );
+    const secondTempDir = fs.mkdtempSync(path.join(os.tmpdir(), "charlotte-fw-test2-"));
     try {
       await watcher.start({
         directoryPath: secondTempDir,

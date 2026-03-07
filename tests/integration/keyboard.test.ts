@@ -11,9 +11,7 @@ import { SnapshotStore } from "../../src/state/snapshot-store.js";
 import { ArtifactStore } from "../../src/state/artifact-store.js";
 import { createDefaultConfig } from "../../src/types/config.js";
 import type { ToolDependencies } from "../../src/tools/tool-helpers.js";
-import {
-  renderActivePage,
-} from "../../src/tools/tool-helpers.js";
+import { renderActivePage } from "../../src/tools/tool-helpers.js";
 
 const KEYBOARD_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/keyboard.html")}`;
 
@@ -59,10 +57,7 @@ describe("Keyboard integration", () => {
   /** Get the text content of an element by CSS selector */
   async function getResultText(selector: string): Promise<string> {
     const page = pageManager.getActivePage();
-    return page.evaluate(
-      (sel) => document.querySelector(sel)?.textContent ?? "",
-      selector,
-    );
+    return page.evaluate((sel) => document.querySelector(sel)?.textContent ?? "", selector);
   }
 
   /**

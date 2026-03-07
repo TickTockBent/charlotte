@@ -13,16 +13,10 @@ import { createDefaultConfig } from "../../src/types/config.js";
 import { DevModeState } from "../../src/dev/dev-mode-state.js";
 import { Auditor } from "../../src/dev/auditor.js";
 import type { ToolDependencies } from "../../src/tools/tool-helpers.js";
-import {
-  renderActivePage,
-  renderAfterAction,
-} from "../../src/tools/tool-helpers.js";
+import { renderActivePage, renderAfterAction } from "../../src/tools/tool-helpers.js";
 
 let TEMP_FIXTURES_DIR: string;
-let FIXTURES_DIR = path.resolve(
-  import.meta.dirname,
-  "../fixtures/pages",
-);
+let FIXTURES_DIR = path.resolve(import.meta.dirname, "../fixtures/pages");
 
 describe("Dev mode integration", () => {
   let browserManager: BrowserManager;
@@ -41,10 +35,7 @@ describe("Dev mode integration", () => {
     await pageManager.openTab(browserManager);
     cdpSessionManager = new CDPSessionManager();
     elementIdGenerator = new ElementIdGenerator();
-    rendererPipeline = new RendererPipeline(
-      cdpSessionManager,
-      elementIdGenerator,
-    );
+    rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator);
     const config = createDefaultConfig();
     config.allowedWorkspaceRoot = os.tmpdir(); // Set allowed root for tests
     devModeState = new DevModeState(config);
@@ -56,7 +47,7 @@ describe("Dev mode integration", () => {
     FIXTURES_DIR = TEMP_FIXTURES_DIR;
     // Update AUDIT_TARGET_FIXTURE to use the temp directory
     AUDIT_TARGET_FIXTURE = `file://${path.resolve(FIXTURES_DIR, "audit-target.html")}`;
-    
+
     const artifactStore = new ArtifactStore(
       path.join(os.tmpdir(), "charlotte-devmode-test-artifacts"),
     );
@@ -119,9 +110,7 @@ describe("Dev mode integration", () => {
       expect(serverInfo.port).toBeGreaterThan(0);
 
       // Verify the server is accessible
-      const response = await fetch(
-        `${serverInfo.url}/simple.html`,
-      );
+      const response = await fetch(`${serverInfo.url}/simple.html`);
       expect(response.ok).toBe(true);
 
       await devModeState.stopAll();
@@ -141,14 +130,10 @@ describe("Dev mode integration", () => {
       });
 
       // First server should be stopped
-      await expect(
-        fetch(`${firstInfo.url}/simple.html`),
-      ).rejects.toThrow();
+      await expect(fetch(`${firstInfo.url}/simple.html`)).rejects.toThrow();
 
       // Second server should work
-      const response = await fetch(
-        `${secondInfo.url}/simple.html`,
-      );
+      const response = await fetch(`${secondInfo.url}/simple.html`);
       expect(response.ok).toBe(true);
 
       await devModeState.stopAll();
@@ -158,10 +143,7 @@ describe("Dev mode integration", () => {
   describe("dev_inject", () => {
     it("injects CSS into the page", async () => {
       const page = pageManager.getActivePage();
-      await page.goto(
-        `file://${path.resolve(FIXTURES_DIR, "simple.html")}`,
-        { waitUntil: "load" },
-      );
+      await page.goto(`file://${path.resolve(FIXTURES_DIR, "simple.html")}`, { waitUntil: "load" });
 
       // Take a baseline snapshot
       await renderActivePage(deps, { source: "observe" });
@@ -182,10 +164,7 @@ describe("Dev mode integration", () => {
 
     it("injects JS that modifies the DOM", async () => {
       const page = pageManager.getActivePage();
-      await page.goto(
-        `file://${path.resolve(FIXTURES_DIR, "simple.html")}`,
-        { waitUntil: "load" },
-      );
+      await page.goto(`file://${path.resolve(FIXTURES_DIR, "simple.html")}`, { waitUntil: "load" });
 
       // Inject JS that changes the title
       await page.evaluate(() => {
@@ -220,9 +199,7 @@ describe("Dev mode integration", () => {
 
         // Should find missing alt text
         const missingAltFinding = result.findings.find(
-          (f) =>
-            f.category === "a11y" &&
-            f.message.includes("alt"),
+          (f) => f.category === "a11y" && f.message.includes("alt"),
         );
         expect(missingAltFinding).toBeDefined();
 
@@ -251,25 +228,19 @@ describe("Dev mode integration", () => {
 
         // Should find missing meta description
         const missingDescriptionFinding = result.findings.find(
-          (f) =>
-            f.category === "seo" &&
-            f.message.includes("description"),
+          (f) => f.category === "seo" && f.message.includes("description"),
         );
         expect(missingDescriptionFinding).toBeDefined();
 
         // Should find missing lang attribute
         const missingLangFinding = result.findings.find(
-          (f) =>
-            f.category === "seo" &&
-            f.message.includes("lang"),
+          (f) => f.category === "seo" && f.message.includes("lang"),
         );
         expect(missingLangFinding).toBeDefined();
 
         // Should find duplicate h1
         const duplicateH1Finding = result.findings.find(
-          (f) =>
-            f.category === "seo" &&
-            f.message.includes("h1"),
+          (f) => f.category === "seo" && f.message.includes("h1"),
         );
         expect(duplicateH1Finding).toBeDefined();
       } finally {
@@ -283,17 +254,13 @@ describe("Dev mode integration", () => {
 
       const session = await page.createCDPSession();
       try {
-        const result = await auditor.audit(page, session, [
-          "performance",
-        ]);
+        const result = await auditor.audit(page, session, ["performance"]);
 
         expect(result.categories_checked).toEqual(["performance"]);
 
         // Should have at least an info finding with performance metrics
         const metricsInfoFinding = result.findings.find(
-          (f) =>
-            f.category === "performance" &&
-            f.severity === "info",
+          (f) => f.category === "performance" && f.severity === "info",
         );
         expect(metricsInfoFinding).toBeDefined();
         expect(metricsInfoFinding!.message).toContain("Performance metrics");
@@ -308,17 +275,13 @@ describe("Dev mode integration", () => {
 
       const session = await page.createCDPSession();
       try {
-        const result = await auditor.audit(page, session, [
-          "contrast",
-        ]);
+        const result = await auditor.audit(page, session, ["contrast"]);
 
         expect(result.categories_checked).toEqual(["contrast"]);
 
         // Should find low contrast issue
         const lowContrastFinding = result.findings.find(
-          (f) =>
-            f.category === "contrast" &&
-            f.message.includes("contrast ratio"),
+          (f) => f.category === "contrast" && f.message.includes("contrast ratio"),
         );
         expect(lowContrastFinding).toBeDefined();
       } finally {
@@ -354,19 +317,12 @@ describe("Dev mode integration", () => {
 
       const session = await page.createCDPSession();
       try {
-        const result = await auditor.audit(page, session, [
-          "a11y",
-          "seo",
-        ]);
+        const result = await auditor.audit(page, session, ["a11y", "seo"]);
 
         expect(result.summary).toMatch(/\d+ finding/);
         // Should have at least some errors or warnings
-        const hasErrors = result.findings.some(
-          (f) => f.severity === "error",
-        );
-        const hasWarnings = result.findings.some(
-          (f) => f.severity === "warning",
-        );
+        const hasErrors = result.findings.some((f) => f.severity === "error");
+        const hasWarnings = result.findings.some((f) => f.severity === "warning");
         expect(hasErrors || hasWarnings).toBe(true);
       } finally {
         await session.detach();
@@ -377,13 +333,11 @@ describe("Dev mode integration", () => {
   describe("reload event buffering", () => {
     it("surfaces reload event in renderActivePage after file change", async () => {
       // Create a temp directory with a simple HTML file
-      const tempServDir = fs.mkdtempSync(
-        path.join(os.tmpdir(), "charlotte-reload-test-"),
-      );
+      const tempServDir = fs.mkdtempSync(path.join(os.tmpdir(), "charlotte-reload-test-"));
       const htmlFilePath = path.join(tempServDir, "index.html");
       fs.writeFileSync(
         htmlFilePath,
-        '<html><head><title>Reload Test</title></head><body><p>Original</p></body></html>',
+        "<html><head><title>Reload Test</title></head><body><p>Original</p></body></html>",
       );
 
       try {
@@ -404,7 +358,7 @@ describe("Dev mode integration", () => {
         // Modify the file to trigger a reload event
         fs.writeFileSync(
           htmlFilePath,
-          '<html><head><title>Reload Test Updated</title></head><body><p>Updated</p></body></html>',
+          "<html><head><title>Reload Test Updated</title></head><body><p>Updated</p></body></html>",
         );
 
         // Wait for the file watcher to detect the change, debounce, and reload
@@ -417,9 +371,7 @@ describe("Dev mode integration", () => {
 
         expect(representation.reload_event).toBeDefined();
         expect(representation.reload_event!.trigger).toBe("file_change");
-        expect(representation.reload_event!.files_changed).toContain(
-          "index.html",
-        );
+        expect(representation.reload_event!.files_changed).toContain("index.html");
         expect(representation.reload_event!.timestamp).toBeTruthy();
 
         // Second render should NOT have the reload event (consumed)

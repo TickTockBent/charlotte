@@ -221,9 +221,7 @@ describe("Monitoring integration", () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       const requests = pageManager.getNetworkRequests();
-      const postRequest = requests.find(
-        (r) => r.url.includes("/api/data") && r.method === "POST",
-      );
+      const postRequest = requests.find((r) => r.url.includes("/api/data") && r.method === "POST");
       expect(postRequest).toBeDefined();
       expect(postRequest!.status).toBe(200);
     });
@@ -236,9 +234,7 @@ describe("Monitoring integration", () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       const requests = pageManager.getNetworkRequests();
-      const failedRequest = requests.find(
-        (r) => r.url.includes("/not-found"),
-      );
+      const failedRequest = requests.find((r) => r.url.includes("/not-found"));
       expect(failedRequest).toBeDefined();
       expect(failedRequest!.status).toBe(404);
     });
@@ -271,9 +267,7 @@ describe("Monitoring integration", () => {
 
     it("captures resource type correctly", async () => {
       const requests = pageManager.getNetworkRequests();
-      const docRequest = requests.find(
-        (r) => r.url === `${serverUrl}/`,
-      );
+      const docRequest = requests.find((r) => r.url === `${serverUrl}/`);
       expect(docRequest).toBeDefined();
       expect(docRequest!.resourceType).toBe("document");
     });

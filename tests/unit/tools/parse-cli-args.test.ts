@@ -39,9 +39,7 @@ describe("parseCliArgs", () => {
     });
 
     it("throws on invalid profile", () => {
-      expect(() => parseCliArgs(["--profile=invalid"])).toThrow(
-        "Invalid profile: invalid",
-      );
+      expect(() => parseCliArgs(["--profile=invalid"])).toThrow("Invalid profile: invalid");
     });
   });
 
@@ -64,24 +62,17 @@ describe("parseCliArgs", () => {
     });
 
     it("throws on invalid group", () => {
-      expect(() => parseCliArgs(["--tools=invalid"])).toThrow(
-        "Invalid tool group: invalid",
-      );
+      expect(() => parseCliArgs(["--tools=invalid"])).toThrow("Invalid tool group: invalid");
     });
 
     it("throws on trailing comma (empty group name)", () => {
-      expect(() => parseCliArgs(["--tools=navigation,"])).toThrow(
-        "Invalid tool group: ",
-      );
+      expect(() => parseCliArgs(["--tools=navigation,"])).toThrow("Invalid tool group: ");
     });
   });
 
   describe("precedence", () => {
     it("--profile takes precedence over --tools", () => {
-      const result = parseCliArgs([
-        "--profile=core",
-        "--tools=navigation,observation",
-      ]);
+      const result = parseCliArgs(["--profile=core", "--tools=navigation,observation"]);
       expect(result).toEqual({ profile: "core" });
       expect(result.toolGroups).toBeUndefined();
     });

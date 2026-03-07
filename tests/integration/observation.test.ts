@@ -38,9 +38,7 @@ describe("Observation integration", () => {
     elementIdGenerator = new ElementIdGenerator();
     rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator);
     const config = createDefaultConfig();
-    const artifactStore = new ArtifactStore(
-      path.join(os.tmpdir(), "charlotte-obs-test-artifacts"),
-    );
+    const artifactStore = new ArtifactStore(path.join(os.tmpdir(), "charlotte-obs-test-artifacts"));
     await artifactStore.initialize();
     deps = {
       browserManager,
@@ -131,18 +129,14 @@ describe("Observation integration", () => {
       await page.goto(SIMPLE_FIXTURE, { waitUntil: "load" });
 
       const representation = await renderActivePage(deps, { detail: "minimal" });
-      const buttons = representation.interactive.filter(
-        (element) => element.type === "button",
-      );
+      const buttons = representation.interactive.filter((element) => element.type === "button");
 
       expect(buttons.length).toBeGreaterThanOrEqual(2);
     });
 
     it("finds all links", async () => {
       const representation = await renderActivePage(deps, { detail: "minimal" });
-      const links = representation.interactive.filter(
-        (element) => element.type === "link",
-      );
+      const links = representation.interactive.filter((element) => element.type === "link");
 
       expect(links.length).toBeGreaterThanOrEqual(5);
     });
@@ -167,15 +161,11 @@ describe("Observation integration", () => {
       const textInputs = representation.interactive.filter(
         (element) => element.type === "text_input",
       );
-      const selects = representation.interactive.filter(
-        (element) => element.type === "select",
-      );
+      const selects = representation.interactive.filter((element) => element.type === "select");
       const checkboxes = representation.interactive.filter(
         (element) => element.type === "checkbox",
       );
-      const radios = representation.interactive.filter(
-        (element) => element.type === "radio",
-      );
+      const radios = representation.interactive.filter((element) => element.type === "radio");
 
       // form.html has: first name, last name, email, phone, search — all text-like inputs
       expect(textInputs.length).toBeGreaterThanOrEqual(3);
@@ -235,9 +225,7 @@ describe("Observation integration", () => {
     });
 
     it("throws ELEMENT_NOT_FOUND for unknown IDs", async () => {
-      await expect(
-        resolveElement(deps, "btn-zzzz"),
-      ).rejects.toThrow("not found");
+      await expect(resolveElement(deps, "btn-zzzz")).rejects.toThrow("not found");
     });
   });
 
@@ -281,10 +269,7 @@ describe("Observation integration", () => {
       const representation = await renderActivePage(deps, { detail: "minimal" });
 
       const elementsWithBounds = representation.interactive.filter(
-        (element) =>
-          element.bounds !== null &&
-          element.bounds.w > 0 &&
-          element.bounds.h > 0,
+        (element) => element.bounds !== null && element.bounds.w > 0 && element.bounds.h > 0,
       );
 
       // Most visible elements should have bounds
@@ -296,9 +281,7 @@ describe("Observation integration", () => {
 
       const elementsWithBounds = representation.interactive.filter(
         (element): element is InteractiveElement & { bounds: Bounds } =>
-          element.bounds !== null &&
-          element.bounds.w > 0 &&
-          element.bounds.h > 0,
+          element.bounds !== null && element.bounds.w > 0 && element.bounds.h > 0,
       );
 
       if (elementsWithBounds.length >= 2) {
@@ -307,9 +290,7 @@ describe("Observation integration", () => {
         const centerAy = elementA.bounds.y + elementA.bounds.h / 2;
         const centerBx = elementB.bounds.x + elementB.bounds.w / 2;
         const centerBy = elementB.bounds.y + elementB.bounds.h / 2;
-        const distance = Math.sqrt(
-          (centerAx - centerBx) ** 2 + (centerAy - centerBy) ** 2,
-        );
+        const distance = Math.sqrt((centerAx - centerBx) ** 2 + (centerAy - centerBy) ** 2);
 
         expect(distance).toBeGreaterThanOrEqual(0);
         expect(typeof distance).toBe("number");
@@ -321,9 +302,7 @@ describe("Observation integration", () => {
   describe("formatElementsResponse", () => {
     it("formats element arrays as MCP tool response", async () => {
       const representation = await renderActivePage(deps, { detail: "minimal" });
-      const buttons = representation.interactive.filter(
-        (element) => element.type === "button",
-      );
+      const buttons = representation.interactive.filter((element) => element.type === "button");
 
       const response = formatElementsResponse(buttons);
 
@@ -347,9 +326,7 @@ describe("Observation integration", () => {
       expect(representation.interactive.length).toBeGreaterThan(0);
 
       // Should see the buttons
-      const buttons = representation.interactive.filter(
-        (element) => element.type === "button",
-      );
+      const buttons = representation.interactive.filter((element) => element.type === "button");
       expect(buttons.length).toBeGreaterThanOrEqual(3);
     });
 
@@ -359,7 +336,7 @@ describe("Observation integration", () => {
 
       // Get initial content
       const beforeMutation = await renderActivePage(deps, { detail: "full" });
-      const initialFullContent = beforeMutation.structure.full_content ?? "";
+      const _initialFullContent = beforeMutation.structure.full_content ?? "";
 
       // Trigger DOM mutation via evaluate
       await page.evaluate(() => {

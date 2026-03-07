@@ -8,18 +8,23 @@
 import { logger } from "./utils/logger.js";
 import type { ToolProfile, ToolGroupName } from "./tools/tool-groups.js";
 
-const VALID_PROFILES: ToolProfile[] = [
-  "core", "browse", "interact", "develop", "audit", "full",
-];
+const VALID_PROFILES: ToolProfile[] = ["core", "browse", "interact", "develop", "audit", "full"];
 
 const VALID_GROUPS: ToolGroupName[] = [
-  "navigation", "observation", "interaction", "session",
-  "dev_mode", "dialog", "evaluate", "monitoring",
+  "navigation",
+  "observation",
+  "interaction",
+  "session",
+  "dev_mode",
+  "dialog",
+  "evaluate",
+  "monitoring",
 ];
 
-export function parseCliArgs(
-  argv: string[] = process.argv.slice(2),
-): { profile?: ToolProfile; toolGroups?: ToolGroupName[] } {
+export function parseCliArgs(argv: string[] = process.argv.slice(2)): {
+  profile?: ToolProfile;
+  toolGroups?: ToolGroupName[];
+} {
   const profileArg = argv.find((a) => a.startsWith("--profile="));
   const toolsArg = argv.find((a) => a.startsWith("--tools="));
 

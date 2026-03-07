@@ -10,10 +10,7 @@ import { SnapshotStore } from "../../src/state/snapshot-store.js";
 import { ArtifactStore } from "../../src/state/artifact-store.js";
 import { createDefaultConfig } from "../../src/types/config.js";
 import type { ToolDependencies } from "../../src/tools/tool-helpers.js";
-import {
-  renderActivePage,
-  renderAfterAction,
-} from "../../src/tools/tool-helpers.js";
+import { renderActivePage, renderAfterAction } from "../../src/tools/tool-helpers.js";
 import { diffRepresentations } from "../../src/state/differ.js";
 
 const INTERACTION_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/interaction.html")}`;
@@ -218,9 +215,7 @@ describe("State management integration", () => {
 
       expect(representationWithDelta.delta).toBeDefined();
       expect(representationWithDelta.delta!.from_snapshot).toBeGreaterThan(0);
-      expect(representationWithDelta.delta!.to_snapshot).toBe(
-        representationWithDelta.snapshot_id,
-      );
+      expect(representationWithDelta.delta!.to_snapshot).toBe(representationWithDelta.snapshot_id);
       expect(representationWithDelta.delta!.changes).toBeInstanceOf(Array);
       expect(representationWithDelta.delta!.summary).toBeTruthy();
     });

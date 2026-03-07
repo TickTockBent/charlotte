@@ -25,12 +25,21 @@ export function diffRepresentations(
   const changes: DiffChange[] = [];
 
   if (scope === "all" || scope === "structure") {
-    changes.push(...diffLandmarks(fromRepresentation.structure.landmarks, toRepresentation.structure.landmarks));
-    changes.push(...diffHeadings(fromRepresentation.structure.headings, toRepresentation.structure.headings));
+    changes.push(
+      ...diffLandmarks(
+        fromRepresentation.structure.landmarks,
+        toRepresentation.structure.landmarks,
+      ),
+    );
+    changes.push(
+      ...diffHeadings(fromRepresentation.structure.headings, toRepresentation.structure.headings),
+    );
   }
 
   if (scope === "all" || scope === "interactive") {
-    changes.push(...diffInteractiveElements(fromRepresentation.interactive, toRepresentation.interactive));
+    changes.push(
+      ...diffInteractiveElements(fromRepresentation.interactive, toRepresentation.interactive),
+    );
     changes.push(...diffForms(fromRepresentation.forms, toRepresentation.forms));
   }
 
@@ -233,10 +242,7 @@ interface StatePropertyChange {
   to: unknown;
 }
 
-function diffElementState(
-  fromState: ElementState,
-  toState: ElementState,
-): StatePropertyChange[] {
+function diffElementState(fromState: ElementState, toState: ElementState): StatePropertyChange[] {
   const statePropertyChanges: StatePropertyChange[] = [];
   const stateProperties: (keyof ElementState)[] = [
     "enabled",
@@ -264,10 +270,7 @@ function diffElementState(
 
 // ─── Form diffing ────────────────────────────────────────────────────
 
-function diffForms(
-  fromForms: FormRepresentation[],
-  toForms: FormRepresentation[],
-): DiffChange[] {
+function diffForms(fromForms: FormRepresentation[], toForms: FormRepresentation[]): DiffChange[] {
   const changes: DiffChange[] = [];
   const fromById = new Map(fromForms.map((form) => [form.id, form]));
   const toById = new Map(toForms.map((form) => [form.id, form]));

@@ -7,10 +7,7 @@ import type { SnapshotStore } from "../state/snapshot-store.js";
 import type { ArtifactStore } from "../state/artifact-store.js";
 import type { CharlotteConfig } from "../types/config.js";
 import type { DevModeState } from "../dev/dev-mode-state.js";
-import type {
-  PageRepresentation,
-  InteractiveElement,
-} from "../types/page-representation.js";
+import type { PageRepresentation, InteractiveElement } from "../types/page-representation.js";
 import type { DetailLevel } from "../renderer/renderer-pipeline.js";
 import { z } from "zod";
 import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
@@ -149,10 +146,7 @@ export async function resolveElement(
   }
 
   // Step 3: Element is genuinely gone — suggest similar
-  const similar = deps.elementIdGenerator.findSimilar(
-    elementId,
-    freshRepresentation.interactive,
-  );
+  const similar = deps.elementIdGenerator.findSimilar(elementId, freshRepresentation.interactive);
 
   const suggestion = similar
     ? `Element '${elementId}' not found. Did you mean '${similar.id}' (${similar.type}: "${similar.label}")?`
@@ -170,9 +164,7 @@ export async function resolveElement(
  * Captures the pre-action snapshot (latest in store), renders post-action
  * state, and computes a structural diff between them.
  */
-export async function renderAfterAction(
-  deps: ToolDependencies,
-): Promise<PageRepresentation> {
+export async function renderAfterAction(deps: ToolDependencies): Promise<PageRepresentation> {
   const preActionSnapshot = deps.snapshotStore.getLatest();
 
   const representation = await renderActivePage(deps, { source: "action" });

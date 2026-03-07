@@ -2,10 +2,7 @@ import { describe, it, expect, afterEach } from "vitest";
 import * as path from "node:path";
 import { StaticServer } from "../../../src/dev/static-server.js";
 
-const FIXTURES_DIR = path.resolve(
-  import.meta.dirname,
-  "../../fixtures/pages",
-);
+const FIXTURES_DIR = path.resolve(import.meta.dirname, "../../fixtures/pages");
 
 describe("StaticServer", () => {
   let server: StaticServer;

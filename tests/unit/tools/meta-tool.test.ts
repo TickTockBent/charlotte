@@ -13,8 +13,12 @@ function createMockRegistry(): ToolRegistry {
     for (const toolName of TOOL_GROUPS[group]) {
       registry[toolName] = {
         enabled: true,
-        enable() { this.enabled = true; },
-        disable() { this.enabled = false; },
+        enable() {
+          this.enabled = true;
+        },
+        disable() {
+          this.enabled = false;
+        },
       } as unknown as RegisteredTool;
     }
   }
@@ -66,10 +70,7 @@ describe("meta-tool", () => {
         registry[tool].enabled = false;
       }
 
-      const result = await metaTool.handler(
-        { action: "enable", group: "interaction" },
-        {} as any,
-      );
+      const result = await metaTool.handler({ action: "enable", group: "interaction" }, {} as any);
       const parsed = JSON.parse((result as any).content[0].text);
       expect(parsed.action).toBe("enable");
       expect(parsed.group).toBe("interaction");
@@ -82,10 +83,7 @@ describe("meta-tool", () => {
     });
 
     it("reports 0 tools enabled if group already enabled", async () => {
-      const result = await metaTool.handler(
-        { action: "enable", group: "navigation" },
-        {} as any,
-      );
+      const result = await metaTool.handler({ action: "enable", group: "navigation" }, {} as any);
       const parsed = JSON.parse((result as any).content[0].text);
       expect(parsed.tools_enabled).toBe(0);
     });
@@ -93,10 +91,7 @@ describe("meta-tool", () => {
 
   describe("disable action", () => {
     it("disables an enabled group", async () => {
-      const result = await metaTool.handler(
-        { action: "disable", group: "session" },
-        {} as any,
-      );
+      const result = await metaTool.handler({ action: "disable", group: "session" }, {} as any);
       const parsed = JSON.parse((result as any).content[0].text);
       expect(parsed.action).toBe("disable");
       expect(parsed.group).toBe("session");
@@ -114,10 +109,7 @@ describe("meta-tool", () => {
         registry[tool].enabled = false;
       }
 
-      const result = await metaTool.handler(
-        { action: "disable", group: "monitoring" },
-        {} as any,
-      );
+      const result = await metaTool.handler({ action: "disable", group: "monitoring" }, {} as any);
       const parsed = JSON.parse((result as any).content[0].text);
       expect(parsed.tools_disabled).toBe(0);
     });

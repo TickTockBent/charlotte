@@ -87,8 +87,8 @@ export interface ReloadEvent {
 export interface PendingDialog {
   type: "alert" | "confirm" | "prompt" | "beforeunload";
   message: string;
-  default_value?: string;  // Only present for "prompt" dialogs
-  timestamp: string;       // ISO 8601
+  default_value?: string; // Only present for "prompt" dialogs
+  timestamp: string; // ISO 8601
 }
 
 export interface PageRepresentation {

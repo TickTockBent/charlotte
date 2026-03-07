@@ -27,16 +27,8 @@ export function registerDevModeTools(
         "Serve a local directory as a static website and optionally watch for file changes. Navigates to the served URL and returns the page representation. File changes trigger automatic reloads and surface as reload_event on the next tool response.",
       inputSchema: {
         path: z.string().describe("Local directory to serve"),
-        port: z
-          .number()
-          .optional()
-          .describe("Port to serve on (default: auto-assign)"),
-        watch: z
-          .boolean()
-          .optional()
-          .describe(
-            "Auto-reload on file changes (default: true)",
-          ),
+        port: z.number().optional().describe("Port to serve on (default: auto-assign)"),
+        watch: z.boolean().optional().describe("Auto-reload on file changes (default: true)"),
       },
     },
     async ({ path: directoryPath, port, watch }) => {
@@ -128,14 +120,8 @@ export function registerDevModeTools(
       description:
         "Inject CSS or JavaScript into the current page for testing modifications without editing files. Returns the page representation with a delta showing changes.",
       inputSchema: {
-        css: z
-          .string()
-          .optional()
-          .describe("CSS to inject into the page"),
-        js: z
-          .string()
-          .optional()
-          .describe("JavaScript to execute in the page context"),
+        css: z.string().optional().describe("CSS to inject into the page"),
+        js: z.string().optional().describe("JavaScript to execute in the page context"),
       },
     },
     async ({ css, js }) => {
@@ -185,9 +171,7 @@ export function registerDevModeTools(
         "Run accessibility and quality audits on the current page. Returns findings with severity levels and actionable recommendations.",
       inputSchema: {
         checks: z
-          .array(
-            z.enum(["a11y", "performance", "seo", "contrast", "links"]),
-          )
+          .array(z.enum(["a11y", "performance", "seo", "contrast", "links"]))
           .optional()
           .describe(
             "Audit categories to run. Options: a11y, performance, seo, contrast, links. Default: all categories.",

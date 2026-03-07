@@ -56,19 +56,14 @@ export class ElementIdGenerator {
     return this.backendNodeIdToId.get(backendDOMNodeId) ?? null;
   }
 
-  findSimilar(
-    elementId: string,
-    currentElements: InteractiveElement[],
-  ): InteractiveElement | null {
+  findSimilar(elementId: string, currentElements: InteractiveElement[]): InteractiveElement | null {
     // Extract type prefix from the missing ID
     const dashIndex = elementId.indexOf("-");
     if (dashIndex === -1) return null;
     const prefix = elementId.substring(0, dashIndex);
 
     // Find elements with the same prefix (same type)
-    const sameType = currentElements.filter((el) =>
-      el.id.startsWith(prefix + "-"),
-    );
+    const sameType = currentElements.filter((el) => el.id.startsWith(prefix + "-"));
 
     if (sameType.length === 0) return null;
 

@@ -6,10 +6,7 @@ import { RendererPipeline } from "../../src/renderer/renderer-pipeline.js";
 import { ElementIdGenerator } from "../../src/renderer/element-id-generator.js";
 import type { Page } from "puppeteer";
 
-const FIXTURE_PATH = path.resolve(
-  import.meta.dirname,
-  "../fixtures/pages/simple.html",
-);
+const FIXTURE_PATH = path.resolve(import.meta.dirname, "../fixtures/pages/simple.html");
 
 describe("RendererPipeline integration", () => {
   let browserManager: BrowserManager;
@@ -90,16 +87,12 @@ describe("RendererPipeline integration", () => {
       const buttons = result.interactive.filter((el) => el.type === "button");
       expect(buttons.length).toBeGreaterThanOrEqual(2);
 
-      const createButton = buttons.find((b) =>
-        b.label.includes("Create New Project"),
-      );
+      const createButton = buttons.find((b) => b.label.includes("Create New Project"));
       expect(createButton).toBeDefined();
       // enabled defaults to undefined (meaning enabled); only set when false
       expect(createButton!.state.enabled).toBeUndefined();
 
-      const exportButton = buttons.find((b) =>
-        b.label.includes("Export Data"),
-      );
+      const exportButton = buttons.find((b) => b.label.includes("Export Data"));
       expect(exportButton).toBeDefined();
       expect(exportButton!.state.enabled).toBe(false);
     });
@@ -117,14 +110,10 @@ describe("RendererPipeline integration", () => {
     it("detects text inputs", async () => {
       const result = await pipeline.render(page, { detail: "minimal" });
 
-      const textInputs = result.interactive.filter(
-        (el) => el.type === "text_input",
-      );
+      const textInputs = result.interactive.filter((el) => el.type === "text_input");
       expect(textInputs.length).toBeGreaterThanOrEqual(1);
 
-      const searchInput = textInputs.find((i) =>
-        i.label.toLowerCase().includes("search"),
-      );
+      const searchInput = textInputs.find((i) => i.label.toLowerCase().includes("search"));
       expect(searchInput).toBeDefined();
     });
 
@@ -138,9 +127,7 @@ describe("RendererPipeline integration", () => {
     it("detects checkboxes", async () => {
       const result = await pipeline.render(page, { detail: "minimal" });
 
-      const checkboxes = result.interactive.filter(
-        (el) => el.type === "checkbox",
-      );
+      const checkboxes = result.interactive.filter((el) => el.type === "checkbox");
       expect(checkboxes.length).toBeGreaterThanOrEqual(1);
     });
   });
@@ -151,9 +138,7 @@ describe("RendererPipeline integration", () => {
       const secondRender = await pipeline.render(page, { detail: "minimal" });
 
       // Same number of interactive elements
-      expect(firstRender.interactive.length).toBe(
-        secondRender.interactive.length,
-      );
+      expect(firstRender.interactive.length).toBe(secondRender.interactive.length);
 
       // Same IDs in same order
       const firstIds = firstRender.interactive.map((el) => el.id);
@@ -196,9 +181,7 @@ describe("RendererPipeline integration", () => {
         // At least some landmarks should have non-zero bounds
       }
 
-      const mainLandmark = result.structure.landmarks.find(
-        (l) => l.role === "main",
-      );
+      const mainLandmark = result.structure.landmarks.find((l) => l.role === "main");
       expect(mainLandmark).toBeDefined();
       expect(mainLandmark!.bounds.w).toBeGreaterThan(0);
       expect(mainLandmark!.bounds.h).toBeGreaterThan(0);
@@ -208,9 +191,7 @@ describe("RendererPipeline integration", () => {
       const result = await pipeline.render(page, { detail: "minimal" });
 
       // visible defaults to undefined (meaning visible); only set to false when hidden
-      const visibleElements = result.interactive.filter(
-        (el) => el.state.visible !== false,
-      );
+      const visibleElements = result.interactive.filter((el) => el.state.visible !== false);
       expect(visibleElements.length).toBeGreaterThan(0);
 
       for (const element of visibleElements) {

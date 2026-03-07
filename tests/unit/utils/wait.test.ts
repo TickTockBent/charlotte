@@ -9,11 +9,11 @@ function createMockPage(behavior: {
 }) {
   return {
     $: vi.fn().mockResolvedValue(behavior.selectorExists ? {} : null),
-    evaluate: vi.fn().mockImplementation((fn: Function, ...args: any[]) => {
+    evaluate: vi.fn().mockImplementation((fn: (...fnArgs: any[]) => any, ...args: any[]) => {
       // The function is called with arguments — detect which condition type
       if (args.length > 0 && typeof args[0] === "string") {
         // Could be text search or JS eval
-        const arg = args[0];
+        const _arg = args[0];
         // Check if it looks like a search text (from text condition)
         // vs a JS expression (from js condition)
         // We determine by checking the function source for "innerText"
@@ -34,11 +34,7 @@ describe("pollUntilCondition", () => {
   it("returns true immediately when condition is already satisfied", async () => {
     const mockPage = createMockPage({ selectorExists: true });
 
-    const result = await pollUntilCondition(
-      mockPage,
-      { selector: "#test" },
-      { timeout: 1000 },
-    );
+    const result = await pollUntilCondition(mockPage, { selector: "#test" }, { timeout: 1000 });
 
     expect(result).toBe(true);
   });
@@ -77,11 +73,7 @@ describe("pollUntilCondition", () => {
   it("checks text condition", async () => {
     const mockPage = createMockPage({ textExists: true });
 
-    const result = await pollUntilCondition(
-      mockPage,
-      { text: "Expected text" },
-      { timeout: 1000 },
-    );
+    const result = await pollUntilCondition(mockPage, { text: "Expected text" }, { timeout: 1000 });
 
     expect(result).toBe(true);
   });

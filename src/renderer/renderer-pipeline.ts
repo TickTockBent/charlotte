@@ -1,9 +1,18 @@
 import type { Page } from "puppeteer";
 import type { CDPSessionManager } from "../browser/cdp-session.js";
-import { AccessibilityExtractor, isLandmarkRole, isHeadingRole, isInteractiveRole } from "./accessibility-extractor.js";
+import {
+  AccessibilityExtractor,
+  isLandmarkRole,
+  isHeadingRole,
+  isInteractiveRole,
+} from "./accessibility-extractor.js";
 import type { ParsedAXNode } from "./accessibility-extractor.js";
 import { LayoutExtractor, ZERO_BOUNDS } from "./layout-extractor.js";
-import { InteractiveExtractor, ROLE_TO_ELEMENT_TYPE, reclassifyFileInputs } from "./interactive-extractor.js";
+import {
+  InteractiveExtractor,
+  ROLE_TO_ELEMENT_TYPE,
+  reclassifyFileInputs,
+} from "./interactive-extractor.js";
 import { ContentExtractor } from "./content-extractor.js";
 import { ElementIdGenerator } from "./element-id-generator.js";
 import { computeDOMPathSignature } from "./dom-path.js";
@@ -35,10 +44,7 @@ export class RendererPipeline {
     private elementIdGenerator: ElementIdGenerator,
   ) {}
 
-  async render(
-    page: Page,
-    options: RenderOptions,
-  ): Promise<PageRepresentation> {
+  async render(page: Page, options: RenderOptions): Promise<PageRepresentation> {
     const startTime = Date.now();
     logger.debug("Starting render pipeline", { detail: options.detail });
 
@@ -54,10 +60,7 @@ export class RendererPipeline {
       .map((n) => n.backendDOMNodeId as number);
 
     // Step 3: Extract layout for relevant nodes
-    const boundsMap = await this.layoutExtractor.getBoundsForNodes(
-      session,
-      backendNodeIds,
-    );
+    const boundsMap = await this.layoutExtractor.getBoundsForNodes(session, backendNodeIds);
 
     // Step 4: Build a fresh ID generator for this render
     const freshIdGenerator = new ElementIdGenerator();
@@ -69,12 +72,11 @@ export class RendererPipeline {
     const headings = this.extractHeadings(rootNodes, freshIdGenerator);
 
     // Step 7: Extract interactive elements and forms
-    const { elements, forms } =
-      this.interactiveExtractor.extractInteractiveElements(
-        rootNodes,
-        boundsMap,
-        freshIdGenerator,
-      );
+    const { elements, forms } = this.interactiveExtractor.extractInteractiveElements(
+      rootNodes,
+      boundsMap,
+      freshIdGenerator,
+    );
 
     // Step 7.5: Reclassify file inputs from "button" to "file_input"
     await reclassifyFileInputs(elements, session, freshIdGenerator);
@@ -141,11 +143,7 @@ export class RendererPipeline {
     const nodes: ParsedAXNode[] = [];
 
     const traverse = (node: ParsedAXNode) => {
-      if (
-        isLandmarkRole(node.role) ||
-        isHeadingRole(node.role) ||
-        this.isInteractiveNode(node)
-      ) {
+      if (isLandmarkRole(node.role) || isHeadingRole(node.role) || this.isInteractiveNode(node)) {
         nodes.push(node);
       }
 
@@ -163,10 +161,22 @@ export class RendererPipeline {
 
   private isInteractiveNode(node: ParsedAXNode): boolean {
     const interactiveRoles = new Set([
-      "button", "link", "textbox", "combobox", "listbox",
-      "checkbox", "radio", "switch", "slider", "spinbutton",
-      "searchbox", "menuitem", "menuitemcheckbox", "menuitemradio",
-      "tab", "treeitem",
+      "button",
+      "link",
+      "textbox",
+      "combobox",
+      "listbox",
+      "checkbox",
+      "radio",
+      "switch",
+      "slider",
+      "spinbutton",
+      "searchbox",
+      "menuitem",
+      "menuitemcheckbox",
+      "menuitemradio",
+      "tab",
+      "treeitem",
     ]);
     return interactiveRoles.has(node.role);
   }
@@ -214,10 +224,7 @@ export class RendererPipeline {
     return landmarks;
   }
 
-  private extractHeadings(
-    rootNodes: ParsedAXNode[],
-    idGenerator: ElementIdGenerator,
-  ): Heading[] {
+  private extractHeadings(rootNodes: ParsedAXNode[], idGenerator: ElementIdGenerator): Heading[] {
     const headings: Heading[] = [];
 
     const traverse = (node: ParsedAXNode) => {
@@ -269,7 +276,8 @@ export class RendererPipeline {
         if (!landmarkCounts[landmarkKey]) {
           landmarkCounts[landmarkKey] = {};
         }
-        landmarkCounts[landmarkKey][elementType] = (landmarkCounts[landmarkKey][elementType] ?? 0) + 1;
+        landmarkCounts[landmarkKey][elementType] =
+          (landmarkCounts[landmarkKey][elementType] ?? 0) + 1;
         total++;
       }
 

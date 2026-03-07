@@ -152,13 +152,19 @@ export function registerObservationTools(
     "charlotte:observe",
     {
       description:
-        'Get current page state without performing any action. Use detail levels to control verbosity: "minimal" for landmarks, headings, and interactive element counts by landmark (use charlotte:find to get specific elements with actionable IDs, or observe({ detail: "summary" }) to see all elements), "summary" (default) for content summaries and full element list, "full" for all text content.',
+        'Get current page state without performing any action. Use detail levels to control verbosity: "minimal" for landmarks, headings, and interactive element counts by landmark (use charlotte:find to get specific elements with actionable IDs, or observe({ detail: "summary" }) to see all elements), "summary" (default) for content summaries and full element list, "full" for all text content. Use view: "tree" for a compact structural outline — cheapest way to orient on page structure.',
       inputSchema: {
         detail: z
           .enum(["minimal", "summary", "full"])
           .optional()
           .describe(
             '"summary" (default), "full" (includes all text content), "minimal" (landmarks + interactive only)',
+          ),
+        view: z
+          .enum(["default", "tree"])
+          .optional()
+          .describe(
+            '"default" (structured JSON) or "tree" (compact structural outline showing landmarks, headings, and element types without text content — cheapest orientation tool)',
           ),
         selector: z.string().optional().describe("CSS selector to scope observation to a subtree"),
         include_styles: z
@@ -173,9 +179,25 @@ export function registerObservationTools(
           ),
       },
     },
-    async ({ detail, selector, include_styles, output_file }) => {
+    async ({ detail, view, selector, include_styles, output_file }) => {
       try {
         await deps.browserManager.ensureConnected();
+
+        // Tree view: lightweight structural outline, skips full render pipeline
+        if (view === "tree") {
+          const page = deps.pageManager.getActivePage();
+          const pendingDialogInfo = deps.pageManager.getPendingDialogInfo();
+          if (pendingDialogInfo) {
+            return {
+              content: [{ type: "text" as const, text: "(dialog blocking page)" }],
+            };
+          }
+          logger.info("Rendering structural tree view");
+          const tree = await deps.rendererPipeline.renderTree(page);
+          return {
+            content: [{ type: "text" as const, text: tree }],
+          };
+        }
 
         const detailLevel = detail ?? "summary";
         logger.info("Observing page", { detail: detailLevel, selector });

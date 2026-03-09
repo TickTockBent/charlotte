@@ -357,18 +357,37 @@ export function handleToolError(error: unknown): {
  * Resolve an output file path from the `output_file` parameter.
  * If the path is relative, it is resolved against `config.outputDir`
  * (or cwd if outputDir is not set). Ensures the parent directory exists.
+ *
+ * Security: the resolved path must fall within `outputDir` (or
+ * `allowedWorkspaceRoot` when outputDir is unset). Symlinks are
+ * resolved after mkdir to catch traversal via symlinked parents.
  */
 export async function resolveOutputPath(
   outputFile: string,
   config: CharlotteConfig,
 ): Promise<string> {
+  const baseDir = config.outputDir ?? config.allowedWorkspaceRoot ?? process.cwd();
   const resolved = path.isAbsolute(outputFile)
     ? outputFile
-    : path.resolve(config.outputDir ?? process.cwd(), outputFile);
+    : path.resolve(baseDir, outputFile);
 
   // Ensure parent directory exists
   await fs.mkdir(path.dirname(resolved), { recursive: true });
-  return resolved;
+
+  // Resolve symlinks to get the real path and validate boundary
+  const realParent = await fs.realpath(path.dirname(resolved));
+  const realResolved = path.join(realParent, path.basename(resolved));
+  const realBase = await fs.realpath(baseDir);
+
+  if (!realResolved.startsWith(realBase + path.sep) && realResolved !== realBase) {
+    throw new CharlotteError(
+      CharlotteErrorCode.SESSION_ERROR,
+      `Output path '${outputFile}' resolves outside the allowed directory '${baseDir}'.`,
+      "Use a relative path or configure output_dir to an appropriate directory.",
+    );
+  }
+
+  return realResolved;
 }
 
 /**
@@ -379,14 +398,13 @@ export async function writeOutputFile(
   content: string,
 ): Promise<{ content: Array<{ type: "text"; text: string }> }> {
   await fs.writeFile(filePath, content, "utf-8");
-  const stats = await fs.stat(filePath);
   return {
     content: [
       {
         type: "text" as const,
         text: JSON.stringify({
           output_file: filePath,
-          size: stats.size,
+          size: Buffer.byteLength(content, "utf-8"),
         }),
       },
     ],

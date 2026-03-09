@@ -31,7 +31,7 @@ describe("file output helpers", () => {
       expect(result).toBe(path.join(tmpDir, "page.json"));
     });
 
-    it("preserves absolute paths", async () => {
+    it("allows absolute paths within outputDir", async () => {
       const absPath = path.join(tmpDir, "subdir", "absolute.json");
       const result = await resolveOutputPath(absPath, config);
       expect(result).toBe(absPath);
@@ -46,10 +46,34 @@ describe("file output helpers", () => {
       expect(stat.isDirectory()).toBe(true);
     });
 
-    it("falls back to cwd when outputDir is not set", async () => {
+    it("falls back to allowedWorkspaceRoot when outputDir is not set", async () => {
       delete config.outputDir;
+      config.allowedWorkspaceRoot = tmpDir;
       const result = await resolveOutputPath("file.json", config);
-      expect(result).toBe(path.resolve(process.cwd(), "file.json"));
+      expect(result).toBe(path.join(tmpDir, "file.json"));
+    });
+
+    it("rejects absolute paths outside outputDir", async () => {
+      const outsidePath = path.join(os.tmpdir(), "outside-boundary", "evil.json");
+      await expect(resolveOutputPath(outsidePath, config)).rejects.toThrow(
+        /resolves outside the allowed directory/,
+      );
+    });
+
+    it("rejects relative paths that traverse above outputDir", async () => {
+      await expect(resolveOutputPath("../../etc/passwd", config)).rejects.toThrow(
+        /resolves outside the allowed directory/,
+      );
+    });
+
+    it("rejects symlink-based traversal", async () => {
+      // Create a symlink inside outputDir that points outside
+      const symlinkPath = path.join(tmpDir, "escape-link");
+      await fs.symlink(os.tmpdir(), symlinkPath);
+
+      await expect(resolveOutputPath("escape-link/evil.json", config)).rejects.toThrow(
+        /resolves outside the allowed directory/,
+      );
     });
   });
 

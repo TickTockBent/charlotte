@@ -1,3 +1,5 @@
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { logger } from "../utils/logger.js";
@@ -281,10 +283,9 @@ export function registerSessionTools(
         }
 
         if (output_dir !== undefined) {
-          deps.config.outputDir = output_dir;
-          // Ensure directory exists
-          const fs = await import("node:fs/promises");
-          await fs.mkdir(output_dir, { recursive: true });
+          const resolvedOutputDir = path.resolve(output_dir);
+          deps.config.outputDir = resolvedOutputDir;
+          await fs.mkdir(resolvedOutputDir, { recursive: true });
         }
 
         if (include_iframes !== undefined) {

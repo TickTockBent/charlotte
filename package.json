@@ -1,7 +1,7 @@
 {
   "name": "@ticktockbent/charlotte",
   "version": "0.4.2",
-  "description": "MCP server that renders web pages into structured, agent-readable representations",
+  "description": "Token-efficient browser MCP server — structured web pages for AI agents, not raw accessibility dumps",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -20,14 +20,19 @@
   "homepage": "https://github.com/ticktockbent/charlotte#readme",
   "keywords": [
     "mcp",
+    "mcp-server",
+    "browser-mcp",
     "model-context-protocol",
-    "web",
-    "accessibility",
+    "browser-automation",
+    "web-scraping",
+    "ai-agent",
+    "token-efficient",
+    "structured-browsing",
+    "playwright-alternative",
+    "accessibility-tree",
     "headless-browser",
     "puppeteer",
-    "ai-agent",
-    "web-scraping",
-    "browser-automation"
+    "web-testing"
   ],
   "scripts": {
     "dev": "tsx watch src/index.ts",

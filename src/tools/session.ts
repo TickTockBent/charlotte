@@ -241,9 +241,18 @@ export function registerSessionTools(
           .describe(
             'Auto-dismiss behavior for JS dialogs. "none" (default) queues for charlotte:dialog.',
           ),
+        include_iframes: coercedBoolean
+          .optional()
+          .describe(
+            "Include iframe content in page representations (default: false). Extracts accessibility tree, interactive elements, and content from child frames.",
+          ),
+        iframe_depth: z
+          .number()
+          .optional()
+          .describe("Maximum iframe nesting depth to traverse (default: 3, min: 1, max: 10)"),
       },
     },
-    async ({ snapshot_depth, auto_snapshot, screenshot_dir, dialog_auto_dismiss }) => {
+    async ({ snapshot_depth, auto_snapshot, screenshot_dir, dialog_auto_dismiss, include_iframes, iframe_depth }) => {
       try {
         logger.info("Configuring Charlotte", { snapshot_depth, auto_snapshot, screenshot_dir });
 
@@ -265,6 +274,14 @@ export function registerSessionTools(
           deps.config.dialogAutoDismiss = dialog_auto_dismiss as DialogAutoDismiss;
         }
 
+        if (include_iframes !== undefined) {
+          deps.config.includeIframes = include_iframes;
+        }
+
+        if (iframe_depth !== undefined) {
+          deps.config.iframeDepth = Math.max(1, Math.min(10, iframe_depth));
+        }
+
         return {
           content: [
             {
@@ -276,6 +293,8 @@ export function registerSessionTools(
                   auto_snapshot: deps.config.autoSnapshot,
                   screenshot_dir: deps.artifactStore.screenshotDir,
                   dialog_auto_dismiss: deps.config.dialogAutoDismiss,
+                  include_iframes: deps.config.includeIframes,
+                  iframe_depth: deps.config.iframeDepth,
                 },
               }),
             },

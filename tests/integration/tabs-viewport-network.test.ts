@@ -37,6 +37,7 @@ describe("Tabs, viewport, and network integration", () => {
     deps = {
       browserManager,
       pageManager,
+      cdpSessionManager,
       rendererPipeline,
       elementIdGenerator,
       snapshotStore: new SnapshotStore(config.snapshotDepth),

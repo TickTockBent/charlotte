@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { BrowserManager } from "./browser/browser-manager.js";
 import type { PageManager } from "./browser/page-manager.js";
+import type { CDPSessionManager } from "./browser/cdp-session.js";
 import type { RendererPipeline } from "./renderer/renderer-pipeline.js";
 import type { ElementIdGenerator } from "./renderer/element-id-generator.js";
 import type { SnapshotStore } from "./state/snapshot-store.js";
@@ -29,6 +30,7 @@ import type { DevModeState } from "./dev/dev-mode-state.js";
 export interface ServerDeps {
   browserManager: BrowserManager;
   pageManager: PageManager;
+  cdpSessionManager: CDPSessionManager;
   rendererPipeline: RendererPipeline;
   elementIdGenerator: ElementIdGenerator;
   snapshotStore: SnapshotStore;
@@ -102,6 +104,7 @@ export function createServer(deps: ServerDeps, options: ServerOptions = {}): Cre
   const toolDeps = {
     browserManager: deps.browserManager,
     pageManager: deps.pageManager,
+    cdpSessionManager: deps.cdpSessionManager,
     rendererPipeline: deps.rendererPipeline,
     elementIdGenerator: deps.elementIdGenerator,
     snapshotStore: deps.snapshotStore,

@@ -48,6 +48,7 @@ describe("Dialog integration", () => {
     deps = {
       browserManager,
       pageManager,
+      cdpSessionManager,
       rendererPipeline,
       elementIdGenerator,
       snapshotStore: new SnapshotStore(config.snapshotDepth),
@@ -385,6 +386,7 @@ describe("Dialog integration", () => {
         {
           browserManager: deps.browserManager,
           pageManager: deps.pageManager,
+          cdpSessionManager,
           rendererPipeline: deps.rendererPipeline,
           elementIdGenerator: deps.elementIdGenerator,
           snapshotStore: deps.snapshotStore,

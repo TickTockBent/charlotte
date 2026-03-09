@@ -38,6 +38,7 @@ describe("Modifier click integration", () => {
     deps = {
       browserManager,
       pageManager,
+      cdpSessionManager,
       rendererPipeline,
       elementIdGenerator,
       snapshotStore: new SnapshotStore(config.snapshotDepth),

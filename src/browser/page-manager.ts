@@ -98,32 +98,36 @@ export class PageManager {
 
     // Handle JavaScript dialogs (alert, confirm, prompt, beforeunload)
     page.on("dialog", async (dialog) => {
-      const dialogType = dialog.type() as PendingDialog["type"];
-      const autoDismiss = this.config.dialogAutoDismiss;
+      try {
+        const dialogType = dialog.type() as PendingDialog["type"];
+        const autoDismiss = this.config.dialogAutoDismiss;
 
-      logger.info("Dialog appeared", { tabId, type: dialogType, message: dialog.message() });
+        logger.info("Dialog appeared", { tabId, type: dialogType, message: dialog.message() });
 
-      // Auto-dismiss logic
-      if (
-        autoDismiss === "accept_all" ||
-        (autoDismiss === "accept_alerts" && dialogType === "alert")
-      ) {
-        await dialog.accept();
-        return;
+        // Auto-dismiss logic
+        if (
+          autoDismiss === "accept_all" ||
+          (autoDismiss === "accept_alerts" && dialogType === "alert")
+        ) {
+          await dialog.accept();
+          return;
+        }
+        if (autoDismiss === "dismiss_all") {
+          await dialog.dismiss();
+          return;
+        }
+
+        // Queue for manual handling
+        managedPage.pendingDialog = dialog;
+        managedPage.pendingDialogInfo = {
+          type: dialogType,
+          message: dialog.message(),
+          ...(dialogType === "prompt" ? { default_value: dialog.defaultValue() } : {}),
+          timestamp: new Date().toISOString(),
+        };
+      } catch (error) {
+        logger.warn("Dialog handler failed", { tabId, error });
       }
-      if (autoDismiss === "dismiss_all") {
-        await dialog.dismiss();
-        return;
-      }
-
-      // Queue for manual handling
-      managedPage.pendingDialog = dialog;
-      managedPage.pendingDialogInfo = {
-        type: dialogType,
-        message: dialog.message(),
-        ...(dialogType === "prompt" ? { default_value: dialog.defaultValue() } : {}),
-        timestamp: new Date().toISOString(),
-      };
     });
 
     // Clear stale dialog references on main-frame navigation only.
@@ -163,6 +167,10 @@ export class PageManager {
       throw new CharlotteError(CharlotteErrorCode.SESSION_ERROR, `Tab '${tabId}' not found`);
     }
 
+    managedPage.page.removeAllListeners("console");
+    managedPage.page.removeAllListeners("response");
+    managedPage.page.removeAllListeners("dialog");
+    managedPage.page.removeAllListeners("framenavigated");
     await managedPage.page.close();
     this.pages.delete(tabId);
 

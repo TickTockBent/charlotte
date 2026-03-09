@@ -50,11 +50,19 @@ export class DevModeState {
   }
 
   async stopAll(): Promise<void> {
-    if (this.fileWatcher.isWatching()) {
-      await this.fileWatcher.stop();
+    try {
+      if (this.fileWatcher.isWatching()) {
+        await this.fileWatcher.stop();
+      }
+    } catch (error) {
+      logger.warn("File watcher stop failed during shutdown", error);
     }
-    if (this.staticServer.isRunning()) {
-      await this.staticServer.stop();
+    try {
+      if (this.staticServer.isRunning()) {
+        await this.staticServer.stop();
+      }
+    } catch (error) {
+      logger.warn("Static server stop failed during shutdown", error);
     }
     this.pendingReloadEvent = null;
     this.reloadInProgress = null;

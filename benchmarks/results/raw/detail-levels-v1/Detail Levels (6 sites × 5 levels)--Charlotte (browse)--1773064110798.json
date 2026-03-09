@@ -1,0 +1,382 @@
+{
+  "testName": "Detail Levels (6 sites × 5 levels)",
+  "serverName": "Charlotte (browse)",
+  "calls": [
+    {
+      "toolName": "charlotte:navigate",
+      "arguments": {
+        "url": "https://en.wikipedia.org/wiki/Main_Page"
+      },
+      "responseChars": 3070,
+      "estimatedTokens": 768,
+      "wallTimeMs": 1956.1115490000002,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "view": "tree"
+      },
+      "responseChars": 1948,
+      "estimatedTokens": 487,
+      "wallTimeMs": 48.705315000000155,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "view": "tree-labeled"
+      },
+      "responseChars": 8230,
+      "estimatedTokens": 2058,
+      "wallTimeMs": 45.18230100000028,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "minimal"
+      },
+      "responseChars": 3070,
+      "estimatedTokens": 768,
+      "wallTimeMs": 70.31573799999978,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "summary"
+      },
+      "responseChars": 38414,
+      "estimatedTokens": 9604,
+      "wallTimeMs": 72.20881800000006,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "full"
+      },
+      "responseChars": 48371,
+      "estimatedTokens": 12093,
+      "wallTimeMs": 74.69772999999986,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:navigate",
+      "arguments": {
+        "url": "https://github.com/anthropics"
+      },
+      "responseChars": 1839,
+      "estimatedTokens": 460,
+      "wallTimeMs": 1303.0502250000004,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "view": "tree"
+      },
+      "responseChars": 1362,
+      "estimatedTokens": 341,
+      "wallTimeMs": 41.39621700000043,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "view": "tree-labeled"
+      },
+      "responseChars": 4506,
+      "estimatedTokens": 1127,
+      "wallTimeMs": 19.817759999999907,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "minimal"
+      },
+      "responseChars": 1839,
+      "estimatedTokens": 460,
+      "wallTimeMs": 34.116525999999794,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "summary"
+      },
+      "responseChars": 18739,
+      "estimatedTokens": 4685,
+      "wallTimeMs": 47.33622600000035,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "full"
+      },
+      "responseChars": 21783,
+      "estimatedTokens": 5446,
+      "wallTimeMs": 53.63525499999923,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:navigate",
+      "arguments": {
+        "url": "https://news.ycombinator.com/"
+      },
+      "responseChars": 336,
+      "estimatedTokens": 84,
+      "wallTimeMs": 6130.058523999999,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "view": "tree"
+      },
+      "responseChars": 1150,
+      "estimatedTokens": 288,
+      "wallTimeMs": 45.31409100000019,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "view": "tree-labeled"
+      },
+      "responseChars": 6093,
+      "estimatedTokens": 1524,
+      "wallTimeMs": 41.30883899999935,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "minimal"
+      },
+      "responseChars": 337,
+      "estimatedTokens": 85,
+      "wallTimeMs": 48.99039099999936,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "summary"
+      },
+      "responseChars": 30489,
+      "estimatedTokens": 7623,
+      "wallTimeMs": 48.677152000000206,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "full"
+      },
+      "responseChars": 34706,
+      "estimatedTokens": 8677,
+      "wallTimeMs": 49.54689800000051,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:navigate",
+      "arguments": {
+        "url": "https://www.linkedin.com/"
+      },
+      "responseChars": 3397,
+      "estimatedTokens": 850,
+      "wallTimeMs": 1566.9892500000005,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "view": "tree"
+      },
+      "responseChars": 1197,
+      "estimatedTokens": 300,
+      "wallTimeMs": 19.084713000000193,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "view": "tree-labeled"
+      },
+      "responseChars": 3849,
+      "estimatedTokens": 963,
+      "wallTimeMs": 49.75487299999986,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "minimal"
+      },
+      "responseChars": 3397,
+      "estimatedTokens": 850,
+      "wallTimeMs": 87.80991100000028,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "summary"
+      },
+      "responseChars": 17482,
+      "estimatedTokens": 4371,
+      "wallTimeMs": 31.584665000000314,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "full"
+      },
+      "responseChars": 20152,
+      "estimatedTokens": 5038,
+      "wallTimeMs": 35.576678999999785,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:navigate",
+      "arguments": {
+        "url": "https://stackoverflow.com/questions"
+      },
+      "responseChars": 3994,
+      "estimatedTokens": 999,
+      "wallTimeMs": 1207.599830000001,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "view": "tree"
+      },
+      "responseChars": 2946,
+      "estimatedTokens": 737,
+      "wallTimeMs": 54.172936999999365,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "view": "tree-labeled"
+      },
+      "responseChars": 8988,
+      "estimatedTokens": 2247,
+      "wallTimeMs": 56.854637000000366,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "minimal"
+      },
+      "responseChars": 4036,
+      "estimatedTokens": 1009,
+      "wallTimeMs": 94.17187000000013,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "summary"
+      },
+      "responseChars": 32382,
+      "estimatedTokens": 8096,
+      "wallTimeMs": 101.6562040000008,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "full"
+      },
+      "responseChars": 41875,
+      "estimatedTokens": 10469,
+      "wallTimeMs": 81.84487200000149,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:navigate",
+      "arguments": {
+        "url": "https://www.amazon.com/"
+      },
+      "responseChars": 785,
+      "estimatedTokens": 197,
+      "wallTimeMs": 3798.690618999999,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "view": "tree"
+      },
+      "responseChars": 39,
+      "estimatedTokens": 10,
+      "wallTimeMs": 3.9117069999992964,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "view": "tree-labeled"
+      },
+      "responseChars": 39,
+      "estimatedTokens": 10,
+      "wallTimeMs": 1.4443240000000515,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "minimal"
+      },
+      "responseChars": 785,
+      "estimatedTokens": 197,
+      "wallTimeMs": 1.228116999998747,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "summary"
+      },
+      "responseChars": 763,
+      "estimatedTokens": 191,
+      "wallTimeMs": 1.0968120000034105,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "full"
+      },
+      "responseChars": 785,
+      "estimatedTokens": 197,
+      "wallTimeMs": 1.4200700000001234,
+      "isError": false
+    }
+  ],
+  "cumulative": {
+    "totalChars": 373173,
+    "totalEstimatedTokens": 93309,
+    "totalWallTimeMs": 17325.361645000005,
+    "totalCalls": 36
+  },
+  "toolDefinitions": {
+    "toolCount": 23,
+    "definitionChars": 15520,
+    "estimatedDefinitionTokens": 4435,
+    "cumulativeDefinitionTokens": 159660
+  },
+  "success": true,
+  "successCriteria": "At least 4 sites load successfully and all 5 detail levels return content for each.",
+  "notes": "Wikipedia: tree=1,948, tree-labeled=8,230, minimal=3,070, summary=38,414, full=48,371\nGitHub: tree=1,362, tree-labeled=4,506, minimal=1,839, summary=18,739, full=21,783\nHacker News: tree=1,150, tree-labeled=6,093, minimal=337, summary=30,489, full=34,706\nLinkedIn: tree=1,197, tree-labeled=3,849, minimal=3,397, summary=17,482, full=20,152\nStack Overflow: tree=2,946, tree-labeled=8,988, minimal=4,036, summary=32,382, full=41,875\nAmazon: tree=39, tree-labeled=39, minimal=785, summary=763, full=785",
+  "timestamp": 1773064110785
+}

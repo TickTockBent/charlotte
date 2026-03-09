@@ -15,6 +15,8 @@ import {
 } from "./interactive-extractor.js";
 import { ContentExtractor } from "./content-extractor.js";
 import { ElementIdGenerator } from "./element-id-generator.js";
+import { extractStructuralTree } from "./structural-tree-extractor.js";
+import type { StructuralTreeOptions } from "./structural-tree-extractor.js";
 import { computeDOMPathSignature } from "./dom-path.js";
 import { discoverFrames } from "./frame-discovery.js";
 import type { DiscoveredFrame } from "./frame-discovery.js";
@@ -323,6 +325,18 @@ export class RendererPipeline {
         fullContents.push(`--- iframe: ${frameUrl} ---\n${frameFullContent}`);
       }
     }
+  }
+
+  /**
+   * Lightweight render that returns only the structural tree view.
+   * Extracts the AX tree and produces a compact tree string — skips
+   * layout extraction, interactive extraction, and content extraction.
+   */
+  async renderTree(page: Page, options?: StructuralTreeOptions): Promise<string> {
+    const session = await this.cdpSessionManager.getSession(page);
+    const rootNodes = await this.accessibilityExtractor.extract(session);
+    const title = await page.title();
+    return extractStructuralTree(rootNodes, title, options);
   }
 
   private collectNodesNeedingBounds(rootNodes: ParsedAXNode[]): ParsedAXNode[] {

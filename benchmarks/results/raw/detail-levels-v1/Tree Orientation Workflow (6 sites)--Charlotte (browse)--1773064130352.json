@@ -1,0 +1,322 @@
+{
+  "testName": "Tree Orientation Workflow (6 sites)",
+  "serverName": "Charlotte (browse)",
+  "calls": [
+    {
+      "toolName": "charlotte:navigate",
+      "arguments": {
+        "url": "https://en.wikipedia.org/wiki/Main_Page"
+      },
+      "responseChars": 3070,
+      "estimatedTokens": 768,
+      "wallTimeMs": 2546.469385999997,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "view": "tree-labeled"
+      },
+      "responseChars": 8230,
+      "estimatedTokens": 2058,
+      "wallTimeMs": 45.464427999999316,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:find",
+      "arguments": {
+        "type": "link"
+      },
+      "responseChars": 34906,
+      "estimatedTokens": 8727,
+      "wallTimeMs": 80.03621600000042,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "minimal"
+      },
+      "responseChars": 3070,
+      "estimatedTokens": 768,
+      "wallTimeMs": 66.04034399999728,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:find",
+      "arguments": {
+        "type": "link"
+      },
+      "responseChars": 34906,
+      "estimatedTokens": 8727,
+      "wallTimeMs": 71.98889100000088,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:navigate",
+      "arguments": {
+        "url": "https://github.com/anthropics"
+      },
+      "responseChars": 1839,
+      "estimatedTokens": 460,
+      "wallTimeMs": 1299.124613,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "view": "tree-labeled"
+      },
+      "responseChars": 4506,
+      "estimatedTokens": 1127,
+      "wallTimeMs": 19.045546999997896,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:find",
+      "arguments": {
+        "type": "link"
+      },
+      "responseChars": 15764,
+      "estimatedTokens": 3941,
+      "wallTimeMs": 46.31801500000074,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "minimal"
+      },
+      "responseChars": 1839,
+      "estimatedTokens": 460,
+      "wallTimeMs": 40.75242799999978,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:find",
+      "arguments": {
+        "type": "link"
+      },
+      "responseChars": 15764,
+      "estimatedTokens": 3941,
+      "wallTimeMs": 32.119973000000755,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:navigate",
+      "arguments": {
+        "url": "https://news.ycombinator.com/"
+      },
+      "responseChars": 336,
+      "estimatedTokens": 84,
+      "wallTimeMs": 5703.431077000001,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "view": "tree-labeled"
+      },
+      "responseChars": 6094,
+      "estimatedTokens": 1524,
+      "wallTimeMs": 49.899460000000545,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:find",
+      "arguments": {
+        "type": "link"
+      },
+      "responseChars": 30070,
+      "estimatedTokens": 7518,
+      "wallTimeMs": 63.73420999999871,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "minimal"
+      },
+      "responseChars": 336,
+      "estimatedTokens": 84,
+      "wallTimeMs": 73.9102899999998,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:find",
+      "arguments": {
+        "type": "link"
+      },
+      "responseChars": 30070,
+      "estimatedTokens": 7518,
+      "wallTimeMs": 48.7446749999981,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:navigate",
+      "arguments": {
+        "url": "https://www.linkedin.com/"
+      },
+      "responseChars": 3396,
+      "estimatedTokens": 849,
+      "wallTimeMs": 1017.957537000002,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "view": "tree-labeled"
+      },
+      "responseChars": 3862,
+      "estimatedTokens": 966,
+      "wallTimeMs": 49.31393399999797,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:find",
+      "arguments": {
+        "type": "link"
+      },
+      "responseChars": 13264,
+      "estimatedTokens": 3316,
+      "wallTimeMs": 90.23572799999965,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "minimal"
+      },
+      "responseChars": 3396,
+      "estimatedTokens": 849,
+      "wallTimeMs": 33.21638600000006,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:find",
+      "arguments": {
+        "type": "link"
+      },
+      "responseChars": 13264,
+      "estimatedTokens": 3316,
+      "wallTimeMs": 34.48949300000095,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:navigate",
+      "arguments": {
+        "url": "https://stackoverflow.com/questions"
+      },
+      "responseChars": 3990,
+      "estimatedTokens": 998,
+      "wallTimeMs": 1310.6033870000028,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "view": "tree-labeled"
+      },
+      "responseChars": 8966,
+      "estimatedTokens": 2242,
+      "wallTimeMs": 55.5666710000005,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:find",
+      "arguments": {
+        "type": "link"
+      },
+      "responseChars": 26551,
+      "estimatedTokens": 6638,
+      "wallTimeMs": 89.96585100000084,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "minimal"
+      },
+      "responseChars": 4033,
+      "estimatedTokens": 1009,
+      "wallTimeMs": 73.78701900000306,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:find",
+      "arguments": {
+        "type": "link"
+      },
+      "responseChars": 26551,
+      "estimatedTokens": 6638,
+      "wallTimeMs": 68.82923599999776,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:navigate",
+      "arguments": {
+        "url": "https://www.amazon.com/"
+      },
+      "responseChars": 271,
+      "estimatedTokens": 68,
+      "wallTimeMs": 3662.9029200000004,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "view": "tree-labeled"
+      },
+      "responseChars": 39,
+      "estimatedTokens": 10,
+      "wallTimeMs": 2.4604869999966468,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:find",
+      "arguments": {
+        "type": "link"
+      },
+      "responseChars": 41,
+      "estimatedTokens": 11,
+      "wallTimeMs": 1.5511210000040592,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:observe",
+      "arguments": {
+        "detail": "minimal"
+      },
+      "responseChars": 271,
+      "estimatedTokens": 68,
+      "wallTimeMs": 1.3790009999938775,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte:find",
+      "arguments": {
+        "type": "link"
+      },
+      "responseChars": 41,
+      "estimatedTokens": 11,
+      "wallTimeMs": 1.1831060000040452,
+      "isError": false
+    }
+  ],
+  "cumulative": {
+    "totalChars": 298736,
+    "totalEstimatedTokens": 74694,
+    "totalWallTimeMs": 16680.521429999997,
+    "totalCalls": 30
+  },
+  "toolDefinitions": {
+    "toolCount": 23,
+    "definitionChars": 15520,
+    "estimatedDefinitionTokens": 4435,
+    "cumulativeDefinitionTokens": 133050
+  },
+  "success": false,
+  "successCriteria": "At least 4 sites complete both workflows and tree-labeled orientation is cheaper than minimal.",
+  "notes": "Wikipedia: tree-labeled=8,230, minimal=3,070 (-168% savings)\nGitHub: tree-labeled=4,506, minimal=1,839 (-145% savings)\nHacker News: tree-labeled=6,094, minimal=336 (-1714% savings)\nLinkedIn: tree-labeled=3,862, minimal=3,396 (-14% savings)\nStack Overflow: tree-labeled=8,966, minimal=4,033 (-122% savings)\nAmazon: tree-labeled=39, minimal=271 (86% savings)\n\nOverall observe savings: tree-labeled=31,697 vs minimal=12,945 chars (-145% savings)",
+  "timestamp": 1773064130352
+}

@@ -18,7 +18,7 @@ Charlotte decomposes each page into a typed, structured representation — landm
 
 ### Benchmarks
 
-Charlotte v0.4.2 vs Playwright MCP, measured by characters returned per tool call on real websites:
+Charlotte v0.5.0 vs Playwright MCP, measured by characters returned per tool call on real websites:
 
 **Navigation** (first contact with a page):
 
@@ -39,7 +39,7 @@ Charlotte's `navigate` returns minimal detail by default — landmarks, headings
 | browse (default) | 23 | ~3,900 | **~47%** |
 | core | 7 | 1,677 | **~77%** |
 
-Tool definitions are sent on every API round-trip. With the default `browse` profile, Charlotte carries ~47% less definition overhead than loading all 42 tools. Over a 20-call browsing session, that's **~38% fewer total tokens**. See the [profile benchmark report](docs/charlotte-profile-benchmark-report.md) for full results.
+Tool definitions are sent on every API round-trip. With the default `browse` profile, Charlotte carries ~47% less definition overhead than loading all tools. Over a 20-call browsing session, that's **~38% fewer total tokens**. See the [profile benchmark report](docs/charlotte-profile-benchmark-report.md) for full results.
 
 **The workflow difference:** Playwright agents receive 61K+ characters every time they look at Hacker News, whether they're reading headlines or looking for a login button. Charlotte agents get 336 characters on arrival, call `find({ type: "link", text: "login" })` to get exactly what they need, and never pay for the rest.
 
@@ -69,7 +69,7 @@ Agents receive landmarks, headings, interactive elements with typed metadata, bo
 
 **Navigation** — `navigate`, `back`, `forward`, `reload`
 
-**Observation** — `observe` (3 detail levels), `find` (spatial + semantic search, CSS selector mode), `screenshot`, `diff` (structural comparison against snapshots)
+**Observation** — `observe` (3 detail levels, structural tree view), `find` (spatial + semantic search, CSS selector mode), `screenshot` (with persistent artifact management), `screenshots`, `screenshot_get`, `screenshot_delete`, `diff` (structural comparison against snapshots)
 
 **Interaction** — `click`, `click_at` (coordinate-based), `type`, `select`, `toggle`, `submit`, `scroll`, `hover`, `drag`, `key` (single/sequence with element targeting), `wait_for` (async condition polling), `upload` (file input), `dialog` (accept/dismiss JS dialogs)
 
@@ -83,7 +83,7 @@ Agents receive landmarks, headings, interactive elements with typed metadata, bo
 
 ## Tool Profiles
 
-Charlotte ships 42 tools, but most workflows only need a subset. Startup profiles control which tools load into the agent's context, reducing definition overhead by up to 77%.
+Charlotte ships 42 tools (41 registered + the `charlotte:tools` meta-tool), but most workflows only need a subset. Startup profiles control which tools load into the agent's context, reducing definition overhead by up to 77%.
 
 ```bash
 charlotte --profile browse    # 23 tools (default) — navigate, observe, interact, tabs
@@ -433,7 +433,7 @@ All tools go through `renderActivePage()` which handles snapshots, reload events
 
 ## Sandbox
 
-Charlotte includes a test website in `tests/sandbox/` that exercises all 42 tools without touching the public internet. Serve it locally with:
+Charlotte includes a test website in `tests/sandbox/` that exercises all tools without touching the public internet. Serve it locally with:
 
 ```
 dev_serve({ path: "tests/sandbox" })
@@ -444,8 +444,6 @@ Four pages cover navigation, forms, interactive elements, delayed content, scrol
 ## Known Issues
 
 **Tool naming convention** — Charlotte uses `:` as a namespace separator in tool names (e.g., `charlotte:navigate`, `charlotte:observe`). MCP SDK v1.26.0+ logs validation warnings for this character, as the emerging [SEP standard](https://github.com/modelcontextprotocol/modelcontextprotocol/issues/986) restricts tool names to `[A-Za-z0-9_.-]`. This does not affect functionality — all tools work correctly — but produces stderr warnings on server startup. Will be addressed in a future release to comply with the SEP standard.
-
-**Iframe content not captured** — Charlotte reads the main frame's accessibility tree only. Content inside iframes (same-origin or cross-origin) is not included in the page representation. See the Roadmap for planned iframe support.
 
 **Shadow DOM** — Open shadow DOM works transparently. Chromium's accessibility tree pierces open shadow boundaries, so web components (e.g., GitHub's `<relative-time>`, `<tool-tip>`) render their content into Charlotte's representation without special handling. Closed shadow roots are opaque to the accessibility tree and will not be captured.
 
@@ -465,19 +463,13 @@ Four pages cover navigation, forms, interactive elements, delayed content, scrol
 
 **Configuration File** — Support a `--config` CLI argument to load settings from a JSON file, simplifying repeatable setups and CI/CD integration.
 
-**File Output** — Add an optional `filename` parameter to `screenshot`, `observe`, and future monitoring tools so large responses can be written to disk instead of returned inline, reducing token consumption.
-
 **Full Device Emulation** — Extend `charlotte:viewport` to accept named devices (e.g., "iPhone 15") and configure user agent, touch support, and device pixel ratio via CDP, not just viewport dimensions.
 
 ### Feature Roadmap
 
-**Screenshot Artifacts** — Save screenshots as persistent file artifacts rather than only returning inline data, enabling agents to reference and manage captured images across sessions.
-
 **Video Recording** — Record interactions as video, capturing the full sequence of agent-driven navigation and manipulation for debugging, documentation, and review.
 
 **ARM64 Docker Images** — Add `linux/arm64` platform support to the Docker publish workflow for native performance on Apple Silicon Macs and ARM servers.
-
-**Iframe Content Extraction** — Traverse child frames via CDP to include iframe content in the page representation. Currently, Charlotte only reads the main frame's accessibility tree; same-origin and cross-origin iframe content is invisible.
 
 See [docs/playwright-mcp-gap-analysis.md](docs/playwright-mcp-gap-analysis.md) for the full gap analysis against Playwright MCP, including lower-priority items (vision tools, testing/verification, tracing, transport, security) and areas where Charlotte has advantages.
 

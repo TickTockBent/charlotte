@@ -4,6 +4,37 @@ All notable changes to Charlotte will be documented in this file.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-03-09
+
+### Added
+
+- **Iframe content extraction** — Child frames are now discovered and their content (interactive elements, content summaries, full text) is merged into the parent page representation. Configurable depth limit (default 3). Iframe interactive elements are included in the `interactive` array and `interactive_summary`. Closes #23.
+- **Structural tree view** — `charlotte:observe` now accepts a `view` parameter with `"tree"` and `"tree-labeled"` modes that render the page as a hierarchical tree with indentation, replacing the flat JSON representation. Tree-labeled mode annotates interactive elements with their IDs for direct use.
+- **File output for large responses** — `charlotte:observe` and `charlotte:screenshot` accept an `output_file` parameter to write results to disk instead of returning inline, reducing token consumption for large pages. Relative paths resolve against `output_dir` (configurable via `charlotte:configure` or `--output-dir` CLI flag). Closes GAP-13, #16.
+- **Screenshot artifact management** — `charlotte:screenshots` (list), `charlotte:screenshot_get` (retrieve), `charlotte:screenshot_delete` (remove) tools for managing persistent screenshot files. `charlotte:screenshot` gains a `save` parameter for persistence.
+- **Code quality tooling** — ESLint, Prettier, and coverage configuration added to the project.
+
+### Fixed
+
+- **`wait_for` JS evaluation** — Replaced `new Function("return " + expr)` with CDP `Runtime.evaluate`, fixing multi-statement JS conditions that silently returned `undefined` due to ASI. Now consistent with `charlotte:evaluate`. Fixes #73.
+- **Browser reconnection race** — `getBrowser()` now calls `ensureConnected()` to auto-recover instead of throwing immediately. `ensureConnected()` verifies browser health after awaiting concurrent launches. Fixes #83.
+- **Renderer pipeline resilience** — Malformed AX properties no longer crash accessibility extraction (#86). Content extraction skips failed nodes instead of aborting (#79). Recursive frame traversal catches errors per-frame (#74). Batch layout extraction uses `Promise.allSettled()` for partial failure tolerance (#77).
+- **Event listener cleanup** — `closeTab()` now explicitly removes all page event listeners before `page.close()` to prevent memory leaks across tab cycles. Fixes #89.
+- **Dialog handler error handling** — Dialog event handler wrapped in try/catch to prevent unhandled promise rejections when dialog is already dismissed. Fixes #75.
+- **Dev mode shutdown resilience** — `DevModeState.stopAll()` catches errors per substep so a file watcher or static server failure doesn't prevent browser cleanup. Fixes #80.
+- **Form field matching null guard** — `resolveId()` null return no longer produces false-positive form field matches. Fixes #76.
+- **Landmark ID collision** — Main-frame landmarks now pass explicit `"main"` frameId for consistent hash input, preventing rare cross-frame ID collisions. Fixes #82.
+- **CLI argument parsing** — `--output-dir=`, `--profile=`, and `--tools=` flags now use `substring(indexOf("=") + 1)` instead of `split("=")[1]`, preserving paths containing `=`. Fixes #70.
+- **Zod bounds validation** — Added `.min()`/`.max()` constraints to `quality` (1-100), viewport `width`/`height` (>=1), and key `delay` (>=0). Fixes #81.
+- **Test cleanup** — File output integration test no longer leaks artifact store temp directory. Fixes #71.
+- **File output security** — Path traversal prevention, mkdir-before-validation fix, and CLI `output-dir` initialization hardened. Fixes security issues from #16 review.
+
+### Changed
+
+- README rewritten with problem-first opening, expanded MCP client setup configs (Cursor, Windsurf, VS Code, Cline, Amp), and updated tool counts.
+- npm package description and keywords updated for discoverability.
+- Site meta descriptions updated to lead with token-efficiency comparison.
+
 ## [0.4.2] - 2026-03-06
 
 ### Added

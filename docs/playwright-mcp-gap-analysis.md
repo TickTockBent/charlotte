@@ -126,12 +126,12 @@ where Charlotte has capabilities Playwright MCP does not**, for completeness.
 | **Suggested Change** | Add `slowly` or `character_delay` parameter to `charlotte:type` |
 | **Implementation Notes** | Puppeteer's `page.keyboard.type(text, {delay})` supports this natively. |
 
-### GAP-06: Click with Modifier Keys
+### GAP-06: Click with Modifier Keys — *remediated in v0.4.0*
 
 | Attribute | Detail |
 |-----------|--------|
 | **Playwright Tool** | `browser_click` with `modifiers` parameter (`["Control", "Shift", "Alt", "Meta"]`) |
-| **Charlotte Status** | Partial — `charlotte:click` has `click_type` (left/right/double) but no modifier key support |
+| **Charlotte Status** | Implemented — `charlotte:click` accepts `modifiers` parameter (`ctrl`, `shift`, `alt`, `meta`, or combinations). Works with all click types. |
 | **Impact** | Medium — blocks Ctrl+Click (open in new tab), Shift+Click (range select), etc. |
 | **Parameters (Playwright)** | `modifiers` (array of modifier key names) |
 | **Suggested Change** | Add `modifiers` parameter to `charlotte:click` |
@@ -143,12 +143,12 @@ where Charlotte has capabilities Playwright MCP does not**, for completeness.
 
 Charlotte operates exclusively in semantic/accessibility mode. Playwright MCP's entire `vision` capability group (6 tools) has no Charlotte equivalent.
 
-### GAP-07: Coordinate-Based Click (`browser_mouse_click_xy`)
+### GAP-07: Coordinate-Based Click (`browser_mouse_click_xy`) — *remediated in v0.4.1*
 
 | Attribute | Detail |
 |-----------|--------|
 | **Impact** | Medium — needed for canvas elements, custom widgets, and elements not in the accessibility tree |
-| **Suggested Tool Name** | `charlotte:click_xy` |
+| **Charlotte Status** | Implemented as `charlotte:click_at` with `x`, `y`, `click_type`, and `modifiers` parameters. |
 
 ### GAP-08: Coordinate-Based Mouse Move (`browser_mouse_move_xy`)
 
@@ -198,15 +198,13 @@ Charlotte operates exclusively in semantic/accessibility mode. Playwright MCP's 
 | **Suggested Tool Name** | `charlotte:pdf` |
 | **Implementation Notes** | Puppeteer supports `page.pdf()` natively. Chromium-only limitation applies to both. |
 
-### GAP-13: Save Outputs to Files
+### GAP-13: Save Outputs to Files — *remediated in v0.5.0*
 
 | Attribute | Detail |
 |-----------|--------|
 | **Playwright Feature** | `filename` parameter on `browser_snapshot`, `browser_take_screenshot`, `browser_console_messages`, `browser_network_requests` |
-| **Charlotte Status** | All data returned inline in tool responses only |
+| **Charlotte Status** | Implemented — `charlotte:observe` and `charlotte:screenshot` accept `output_file` parameter to write results to disk. Relative paths resolve against `output_dir` (configurable via `charlotte:configure` or `--output-dir` CLI flag). Screenshot artifact management via `screenshots`, `screenshot_get`, `screenshot_delete` tools. |
 | **Impact** | Medium — file output reduces token consumption for large responses, enables post-session analysis |
-| **Suggested Change** | Add optional `filename` / `save_to` parameter on `screenshot`, `observe`, and future monitoring tools |
-| **Implementation Notes** | Charlotte's roadmap already mentions "Screenshot Artifacts". |
 
 ---
 
@@ -588,14 +586,14 @@ Features Charlotte provides that Playwright MCP **does not** have as dedicated t
 | GAP-03 | Interaction | Dialog handling | `browser_handle_dialog` | Remediated in v0.3.0 | High |
 | GAP-04 | Interaction | Batch form fill | `browser_fill_form` | Missing | Medium |
 | GAP-05 | Interaction | Slow typing | `slowly` param | Missing | Medium |
-| GAP-06 | Interaction | Click modifiers | `modifiers` param | Missing | Medium |
-| GAP-07 | Vision | Coordinate click | `browser_mouse_click_xy` | Missing | Medium |
+| GAP-06 | Interaction | Click modifiers | `modifiers` param | Remediated in v0.4.0 | Medium |
+| GAP-07 | Vision | Coordinate click | `browser_mouse_click_xy` | Remediated in v0.4.1 | Medium |
 | GAP-08 | Vision | Coordinate move | `browser_mouse_move_xy` | Missing | Medium |
 | GAP-09 | Vision | Coordinate drag | `browser_mouse_drag_xy` | Missing | Medium |
 | GAP-10 | Vision | Mouse down/up | `browser_mouse_down/up` | Missing | Low |
 | GAP-11 | Vision | Mouse wheel | `browser_mouse_wheel` | Missing | Low |
 | GAP-12 | Export | PDF generation | `browser_pdf_save` | Missing | Low-Med |
-| GAP-13 | Export | Save to files | `filename` param | Missing | Medium |
+| GAP-13 | Export | Save to files | `filename` param | Remediated in v0.5.0 | Medium |
 | GAP-14 | Testing | Verify element visible | `browser_verify_element_visible` | Missing | Medium |
 | GAP-15 | Testing | Verify text visible | `browser_verify_text_visible` | Missing | Medium |
 | GAP-16 | Testing | Verify list | `browser_verify_list_visible` | Missing | Low |
@@ -624,7 +622,7 @@ Features Charlotte provides that Playwright MCP **does not** have as dedicated t
 | GAP-39 | Security | Origin allow/block | `--allowed/blocked-origins` | Missing | Medium |
 | GAP-40 | Security | Service worker blocking | `--block-service-workers` | Missing | Low |
 | GAP-41 | Security | HTTPS error ignoring | `--ignore-https-errors` | Missing | Low-Med |
-| GAP-42 | Security | Capability gating | `--caps` flag | Missing | Medium |
+| GAP-42 | Security | Capability gating | `--caps` flag | Remediated in v0.4.0 (profiles) | Medium |
 | GAP-43 | Security | Secrets management | `--secrets` flag | Missing | Low |
 
 ---

@@ -8,7 +8,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     {
       url: `${baseUrl}/`,
-      lastModified: new Date("2026-03-04"),
+      lastModified: new Date("2026-03-09"),
       changeFrequency: "weekly",
       priority: 1.0,
     },
@@ -20,9 +20,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     {
       url: `${baseUrl}/changelog/`,
-      lastModified: new Date("2026-03-04"),
+      lastModified: new Date("2026-03-09"),
       changeFrequency: "weekly",
       priority: 0.7,
     },
+    // TODO: Add standalone pages for more search entry points:
+    // - /setup/ (getting started guide — maps to docs/mcp-setup.md)
+    // - /spec/ (full specification reference — maps to docs/CHARLOTTE_SPEC.md)
+    // - /sandbox/ (sandbox walkthrough — maps to docs/sandbox.md)
+    // - /benchmarks/ (benchmark methodology — maps to docs/charlotte-benchmark-report.md)
   ];
 }

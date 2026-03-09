@@ -2,13 +2,19 @@
 
 **The Web, Readable.**
 
-Charlotte is an MCP server that renders web pages into structured, agent-readable representations using headless Chromium. It exposes the browser's semantic understanding — accessibility tree, layout geometry, interactive elements — to AI agents via [Model Context Protocol](https://modelcontextprotocol.io/) tools, enabling navigation, observation, and interaction without vision models or brittle selectors.
+Your AI agent spends 60,000 tokens just to look at a web page. Charlotte does it in 336.
+
+Charlotte is an MCP server that gives AI agents structured, token-efficient access to the web.
+Instead of dumping the full accessibility tree on every call, Charlotte returns only what
+the agent needs: a compact page summary on arrival, targeted queries for specific elements,
+and full detail only when explicitly requested. The result is 25-182x less data per page
+compared to [Playwright MCP](https://github.com/anthropics/playwright-mcp), saving thousands of dollars across production workloads.
 
 ## Why Charlotte?
 
 Most browser MCP servers dump the entire accessibility tree on every call — a flat text blob that can exceed a million characters on content-heavy pages. Agents pay for all of it whether they need it or not.
 
-Charlotte takes a different approach. It decomposes each page into a typed, structured representation — landmarks, headings, interactive elements, forms, content summaries — and lets agents control how much they receive with three detail levels. When an agent navigates to a new page, it gets a compact orientation (336 characters for Hacker News) instead of the full element dump (61,000+ characters). When it needs specifics, it asks for them.
+Charlotte decomposes each page into a typed, structured representation — landmarks, headings, interactive elements, forms, content summaries — and lets agents control how much they receive with three detail levels. When an agent navigates to a new page, it gets a compact orientation (336 characters for Hacker News) instead of the full element dump (61,000+ characters). When it needs specifics, it asks for them.
 
 ### Benchmarks
 
@@ -150,7 +156,9 @@ npm start
 
 ### MCP Client Configuration
 
-Add Charlotte to your MCP client configuration. For Claude Code, create `.mcp.json` in your project root:
+#### Claude Code
+
+Create `.mcp.json` in your project root:
 
 ```json
 {
@@ -165,7 +173,85 @@ Add Charlotte to your MCP client configuration. For Claude Code, create `.mcp.js
 }
 ```
 
-For Claude Desktop, add to `claude_desktop_config.json`:
+#### Claude Desktop
+
+Add to `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "charlotte": {
+      "command": "npx",
+      "args": ["@ticktockbent/charlotte"]
+    }
+  }
+}
+```
+
+#### Cursor
+
+Add to `.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "charlotte": {
+      "command": "npx",
+      "args": ["@ticktockbent/charlotte"]
+    }
+  }
+}
+```
+
+#### Windsurf
+
+Add to `~/.codeium/windsurf/mcp_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "charlotte": {
+      "command": "npx",
+      "args": ["@ticktockbent/charlotte"]
+    }
+  }
+}
+```
+
+#### VS Code (Copilot)
+
+Add to `.vscode/mcp.json`:
+
+```json
+{
+  "servers": {
+    "charlotte": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["@ticktockbent/charlotte"]
+    }
+  }
+}
+```
+
+#### Cline
+
+Add to Cline MCP settings (via the Cline sidebar > MCP Servers > Configure):
+
+```json
+{
+  "mcpServers": {
+    "charlotte": {
+      "command": "npx",
+      "args": ["@ticktockbent/charlotte"]
+    }
+  }
+}
+```
+
+#### Amp
+
+Add to `~/.amp/settings.json`:
 
 ```json
 {

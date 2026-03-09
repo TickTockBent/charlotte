@@ -77,7 +77,7 @@ export function createServer(deps: ServerDeps, options: ServerOptions = {}): Cre
   const server = new McpServer(
     {
       name: "charlotte",
-      version: "0.4.2",
+      version: "0.5.0",
     },
     {
       capabilities: {

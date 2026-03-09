@@ -19,6 +19,22 @@ interface Release {
 
 const releases: Release[] = [
   {
+    version: "0.5.0",
+    date: "2026-03-09",
+    entries: [
+      { type: "added", text: "Iframe content extraction — Child frame content (interactive elements, text, summaries) merged into parent page representation. Configurable depth." },
+      { type: "added", text: "Structural tree view — charlotte:observe accepts view: \"tree\" and \"tree-labeled\" for hierarchical text output with optional element IDs." },
+      { type: "added", text: "File output — charlotte:observe and charlotte:screenshot accept output_file to write results to disk, reducing token consumption. Closes GAP-13." },
+      { type: "added", text: "Screenshot artifact management — screenshots, screenshot_get, screenshot_delete tools for persistent screenshot files." },
+      { type: "fixed", text: "wait_for JS evaluation now uses CDP Runtime.evaluate, fixing multi-statement conditions that silently returned undefined." },
+      { type: "fixed", text: "Browser reconnection race — getBrowser() auto-recovers via ensureConnected() instead of throwing immediately." },
+      { type: "fixed", text: "Renderer pipeline resilience — malformed AX properties, failed content nodes, bad iframes, and transient CDP errors no longer crash renders." },
+      { type: "fixed", text: "Event listener cleanup on tab close, dialog handler error handling, and dev mode shutdown resilience." },
+      { type: "fixed", text: "Form field matching null guard, landmark ID cross-frame collision, CLI arg parsing with = in paths, and Zod bounds validation." },
+      { type: "changed", text: "README rewritten with problem-first opening. MCP client configs added for Cursor, Windsurf, VS Code, Cline, and Amp." },
+    ],
+  },
+  {
     version: "0.4.2",
     date: "2026-03-06",
     entries: [

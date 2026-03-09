@@ -1,6 +1,6 @@
 # Charlotte Technical Specification
 
-**Version:** 0.4.2
+**Version:** 0.5.0
 
 Charlotte is an MCP server that renders web pages into structured, agent-readable `PageRepresentation` objects using headless Chromium and Puppeteer. It communicates over stdio using the Model Context Protocol.
 
@@ -96,6 +96,7 @@ interface PageRepresentation {
     network: Array<{ url: string; status: number; statusText: string }>;
   };
   interactive_summary?: InteractiveSummary;  // Present at minimal detail level
+  iframes?: IframeInfo[];                     // Present when child frames are discovered
   reload_event?: ReloadEvent;                // Present when dev_serve detects file changes
   pending_dialog?: PendingDialog;            // Present when a JS dialog is blocking
   delta?: SnapshotDiff;                      // Present after interaction tools
@@ -223,6 +224,19 @@ interface InteractiveSummary {
 
 Present at minimal detail level. `by_landmark` keys match landmark format: `"role (label)"`, `"role"` for unlabeled, or `"(page root)"` for elements outside any landmark.
 
+### IframeInfo
+
+```typescript
+interface IframeInfo {
+  url: string;
+  bounds: Bounds | null;
+}
+```
+
+Present when child frames are discovered during rendering. Interactive elements from iframes are merged into the parent `interactive` array and `interactive_summary`. Content summaries and full text are appended with iframe URL prefixes.
+
+Iframe discovery depth is configurable (default: 3 levels).
+
 ---
 
 ## Element Identity
@@ -283,6 +297,7 @@ elementType | role | name | nearestLandmarkRole | nearestLandmarkLabel | nearest
 | `form` | `frm` |
 | `region` | `rgn` |
 | `heading` | `hdg` |
+| `dom_element` | `dom` |
 | *(fallback)* | `el` |
 
 ### Collision Handling
@@ -362,8 +377,10 @@ Get current page state without performing any action.
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `detail` | `"minimal" \| "summary" \| "full"` | No | `"summary"` | Verbosity level |
+| `view` | `"default" \| "tree" \| "tree-labeled"` | No | `"default"` | Output format. `"tree"` renders a hierarchical text tree. `"tree-labeled"` adds interactive element IDs. |
 | `selector` | `string` | No | — | CSS selector to scope observation |
 | `include_styles` | `boolean` | No | `false` | Include computed styles |
+| `output_file` | `string` | No | — | Write to file instead of returning inline. Relative paths resolve against `output_dir`. |
 
 #### `charlotte:find`
 
@@ -393,8 +410,10 @@ Capture a visual screenshot.
 | `selector` | `string` | No | — | CSS selector for specific element |
 | `format` | `"png" \| "jpeg" \| "webp"` | No | `"png"` | Image format |
 | `quality` | `number` | No | — | 1-100 for jpeg/webp |
+| `save` | `boolean` | No | `false` | Save as a persistent file artifact |
+| `output_file` | `string` | No | — | Write to file instead of returning base64 inline. Mutually exclusive with `save`. |
 
-**Returns:** Base64-encoded image. When `screenshot_dir` is configured via `charlotte:configure`, also persists the screenshot as a file artifact.
+**Returns:** Base64-encoded image. When `save` is true, also persists the screenshot as a file artifact with metadata.
 
 #### `charlotte:screenshots`
 
@@ -718,6 +737,7 @@ Headers persist for all subsequent requests on the active page.
 | `snapshot_depth` | `number` | No | `50` | Ring buffer size (5-500) |
 | `auto_snapshot` | `"every_action" \| "observe_only" \| "manual"` | No | `"every_action"` | Auto-snapshot mode |
 | `screenshot_dir` | `string` | No | *(OS temp dir)* | Directory for persistent screenshot artifacts |
+| `output_dir` | `string` | No | — | Base directory for `output_file` paths on observe/screenshot |
 | `dialog_auto_dismiss` | `"none" \| "accept_alerts" \| "accept_all" \| "dismiss_all"` | No | `"none"` | Auto-dismiss behavior for JS dialogs |
 
 See [Configuration](#configuration) for details.
@@ -861,6 +881,7 @@ interface CharlotteConfig {
   autoSnapshot: AutoSnapshotMode;           // Default: "every_action"
   dialogAutoDismiss: DialogAutoDismiss;     // Default: "none"
   screenshotDir?: string;                   // Default: OS temp dir
+  outputDir?: string;                        // Base dir for output_file paths
 }
 
 type AutoSnapshotMode = "every_action" | "observe_only" | "manual";

@@ -76,6 +76,7 @@ export class InteractiveExtractor {
     rootNodes: ParsedAXNode[],
     boundsMap: Map<number, Bounds>,
     idGenerator: ElementIdGenerator,
+    frameId?: string,
   ): ExtractionResult {
     const elements: InteractiveElement[] = [];
     const formNodes: ParsedAXNode[] = [];
@@ -94,6 +95,7 @@ export class InteractiveExtractor {
           node.name,
           domPath,
           node.backendDOMNodeId,
+          frameId,
         );
 
         let bounds: Bounds | null = null;
@@ -162,7 +164,7 @@ export class InteractiveExtractor {
     }
 
     // Build form representations
-    const forms = this.buildFormRepresentations(formNodes, elements, idGenerator, boundsMap);
+    const forms = this.buildFormRepresentations(formNodes, elements, idGenerator, boundsMap, frameId);
 
     return { elements, forms };
   }
@@ -172,6 +174,7 @@ export class InteractiveExtractor {
     interactiveElements: InteractiveElement[],
     idGenerator: ElementIdGenerator,
     _boundsMap: Map<number, Bounds>,
+    frameId?: string,
   ): FormRepresentation[] {
     const forms: FormRepresentation[] = [];
 
@@ -183,6 +186,7 @@ export class InteractiveExtractor {
         formNode.name,
         domPath,
         formNode.backendDOMNodeId,
+        frameId,
       );
 
       // Collect IDs of interactive elements that are descendants of this form

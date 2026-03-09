@@ -9,6 +9,10 @@ export interface CharlotteConfig {
   dialogAutoDismiss: DialogAutoDismiss;
   /** Directory for persistent screenshot artifacts. Defaults to OS temp dir. */
   screenshotDir?: string;
+  /** Whether to include iframe content in page representations. Default: false. */
+  includeIframes: boolean;
+  /** Maximum iframe nesting depth to traverse. Default: 3. */
+  iframeDepth: number;
 }
 
 export function createDefaultConfig(): CharlotteConfig {
@@ -17,5 +21,7 @@ export function createDefaultConfig(): CharlotteConfig {
     autoSnapshot: "every_action",
     dialogAutoDismiss: "none",
     allowedWorkspaceRoot: process.cwd(), // Default to cwd for universal safety
+    includeIframes: false,
+    iframeDepth: 3,
   };
 }

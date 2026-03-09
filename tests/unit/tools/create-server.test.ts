@@ -10,6 +10,7 @@ function createMockDeps(): ServerDeps {
   return {
     browserManager: {} as any,
     pageManager: { getActivePage: () => ({}) } as any,
+    cdpSessionManager: {} as any,
     rendererPipeline: {} as any,
     elementIdGenerator: {} as any,
     snapshotStore: {} as any,
@@ -20,6 +21,8 @@ function createMockDeps(): ServerDeps {
       screenshotDir: "/tmp",
       dialogAutoDismiss: "none",
       allowedWorkspaceRoot: "/tmp",
+      includeIframes: false,
+      iframeDepth: 3,
     } as any,
   };
 }

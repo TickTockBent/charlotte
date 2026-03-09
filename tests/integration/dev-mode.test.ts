@@ -55,6 +55,7 @@ describe("Dev mode integration", () => {
     deps = {
       browserManager,
       pageManager,
+      cdpSessionManager,
       rendererPipeline,
       elementIdGenerator,
       snapshotStore: new SnapshotStore(config.snapshotDepth),
@@ -79,6 +80,7 @@ describe("Dev mode integration", () => {
         directoryPath: FIXTURES_DIR,
         watch: false,
         pageManager,
+        cdpSessionManager,
       });
 
       expect(serverInfo.url).toMatch(/^http:\/\/localhost:\d+$/);
@@ -105,6 +107,7 @@ describe("Dev mode integration", () => {
         directoryPath: FIXTURES_DIR,
         watch: false,
         pageManager,
+        cdpSessionManager,
       });
 
       expect(serverInfo.port).toBeGreaterThan(0);
@@ -121,12 +124,14 @@ describe("Dev mode integration", () => {
         directoryPath: FIXTURES_DIR,
         watch: false,
         pageManager,
+        cdpSessionManager,
       });
 
       const secondInfo = await devModeState.startServing({
         directoryPath: FIXTURES_DIR,
         watch: false,
         pageManager,
+        cdpSessionManager,
       });
 
       // First server should be stopped
@@ -345,6 +350,7 @@ describe("Dev mode integration", () => {
           directoryPath: tempServDir,
           watch: true,
           pageManager,
+          cdpSessionManager,
           usePolling: true,
         });
 

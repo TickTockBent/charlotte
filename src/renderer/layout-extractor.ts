@@ -46,12 +46,19 @@ export class LayoutExtractor {
     const batchSize = 50;
     for (let i = 0; i < backendNodeIds.length; i += batchSize) {
       const batch = backendNodeIds.slice(i, i + batchSize);
-      const results = await Promise.all(
+      const settledResults = await Promise.allSettled(
         batch.map(async (nodeId) => {
           const bounds = await this.getBounds(session, nodeId);
           return { nodeId, bounds };
         }),
       );
+
+      const results = settledResults
+        .filter(
+          (r): r is PromiseFulfilledResult<{ nodeId: number; bounds: Bounds | null }> =>
+            r.status === "fulfilled",
+        )
+        .map((r) => r.value);
 
       for (const { nodeId, bounds } of results) {
         if (bounds && (offsetX !== 0 || offsetY !== 0)) {

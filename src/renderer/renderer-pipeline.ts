@@ -72,8 +72,8 @@ export class RendererPipeline {
     // Step 4: Build a fresh ID generator for this render
     const freshIdGenerator = new ElementIdGenerator();
 
-    // Step 5: Extract landmarks with bounds
-    const landmarks = this.extractLandmarks(rootNodes, boundsMap, freshIdGenerator);
+    // Step 5: Extract landmarks with bounds (pass "main" frameId for consistent hash input)
+    const landmarks = this.extractLandmarks(rootNodes, boundsMap, freshIdGenerator, "main");
 
     // Step 6: Extract headings
     const headings = this.extractHeadings(rootNodes, freshIdGenerator);

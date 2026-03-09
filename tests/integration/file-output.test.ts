@@ -29,6 +29,7 @@ describe("File output integration", () => {
   let elementIdGenerator: ElementIdGenerator;
   let deps: ToolDependencies;
   let outputDir: string;
+  let artifactStoreDir: string;
 
   beforeAll(async () => {
     browserManager = new BrowserManager();
@@ -39,11 +40,12 @@ describe("File output integration", () => {
     elementIdGenerator = new ElementIdGenerator();
     rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator);
     outputDir = await fs.mkdtemp(path.join(os.tmpdir(), "charlotte-file-output-test-"));
+    artifactStoreDir = await fs.mkdtemp(
+      path.join(os.tmpdir(), "charlotte-file-output-test-artifacts-"),
+    );
     const config = createDefaultConfig();
     config.outputDir = outputDir;
-    const artifactStore = new ArtifactStore(
-      path.join(os.tmpdir(), "charlotte-file-output-test-artifacts"),
-    );
+    const artifactStore = new ArtifactStore(artifactStoreDir);
     await artifactStore.initialize();
     deps = {
       browserManager,
@@ -60,6 +62,7 @@ describe("File output integration", () => {
   afterAll(async () => {
     await browserManager.close();
     await fs.rm(outputDir, { recursive: true, force: true });
+    await fs.rm(artifactStoreDir, { recursive: true, force: true });
   });
 
   describe("observe with output_file", () => {

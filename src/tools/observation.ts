@@ -381,7 +381,7 @@ export function registerObservationTools(
           .enum(["png", "jpeg", "webp"])
           .optional()
           .describe('"png" (default), "jpeg", "webp"'),
-        quality: z.number().optional().describe("1-100 for jpeg/webp quality"),
+        quality: z.number().min(1).max(100).optional().describe("1-100 for jpeg/webp quality"),
         save: z
           .boolean()
           .optional()

@@ -35,10 +35,7 @@ describe("PageManager", () => {
     });
 
     it("opens a tab with a URL", async () => {
-      const tabId = await pageManager.openTab(
-        browserManager,
-        "about:blank",
-      );
+      const tabId = await pageManager.openTab(browserManager, "about:blank");
 
       expect(tabId).toBeTruthy();
       const page = pageManager.getActivePage();
@@ -73,9 +70,7 @@ describe("PageManager", () => {
     it("throws when switching to non-existent tab", async () => {
       await pageManager.openTab(browserManager);
 
-      await expect(
-        pageManager.switchTab("tab-nonexistent"),
-      ).rejects.toThrow("not found");
+      await expect(pageManager.switchTab("tab-nonexistent")).rejects.toThrow("not found");
     });
 
     it("closes a tab", async () => {
@@ -102,9 +97,7 @@ describe("PageManager", () => {
     it("throws when closing non-existent tab", async () => {
       await pageManager.openTab(browserManager);
 
-      await expect(
-        pageManager.closeTab("tab-nonexistent"),
-      ).rejects.toThrow("not found");
+      await expect(pageManager.closeTab("tab-nonexistent")).rejects.toThrow("not found");
     });
 
     it("throws when no active tab and getActivePage is called", () => {

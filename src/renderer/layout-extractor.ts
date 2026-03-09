@@ -5,10 +5,7 @@ import { logger } from "../utils/logger.js";
 export const ZERO_BOUNDS: Bounds = { x: 0, y: 0, w: 0, h: 0 };
 
 export class LayoutExtractor {
-  async getBounds(
-    session: CDPSession,
-    backendNodeId: number,
-  ): Promise<Bounds | null> {
+  async getBounds(session: CDPSession, backendNodeId: number): Promise<Bounds | null> {
     try {
       const result = await session.send("DOM.getBoxModel" as any, {
         backendNodeId,
@@ -39,8 +36,11 @@ export class LayoutExtractor {
   async getBoundsForNodes(
     session: CDPSession,
     backendNodeIds: number[],
+    frameOffset?: { x: number; y: number },
   ): Promise<Map<number, Bounds>> {
     const boundsMap = new Map<number, Bounds>();
+    const offsetX = frameOffset?.x ?? 0;
+    const offsetY = frameOffset?.y ?? 0;
 
     // Process in parallel for performance, but cap concurrency
     const batchSize = 50;
@@ -54,13 +54,21 @@ export class LayoutExtractor {
       );
 
       for (const { nodeId, bounds } of results) {
-        boundsMap.set(nodeId, bounds ?? ZERO_BOUNDS);
+        if (bounds && (offsetX !== 0 || offsetY !== 0)) {
+          // Translate frame-local bounds to page-level coordinates
+          boundsMap.set(nodeId, {
+            x: bounds.x + offsetX,
+            y: bounds.y + offsetY,
+            w: bounds.w,
+            h: bounds.h,
+          });
+        } else {
+          boundsMap.set(nodeId, bounds ?? ZERO_BOUNDS);
+        }
       }
     }
 
-    logger.debug(
-      `Extracted bounds for ${boundsMap.size}/${backendNodeIds.length} nodes`,
-    );
+    logger.debug(`Extracted bounds for ${boundsMap.size}/${backendNodeIds.length} nodes`);
     return boundsMap;
   }
 }

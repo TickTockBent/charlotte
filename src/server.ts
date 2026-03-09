@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { BrowserManager } from "./browser/browser-manager.js";
 import type { PageManager } from "./browser/page-manager.js";
+import type { CDPSessionManager } from "./browser/cdp-session.js";
 import type { RendererPipeline } from "./renderer/renderer-pipeline.js";
 import type { ElementIdGenerator } from "./renderer/element-id-generator.js";
 import type { SnapshotStore } from "./state/snapshot-store.js";
@@ -29,6 +30,7 @@ import type { DevModeState } from "./dev/dev-mode-state.js";
 export interface ServerDeps {
   browserManager: BrowserManager;
   pageManager: PageManager;
+  cdpSessionManager: CDPSessionManager;
   rendererPipeline: RendererPipeline;
   elementIdGenerator: ElementIdGenerator;
   snapshotStore: SnapshotStore;
@@ -47,10 +49,7 @@ export interface CreateServerResult {
   registry: ToolRegistry;
 }
 
-export function createServer(
-  deps: ServerDeps,
-  options: ServerOptions = {},
-): CreateServerResult {
+export function createServer(deps: ServerDeps, options: ServerOptions = {}): CreateServerResult {
   // Resolve which tools should be enabled
   const profileName = options.toolGroups ? undefined : (options.profile ?? "browse");
   const enabledTools = options.toolGroups
@@ -66,19 +65,13 @@ export function createServer(
   const activeLabel = profileName
     ? `Active profile: ${profileName}.`
     : `Active groups: ${options.toolGroups!.join(", ")}.`;
-  const instructionLines = [
-    `Charlotte browser automation server. ${activeLabel}`,
-  ];
+  const instructionLines = [`Charlotte browser automation server. ${activeLabel}`];
   if (fullyDisabledGroups.length > 0) {
-    instructionLines.push(
-      "Additional tool groups available via charlotte:tools:",
-    );
+    instructionLines.push("Additional tool groups available via charlotte:tools:");
     for (const group of fullyDisabledGroups) {
       instructionLines.push(`  - ${group}: ${GROUP_DESCRIPTIONS[group]}`);
     }
-    instructionLines.push(
-      "Call charlotte:tools to list groups or enable/disable them.",
-    );
+    instructionLines.push("Call charlotte:tools to list groups or enable/disable them.");
   }
 
   const server = new McpServer(
@@ -111,6 +104,7 @@ export function createServer(
   const toolDeps = {
     browserManager: deps.browserManager,
     pageManager: deps.pageManager,
+    cdpSessionManager: deps.cdpSessionManager,
     rendererPipeline: deps.rendererPipeline,
     elementIdGenerator: deps.elementIdGenerator,
     snapshotStore: deps.snapshotStore,

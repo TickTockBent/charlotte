@@ -32,13 +32,12 @@ describe("Tabs, viewport, and network integration", () => {
     elementIdGenerator = new ElementIdGenerator();
     rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator);
     const config = createDefaultConfig();
-    const artifactStore = new ArtifactStore(
-      path.join(os.tmpdir(), "charlotte-tvn-test-artifacts"),
-    );
+    const artifactStore = new ArtifactStore(path.join(os.tmpdir(), "charlotte-tvn-test-artifacts"));
     await artifactStore.initialize();
     deps = {
       browserManager,
       pageManager,
+      cdpSessionManager,
       rendererPipeline,
       elementIdGenerator,
       snapshotStore: new SnapshotStore(config.snapshotDepth),

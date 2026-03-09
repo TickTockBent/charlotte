@@ -26,9 +26,7 @@ export class DevModeState {
   private pendingReloadEvent: ReloadEvent | null = null;
   private reloadInProgress: Promise<void> | null = null;
 
-  async startServing(
-    options: DevServeOptions,
-  ): Promise<StaticServerInfo> {
+  async startServing(options: DevServeOptions): Promise<StaticServerInfo> {
     // Stop any existing serving session first
     await this.stopAll();
 
@@ -76,10 +74,7 @@ export class DevModeState {
     return this.staticServer.getInfo();
   }
 
-  private handleFilesChanged(
-    changedFiles: string[],
-    pageManager: PageManager,
-  ): void {
+  private handleFilesChanged(changedFiles: string[], pageManager: PageManager): void {
     // Merge with any existing pending event (accumulate files)
     if (this.pendingReloadEvent) {
       const existingFiles = new Set(this.pendingReloadEvent.files_changed);

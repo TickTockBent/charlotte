@@ -46,10 +46,7 @@ export async function pollUntilCondition(
 /**
  * Evaluate a single WaitCondition against the current page state.
  */
-async function evaluateCondition(
-  page: Page,
-  condition: WaitCondition,
-): Promise<boolean> {
+async function evaluateCondition(page: Page, condition: WaitCondition): Promise<boolean> {
   if (condition.selector) {
     const element = await page.$(condition.selector);
     if (!element) return false;
@@ -67,7 +64,7 @@ async function evaluateCondition(
     const jsExpression = condition.js;
     try {
       const result = await page.evaluate((expression) => {
-        return !!new Function('return ' + expression)();
+        return !!new Function("return " + expression)();
       }, jsExpression);
       if (!result) return false;
     } catch {

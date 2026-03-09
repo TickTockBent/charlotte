@@ -11,10 +11,7 @@ import { ArtifactStore } from "../../src/state/artifact-store.js";
 import { createDefaultConfig } from "../../src/types/config.js";
 import type { CharlotteConfig } from "../../src/types/config.js";
 import type { ToolDependencies } from "../../src/tools/tool-helpers.js";
-import {
-  renderActivePage,
-  renderAfterAction,
-} from "../../src/tools/tool-helpers.js";
+import { renderActivePage, renderAfterAction } from "../../src/tools/tool-helpers.js";
 
 const DRAG_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/drag.html")}`;
 
@@ -41,6 +38,7 @@ describe("Drag and drop integration", () => {
     deps = {
       browserManager,
       pageManager,
+      cdpSessionManager,
       rendererPipeline,
       elementIdGenerator,
       snapshotStore: new SnapshotStore(config.snapshotDepth),
@@ -72,9 +70,7 @@ describe("Drag and drop integration", () => {
     return page.evaluate((id) => {
       const zone = document.getElementById(id);
       if (!zone) return [];
-      return Array.from(zone.querySelectorAll(".draggable")).map(
-        (el) => el.id,
-      );
+      return Array.from(zone.querySelectorAll(".draggable")).map((el) => el.id);
     }, zoneId);
   }
 

@@ -6,10 +6,7 @@ import { RendererPipeline } from "../../src/renderer/renderer-pipeline.js";
 import { ElementIdGenerator } from "../../src/renderer/element-id-generator.js";
 import type { Page } from "puppeteer";
 
-const FIXTURE_PATH = path.resolve(
-  import.meta.dirname,
-  "../fixtures/pages/pseudo-elements.html",
-);
+const FIXTURE_PATH = path.resolve(import.meta.dirname, "../fixtures/pages/pseudo-elements.html");
 
 describe("Pseudo-element content deduplication", () => {
   let browserManager: BrowserManager;
@@ -49,8 +46,8 @@ describe("Pseudo-element content deduplication", () => {
     it("does not duplicate ::after pseudo-element content in heading text", async () => {
       const result = await pipeline.render(page, { detail: "minimal" });
 
-      const gettingStarted = result.structure.headings.find(
-        (h) => h.text.includes("Getting Started"),
+      const gettingStarted = result.structure.headings.find((h) =>
+        h.text.includes("Getting Started"),
       );
       expect(gettingStarted).toBeDefined();
       // Should not have the arrow duplicated
@@ -62,9 +59,7 @@ describe("Pseudo-element content deduplication", () => {
     it("does not duplicate ::before and ::after pseudo-element content in heading text", async () => {
       const result = await pipeline.render(page, { detail: "minimal" });
 
-      const features = result.structure.headings.find(
-        (h) => h.text.includes("Features Overview"),
-      );
+      const features = result.structure.headings.find((h) => h.text.includes("Features Overview"));
       expect(features).toBeDefined();
       // Should not have brackets duplicated
       expect(features!.text).not.toMatch(/\[.*\[/);
@@ -83,8 +78,8 @@ describe("Pseudo-element content deduplication", () => {
       // The star from ::before should be present in the heading text
       expect(h1!.text).toContain("\u2605");
 
-      const gettingStarted = result.structure.headings.find(
-        (h) => h.text.includes("Getting Started"),
+      const gettingStarted = result.structure.headings.find((h) =>
+        h.text.includes("Getting Started"),
       );
       expect(gettingStarted).toBeDefined();
       // The arrow from ::after should be present
@@ -94,9 +89,7 @@ describe("Pseudo-element content deduplication", () => {
     it("leaves plain headings unchanged", async () => {
       const result = await pipeline.render(page, { detail: "minimal" });
 
-      const plain = result.structure.headings.find(
-        (h) => h.text.includes("Plain Heading"),
-      );
+      const plain = result.structure.headings.find((h) => h.text.includes("Plain Heading"));
       expect(plain).toBeDefined();
       expect(plain!.text).toBe("Plain Heading");
     });

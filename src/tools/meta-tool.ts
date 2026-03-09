@@ -33,9 +33,7 @@ function getGroupStatus(registry: ToolRegistry): Record<string, GroupStatus> {
 
   for (const groupName of ALL_GROUP_NAMES) {
     const toolNames = TOOL_GROUPS[groupName];
-    const enabledCount = toolNames.filter(
-      (name) => registry[name]?.enabled === true,
-    ).length;
+    const enabledCount = toolNames.filter((name) => registry[name]?.enabled === true).length;
     status[groupName] = {
       enabled: enabledCount === toolNames.length,
       enabled_count: enabledCount,
@@ -51,10 +49,7 @@ function getGroupStatus(registry: ToolRegistry): Record<string, GroupStatus> {
 /**
  * Register the charlotte:tools meta-tool.
  */
-export function registerMetaTool(
-  server: McpServer,
-  registry: ToolRegistry,
-): RegisteredTool {
+export function registerMetaTool(server: McpServer, registry: ToolRegistry): RegisteredTool {
   return server.registerTool(
     "charlotte:tools",
     {
@@ -72,7 +67,9 @@ export function registerMetaTool(
         action: z
           .enum(["list", "enable", "disable"])
           .optional()
-          .describe('"list" (default) — show all groups and status. "enable"/"disable" — toggle a group.'),
+          .describe(
+            '"list" (default) — show all groups and status. "enable"/"disable" — toggle a group.',
+          ),
         group: z
           .enum(ALL_GROUP_NAMES as [ToolGroupName, ...ToolGroupName[]])
           .optional()

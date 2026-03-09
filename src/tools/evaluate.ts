@@ -17,117 +17,118 @@ export function registerEvaluateTools(
 ): Record<string, RegisteredTool> {
   const tools: Record<string, RegisteredTool> = {};
 
-  tools["charlotte:evaluate"] = server.registerTool("charlotte:evaluate", {
-    description:
-      "Execute JavaScript in page context. Supports single expressions and multi-statement code. Returns the completion value of the last expression-statement.",
-    inputSchema: {
-      expression: z.string().describe("JS expression or multi-statement code to evaluate"),
-      timeout: z
-        .number()
-        .optional()
-        .describe("Max execution time in ms (default: 5000)"),
-      await_promise: z
-        .boolean()
-        .optional()
-        .describe(
-          "If the expression returns a Promise, await it before returning (default: true)",
-        ),
-    },
-  }, async ({ expression, timeout, await_promise }) => {
-    await deps.browserManager.ensureConnected();
-    const page = deps.getActivePage();
-
-    const evaluationTimeout = timeout ?? 5000;
-    const shouldAwaitPromise = await_promise ?? true;
-
-    const cdpSession = await page.createCDPSession();
-    try {
-      const evalResult = await Promise.race([
-        cdpSession.send("Runtime.evaluate", {
-          expression,
-          returnByValue: true,
-          awaitPromise: shouldAwaitPromise,
-          timeout: evaluationTimeout,
-        }),
-        new Promise<never>((_, reject) =>
-          setTimeout(
-            () => reject(new Error("TIMEOUT")),
-            evaluationTimeout + 500, // slightly longer than CDP timeout as fallback
+  tools["charlotte:evaluate"] = server.registerTool(
+    "charlotte:evaluate",
+    {
+      description:
+        "Execute JavaScript in page context. Supports single expressions and multi-statement code. Returns the completion value of the last expression-statement.",
+      inputSchema: {
+        expression: z.string().describe("JS expression or multi-statement code to evaluate"),
+        timeout: z.number().optional().describe("Max execution time in ms (default: 5000)"),
+        await_promise: z
+          .boolean()
+          .optional()
+          .describe(
+            "If the expression returns a Promise, await it before returning (default: true)",
           ),
-        ),
-      ]);
+      },
+    },
+    async ({ expression, timeout, await_promise }) => {
+      await deps.browserManager.ensureConnected();
+      const page = deps.getActivePage();
 
-      // Check for exceptions
-      if (evalResult.exceptionDetails) {
-        const exceptionMessage =
-          evalResult.exceptionDetails.exception?.description ??
-          evalResult.exceptionDetails.text ??
-          "Unknown evaluation error";
-        throw new CharlotteError(
-          CharlotteErrorCode.EVALUATION_ERROR,
-          `Evaluation error: ${exceptionMessage}`,
-        );
-      }
+      const evaluationTimeout = timeout ?? 5000;
+      const shouldAwaitPromise = await_promise ?? true;
 
-      // Serialize the RemoteObject result
-      const remoteObject = evalResult.result;
-      const result = serializeRemoteObject(remoteObject);
+      const cdpSession = await page.createCDPSession();
+      try {
+        const evalResult = await Promise.race([
+          cdpSession.send("Runtime.evaluate", {
+            expression,
+            returnByValue: true,
+            awaitPromise: shouldAwaitPromise,
+            timeout: evaluationTimeout,
+          }),
+          new Promise<never>((_, reject) =>
+            setTimeout(
+              () => reject(new Error("TIMEOUT")),
+              evaluationTimeout + 500, // slightly longer than CDP timeout as fallback
+            ),
+          ),
+        ]);
 
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify(result, null, 2),
-          },
-        ],
-      };
-    } catch (error: unknown) {
-      if (error instanceof CharlotteError) {
+        // Check for exceptions
+        if (evalResult.exceptionDetails) {
+          const exceptionMessage =
+            evalResult.exceptionDetails.exception?.description ??
+            evalResult.exceptionDetails.text ??
+            "Unknown evaluation error";
+          throw new CharlotteError(
+            CharlotteErrorCode.EVALUATION_ERROR,
+            `Evaluation error: ${exceptionMessage}`,
+          );
+        }
+
+        // Serialize the RemoteObject result
+        const remoteObject = evalResult.result;
+        const result = serializeRemoteObject(remoteObject);
+
         return {
           content: [
             {
               type: "text" as const,
-              text: JSON.stringify(error.toResponse()),
+              text: JSON.stringify(result, null, 2),
             },
           ],
-          isError: true,
         };
-      }
+      } catch (error: unknown) {
+        if (error instanceof CharlotteError) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: JSON.stringify(error.toResponse()),
+              },
+            ],
+            isError: true,
+          };
+        }
 
-      if (error instanceof Error && error.message === "TIMEOUT") {
-        const timeoutError = new CharlotteError(
-          CharlotteErrorCode.TIMEOUT,
-          `Expression evaluation exceeded ${evaluationTimeout}ms. The expression may have had side effects before termination.`,
+        if (error instanceof Error && error.message === "TIMEOUT") {
+          const timeoutError = new CharlotteError(
+            CharlotteErrorCode.TIMEOUT,
+            `Expression evaluation exceeded ${evaluationTimeout}ms. The expression may have had side effects before termination.`,
+          );
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: JSON.stringify(timeoutError.toResponse()),
+              },
+            ],
+            isError: true,
+          };
+        }
+
+        logger.error("Unexpected error in evaluate", error);
+        const sessionError = new CharlotteError(
+          CharlotteErrorCode.SESSION_ERROR,
+          `Unexpected error: ${error instanceof Error ? error.message : String(error)}`,
         );
         return {
           content: [
             {
               type: "text" as const,
-              text: JSON.stringify(timeoutError.toResponse()),
+              text: JSON.stringify(sessionError.toResponse()),
             },
           ],
           isError: true,
         };
+      } finally {
+        await cdpSession.detach();
       }
-
-      logger.error("Unexpected error in evaluate", error);
-      const sessionError = new CharlotteError(
-        CharlotteErrorCode.SESSION_ERROR,
-        `Unexpected error: ${error instanceof Error ? error.message : String(error)}`,
-      );
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify(sessionError.toResponse()),
-          },
-        ],
-        isError: true,
-      };
-    } finally {
-      await cdpSession.detach();
-    }
-  });
+    },
+  );
 
   return tools;
 }
@@ -135,9 +136,13 @@ export function registerEvaluateTools(
 /**
  * Convert a CDP RemoteObject to a { value, type } result.
  */
-function serializeRemoteObject(
-  remoteObject: { type: string; subtype?: string; value?: unknown; description?: string; className?: string },
-): { value: unknown; type: string } {
+function serializeRemoteObject(remoteObject: {
+  type: string;
+  subtype?: string;
+  value?: unknown;
+  description?: string;
+  className?: string;
+}): { value: unknown; type: string } {
   const { type, subtype, value, description, className } = remoteObject;
 
   if (type === "undefined") {

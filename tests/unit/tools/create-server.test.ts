@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { createServer, type ServerDeps } from "../../../src/server.js";
-import { ALL_TOOL_NAMES, TOOL_GROUPS, resolveProfile, resolveGroups } from "../../../src/tools/tool-groups.js";
+import { ALL_TOOL_NAMES, resolveProfile, resolveGroups } from "../../../src/tools/tool-groups.js";
 
 /**
  * Minimal mock ServerDeps. Tool handlers are never invoked in these tests,
@@ -10,6 +10,7 @@ function createMockDeps(): ServerDeps {
   return {
     browserManager: {} as any,
     pageManager: { getActivePage: () => ({}) } as any,
+    cdpSessionManager: {} as any,
     rendererPipeline: {} as any,
     elementIdGenerator: {} as any,
     snapshotStore: {} as any,
@@ -20,6 +21,8 @@ function createMockDeps(): ServerDeps {
       screenshotDir: "/tmp",
       dialogAutoDismiss: "none",
       allowedWorkspaceRoot: "/tmp",
+      includeIframes: false,
+      iframeDepth: 3,
     } as any,
   };
 }

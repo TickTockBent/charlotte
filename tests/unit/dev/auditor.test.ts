@@ -1,9 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  relativeLuminance,
-  contrastRatio,
-  parseRgbColor,
-} from "../../../src/dev/auditor.js";
+import { relativeLuminance, contrastRatio, parseRgbColor } from "../../../src/dev/auditor.js";
 
 describe("Auditor utilities", () => {
   describe("relativeLuminance", () => {
@@ -58,9 +54,7 @@ describe("Auditor utilities", () => {
     });
 
     it("parses rgba() format", () => {
-      expect(parseRgbColor("rgba(100, 200, 50, 0.5)")).toEqual([
-        100, 200, 50,
-      ]);
+      expect(parseRgbColor("rgba(100, 200, 50, 0.5)")).toEqual([100, 200, 50]);
     });
 
     it("parses without spaces", () => {

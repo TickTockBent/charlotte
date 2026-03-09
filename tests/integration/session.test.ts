@@ -19,7 +19,7 @@ describe("Session integration", () => {
   let cdpSessionManager: CDPSessionManager;
   let elementIdGenerator: ElementIdGenerator;
   let rendererPipeline: RendererPipeline;
-  let deps: ToolDependencies;
+  let _deps: ToolDependencies;
 
   beforeAll(async () => {
     browserManager = new BrowserManager();
@@ -34,9 +34,10 @@ describe("Session integration", () => {
       path.join(os.tmpdir(), "charlotte-session-test-artifacts"),
     );
     await artifactStore.initialize();
-    deps = {
+    _deps = {
       browserManager,
       pageManager,
+      cdpSessionManager,
       rendererPipeline,
       elementIdGenerator,
       snapshotStore: new SnapshotStore(config.snapshotDepth),
@@ -104,9 +105,7 @@ describe("Session integration", () => {
       });
 
       const cookies = await page.cookies("http://localhost");
-      const httpOnlyCookie = cookies.find(
-        (c) => c.name === "http_only_cookie",
-      );
+      const httpOnlyCookie = cookies.find((c) => c.name === "http_only_cookie");
       expect(httpOnlyCookie).toBeDefined();
       expect(httpOnlyCookie!.httpOnly).toBe(true);
     });

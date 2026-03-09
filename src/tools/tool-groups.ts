@@ -8,12 +8,7 @@
 // ─── Group definitions ───
 
 export const TOOL_GROUPS = {
-  navigation: [
-    "charlotte:navigate",
-    "charlotte:back",
-    "charlotte:forward",
-    "charlotte:reload",
-  ],
+  navigation: ["charlotte:navigate", "charlotte:back", "charlotte:forward", "charlotte:reload"],
   observation: [
     "charlotte:observe",
     "charlotte:find",
@@ -50,21 +45,10 @@ export const TOOL_GROUPS = {
     "charlotte:viewport",
     "charlotte:network",
   ],
-  dev_mode: [
-    "charlotte:dev_serve",
-    "charlotte:dev_inject",
-    "charlotte:dev_audit",
-  ],
-  dialog: [
-    "charlotte:dialog",
-  ],
-  evaluate: [
-    "charlotte:evaluate",
-  ],
-  monitoring: [
-    "charlotte:console",
-    "charlotte:requests",
-  ],
+  dev_mode: ["charlotte:dev_serve", "charlotte:dev_inject", "charlotte:dev_audit"],
+  dialog: ["charlotte:dialog"],
+  evaluate: ["charlotte:evaluate"],
+  monitoring: ["charlotte:console", "charlotte:requests"],
 } as const;
 
 export type ToolGroupName = keyof typeof TOOL_GROUPS;
@@ -264,7 +248,8 @@ export function getToolGroup(toolName: string): ToolGroupName | undefined {
 export const GROUP_DESCRIPTIONS: Record<ToolGroupName, string> = {
   navigation: "Page navigation (navigate, back, forward, reload)",
   observation: "Page inspection (observe, find, screenshot, diff)",
-  interaction: "DOM interaction (click, click_at, type, select, toggle, submit, scroll, hover, drag, key/sequences, wait_for, upload)",
+  interaction:
+    "DOM interaction (click, click_at, type, select, toggle, submit, scroll, hover, drag, key/sequences, wait_for, upload)",
   session: "Session management (cookies, headers, configure, tabs, viewport, network)",
   dev_mode: "Development tools (dev_serve, dev_inject, dev_audit)",
   dialog: "JavaScript dialog handling",

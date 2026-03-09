@@ -20,14 +20,10 @@ export function registerMonitoringTools(
         level: z
           .enum(["all", "log", "info", "warn", "error", "debug"])
           .optional()
-          .describe(
-            'Filter by log level. "all" (default) returns every message.',
-          ),
+          .describe('Filter by log level. "all" (default) returns every message.'),
         clear: coercedBoolean
           .optional()
-          .describe(
-            "Clear the message buffer after retrieval (default: false).",
-          ),
+          .describe("Clear the message buffer after retrieval (default: false)."),
         output_file: z
           .string()
           .optional()
@@ -89,9 +85,7 @@ export function registerMonitoringTools(
         url_pattern: z
           .string()
           .optional()
-          .describe(
-            "Filter requests by URL substring match (case-insensitive).",
-          ),
+          .describe("Filter requests by URL substring match (case-insensitive)."),
         resource_type: z
           .enum([
             "document",
@@ -109,20 +103,14 @@ export function registerMonitoringTools(
             "other",
           ])
           .optional()
-          .describe(
-            "Filter by resource type (e.g. \"fetch\", \"xhr\", \"document\").",
-          ),
+          .describe('Filter by resource type (e.g. "fetch", "xhr", "document").'),
         status_min: z
           .number()
           .optional()
-          .describe(
-            "Minimum HTTP status code to include (e.g. 400 for errors only).",
-          ),
+          .describe("Minimum HTTP status code to include (e.g. 400 for errors only)."),
         clear: coercedBoolean
           .optional()
-          .describe(
-            "Clear the request buffer after retrieval (default: false).",
-          ),
+          .describe("Clear the request buffer after retrieval (default: false)."),
         output_file: z
           .string()
           .optional()
@@ -139,9 +127,7 @@ export function registerMonitoringTools(
 
         if (url_pattern) {
           const lowerPattern = url_pattern.toLowerCase();
-          requests = requests.filter((r) =>
-            r.url.toLowerCase().includes(lowerPattern),
-          );
+          requests = requests.filter((r) => r.url.toLowerCase().includes(lowerPattern));
         }
 
         if (resource_type) {

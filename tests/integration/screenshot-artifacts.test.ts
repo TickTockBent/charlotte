@@ -32,15 +32,14 @@ describe("Screenshot artifacts integration", () => {
     const rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator);
     const config = createDefaultConfig();
 
-    testDir = await fs.mkdtemp(
-      path.join(os.tmpdir(), "charlotte-integration-artifacts-"),
-    );
+    testDir = await fs.mkdtemp(path.join(os.tmpdir(), "charlotte-integration-artifacts-"));
     artifactStore = new ArtifactStore(testDir);
     await artifactStore.initialize();
 
     deps = {
       browserManager,
       pageManager,
+      cdpSessionManager,
       rendererPipeline,
       elementIdGenerator,
       snapshotStore: new SnapshotStore(config.snapshotDepth),

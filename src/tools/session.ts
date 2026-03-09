@@ -18,10 +18,7 @@ const CookieSchema = z.object({
   path: z.string().optional().describe("Cookie path (default: '/')"),
   secure: coercedBoolean.optional().describe("Secure flag"),
   httpOnly: coercedBoolean.optional().describe("HttpOnly flag"),
-  sameSite: z
-    .enum(["Strict", "Lax", "None"])
-    .optional()
-    .describe("SameSite attribute"),
+  sameSite: z.enum(["Strict", "Lax", "None"]).optional().describe("SameSite attribute"),
 });
 
 export function registerSessionTools(
@@ -52,9 +49,7 @@ export function registerSessionTools(
 
         logger.info("Getting cookies", { urls });
 
-        const cookies = urls?.length
-          ? await page.cookies(...urls)
-          : await page.cookies();
+        const cookies = urls?.length ? await page.cookies(...urls) : await page.cookies();
 
         return {
           content: [
@@ -92,9 +87,7 @@ export function registerSessionTools(
         names: z
           .array(z.string())
           .optional()
-          .describe(
-            "Cookie names to delete. If omitted, clears all cookies for the current page.",
-          ),
+          .describe("Cookie names to delete. If omitted, clears all cookies for the current page."),
       },
     },
     async ({ names }) => {
@@ -136,9 +129,7 @@ export function registerSessionTools(
       description:
         "Set cookies on the active page. Cookies persist for subsequent navigations within matching domains.",
       inputSchema: {
-        cookies: z
-          .array(CookieSchema)
-          .describe("Array of cookie objects to set"),
+        cookies: z.array(CookieSchema).describe("Array of cookie objects to set"),
       },
     },
     async ({ cookies }) => {
@@ -226,8 +217,7 @@ export function registerSessionTools(
   tools["charlotte:configure"] = server.registerTool(
     "charlotte:configure",
     {
-      description:
-        "Configure Charlotte runtime settings. Changes take effect immediately.",
+      description: "Configure Charlotte runtime settings. Changes take effect immediately.",
       inputSchema: {
         snapshot_depth: z
           .number()
@@ -257,9 +247,18 @@ export function registerSessionTools(
           .describe(
             "Directory for large tool output files (used by output_file parameter on observe, screenshot, console, requests). Created automatically if it doesn't exist.",
           ),
+        include_iframes: coercedBoolean
+          .optional()
+          .describe(
+            "Include iframe content in page representations (default: false). Extracts accessibility tree, interactive elements, and content from child frames.",
+          ),
+        iframe_depth: z
+          .number()
+          .optional()
+          .describe("Maximum iframe nesting depth to traverse (default: 3, min: 1, max: 10)"),
       },
     },
-    async ({ snapshot_depth, auto_snapshot, screenshot_dir, dialog_auto_dismiss, output_dir }) => {
+    async ({ snapshot_depth, auto_snapshot, screenshot_dir, dialog_auto_dismiss, output_dir, include_iframes, iframe_depth }) => {
       try {
         logger.info("Configuring Charlotte", { snapshot_depth, auto_snapshot, screenshot_dir });
 
@@ -288,6 +287,14 @@ export function registerSessionTools(
           await fs.mkdir(output_dir, { recursive: true });
         }
 
+        if (include_iframes !== undefined) {
+          deps.config.includeIframes = include_iframes;
+        }
+
+        if (iframe_depth !== undefined) {
+          deps.config.iframeDepth = Math.max(1, Math.min(10, iframe_depth));
+        }
+
         return {
           content: [
             {
@@ -300,6 +307,8 @@ export function registerSessionTools(
                   screenshot_dir: deps.artifactStore.screenshotDir,
                   dialog_auto_dismiss: deps.config.dialogAutoDismiss,
                   output_dir: deps.config.outputDir ?? null,
+                  include_iframes: deps.config.includeIframes,
+                  iframe_depth: deps.config.iframeDepth,
                 },
               }),
             },
@@ -345,10 +354,7 @@ export function registerSessionTools(
       description:
         "Open a new browser tab. Optionally navigate to a URL. The new tab becomes the active tab.",
       inputSchema: {
-        url: z
-          .string()
-          .optional()
-          .describe("URL to navigate to (default: blank page)"),
+        url: z.string().optional().describe("URL to navigate to (default: blank page)"),
       },
     },
     async ({ url }) => {
@@ -366,10 +372,14 @@ export function registerSessionTools(
           content: [
             {
               type: "text" as const,
-              text: JSON.stringify({
-                tab_id: tabId,
-                ...representation,
-              }, null, 2),
+              text: JSON.stringify(
+                {
+                  tab_id: tabId,
+                  ...representation,
+                },
+                null,
+                2,
+              ),
             },
           ],
         };
@@ -458,14 +468,8 @@ export function registerSessionTools(
       description:
         "Change the browser viewport dimensions. Use a device preset or specify custom width/height. Returns page representation at the new viewport size.",
       inputSchema: {
-        width: z
-          .number()
-          .optional()
-          .describe("Viewport width in pixels"),
-        height: z
-          .number()
-          .optional()
-          .describe("Viewport height in pixels"),
+        width: z.number().optional().describe("Viewport width in pixels"),
+        height: z.number().optional().describe("Viewport height in pixels"),
         device: z
           .enum(["mobile", "tablet", "desktop"])
           .optional()
@@ -569,7 +573,7 @@ export function registerSessionTools(
           .array(z.string())
           .optional()
           .describe(
-            "URL patterns to block (e.g. [\"*.ads.com\", \"tracking.js\"]). Pass empty array to clear.",
+            'URL patterns to block (e.g. ["*.ads.com", "tracking.js"]). Pass empty array to clear.',
           ),
       },
     },

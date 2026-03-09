@@ -11,6 +11,10 @@ export interface CharlotteConfig {
   screenshotDir?: string;
   /** Directory for large tool output files. When set, tools with output_file support write here. */
   outputDir?: string;
+  /** Whether to include iframe content in page representations. Default: false. */
+  includeIframes: boolean;
+  /** Maximum iframe nesting depth to traverse. Default: 3. */
+  iframeDepth: number;
 }
 
 export function createDefaultConfig(): CharlotteConfig {
@@ -19,5 +23,7 @@ export function createDefaultConfig(): CharlotteConfig {
     autoSnapshot: "every_action",
     dialogAutoDismiss: "none",
     allowedWorkspaceRoot: process.cwd(), // Default to cwd for universal safety
+    includeIframes: false,
+    iframeDepth: 3,
   };
 }

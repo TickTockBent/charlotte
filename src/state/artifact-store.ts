@@ -39,8 +39,7 @@ export class ArtifactStore {
   private _screenshotDir: string;
 
   constructor(screenshotDir?: string) {
-    this._screenshotDir =
-      screenshotDir ?? path.join(os.tmpdir(), "charlotte-screenshots");
+    this._screenshotDir = screenshotDir ?? path.join(os.tmpdir(), "charlotte-screenshots");
   }
 
   get screenshotDir(): string {
@@ -199,16 +198,14 @@ export class ArtifactStore {
   }
 
   private async saveIndex(): Promise<void> {
-    const entries: ArtifactMeta[] = Array.from(this.artifacts.values()).map(
-      (a) => ({
-        id: a.id,
-        format: a.format,
-        selector: a.selector,
-        url: a.url,
-        title: a.title,
-        timestamp: a.timestamp,
-      }),
-    );
+    const entries: ArtifactMeta[] = Array.from(this.artifacts.values()).map((a) => ({
+      id: a.id,
+      format: a.format,
+      selector: a.selector,
+      url: a.url,
+      title: a.title,
+      timestamp: a.timestamp,
+    }));
 
     await fs.writeFile(this.indexPath, JSON.stringify(entries, null, 2));
   }

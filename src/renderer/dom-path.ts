@@ -26,9 +26,7 @@ export function computeDOMPathSignature(node: ParsedAXNode): DOMPathSignature {
   // Compute sibling index: position among siblings with the same role
   let siblingIndex = 0;
   if (node.parent) {
-    const sameRoleSiblings = node.parent.children.filter(
-      (child) => child.role === node.role,
-    );
+    const sameRoleSiblings = node.parent.children.filter((child) => child.role === node.role);
     siblingIndex = sameRoleSiblings.indexOf(node);
     if (siblingIndex === -1) siblingIndex = 0;
   }

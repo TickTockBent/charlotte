@@ -11,6 +11,8 @@ export interface ParsedAXNode {
   backendDOMNodeId: number | null;
   children: ParsedAXNode[];
   parent: ParsedAXNode | null;
+  /** CDP frame ID this node belongs to. Null for main frame. */
+  frameId: string | null;
 }
 
 const LANDMARK_ROLES = new Set([
@@ -83,10 +85,11 @@ function extractProperties(
 }
 
 export class AccessibilityExtractor {
-  async extract(session: CDPSession): Promise<ParsedAXNode[]> {
-    logger.debug("Extracting accessibility tree");
+  async extract(session: CDPSession, frameId?: string): Promise<ParsedAXNode[]> {
+    logger.debug("Extracting accessibility tree", { frameId: frameId ?? "main" });
 
-    const result = await session.send("Accessibility.getFullAXTree" as any);
+    const params = frameId ? { frameId } : {};
+    const result = await session.send("Accessibility.getFullAXTree" as any, params);
     const rawNodes: RawAXNode[] = (result as any).nodes;
 
     if (!rawNodes || rawNodes.length === 0) {
@@ -138,10 +141,7 @@ export class AccessibilityExtractor {
       const name = raw.name?.value ?? "";
       const description = raw.description?.value ?? "";
       const rawValue = raw.value?.value;
-      const value =
-        rawValue !== undefined && rawValue !== null
-          ? String(rawValue)
-          : null;
+      const value = rawValue !== undefined && rawValue !== null ? String(rawValue) : null;
 
       const parsed: ParsedAXNode = {
         nodeId: raw.nodeId,
@@ -153,6 +153,7 @@ export class AccessibilityExtractor {
         backendDOMNodeId: raw.backendDOMNodeId ?? null,
         children: [],
         parent: null,
+        frameId: frameId ?? null,
       };
 
       nodeMap.set(raw.nodeId, parsed);

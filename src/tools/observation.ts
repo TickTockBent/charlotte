@@ -6,10 +6,7 @@ import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 import { diffRepresentations } from "../state/differ.js";
 import type { DiffScope } from "../state/differ.js";
 import type { ToolDependencies } from "./tool-helpers.js";
-import type {
-  InteractiveElement,
-  Bounds,
-} from "../types/page-representation.js";
+import type { Bounds } from "../types/page-representation.js";
 import type { RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
   renderActivePage,
@@ -163,16 +160,11 @@ export function registerObservationTools(
           .describe(
             '"summary" (default), "full" (includes all text content), "minimal" (landmarks + interactive only)',
           ),
-        selector: z
-          .string()
-          .optional()
-          .describe("CSS selector to scope observation to a subtree"),
+        selector: z.string().optional().describe("CSS selector to scope observation to a subtree"),
         include_styles: z
           .boolean()
           .optional()
-          .describe(
-            "Include computed styles for visible elements (default: false)",
-          ),
+          .describe("Include computed styles for visible elements (default: false)"),
         output_file: z
           .string()
           .optional()
@@ -228,15 +220,11 @@ export function registerObservationTools(
         near: z
           .string()
           .optional()
-          .describe(
-            "Element ID — find elements spatially near this one (within ~200px)",
-          ),
+          .describe("Element ID — find elements spatially near this one (within ~200px)"),
         within: z
           .string()
           .optional()
-          .describe(
-            "Element ID — find elements geometrically contained within this one's bounds",
-          ),
+          .describe("Element ID — find elements geometrically contained within this one's bounds"),
         selector: z
           .string()
           .optional()
@@ -281,9 +269,7 @@ export function registerObservationTools(
 
         // Filter by type
         if (type) {
-          matchingElements = matchingElements.filter(
-            (element) => element.type === type,
-          );
+          matchingElements = matchingElements.filter((element) => element.type === type);
         }
 
         // Filter by role — we match against the type since our pipeline
@@ -314,7 +300,7 @@ export function registerObservationTools(
 
         // Spatial filter: near
         if (near) {
-          const { backendNodeId } = await resolveElement(deps, near);
+          const { backendNodeId: _nearNodeId } = await resolveElement(deps, near);
           // Find the reference element in the interactive list
           const referenceElement = representation.interactive.find(
             (element) => element.id === near,
@@ -324,21 +310,12 @@ export function registerObservationTools(
             matchingElements = matchingElements
               .filter((element) => {
                 if (!element.bounds || element.id === near) return false;
-                const distance = centerDistance(
-                  element.bounds,
-                  referenceElement.bounds!,
-                );
+                const distance = centerDistance(element.bounds, referenceElement.bounds!);
                 return distance <= NEAR_THRESHOLD_PX;
               })
               .sort((elementA, elementB) => {
-                const distanceA = centerDistance(
-                  elementA.bounds!,
-                  referenceElement.bounds!,
-                );
-                const distanceB = centerDistance(
-                  elementB.bounds!,
-                  referenceElement.bounds!,
-                );
+                const distanceA = centerDistance(elementA.bounds!, referenceElement.bounds!);
+                const distanceB = centerDistance(elementB.bounds!, referenceElement.bounds!);
                 return distanceA - distanceB;
               });
           }
@@ -346,7 +323,7 @@ export function registerObservationTools(
 
         // Spatial filter: within
         if (within) {
-          const { backendNodeId } = await resolveElement(deps, within);
+          const { backendNodeId: _withinNodeId } = await resolveElement(deps, within);
           const containerElement = representation.interactive.find(
             (element) => element.id === within,
           );
@@ -380,10 +357,7 @@ export function registerObservationTools(
           .enum(["png", "jpeg", "webp"])
           .optional()
           .describe('"png" (default), "jpeg", "webp"'),
-        quality: z
-          .number()
-          .optional()
-          .describe("1-100 for jpeg/webp quality"),
+        quality: z.number().optional().describe("1-100 for jpeg/webp quality"),
         save: z
           .boolean()
           .optional()
@@ -427,15 +401,13 @@ export function registerObservationTools(
 
           screenshotBase64 = (await element.screenshot({
             type: screenshotFormat,
-            quality:
-              screenshotFormat !== "png" ? quality : undefined,
+            quality: screenshotFormat !== "png" ? quality : undefined,
             encoding: "base64",
           })) as string;
         } else {
           screenshotBase64 = (await page.screenshot({
             type: screenshotFormat,
-            quality:
-              screenshotFormat !== "png" ? quality : undefined,
+            quality: screenshotFormat !== "png" ? quality : undefined,
             encoding: "base64",
             fullPage: true,
           })) as string;
@@ -449,8 +421,7 @@ export function registerObservationTools(
         }
 
         const content: Array<
-          | { type: "image"; data: string; mimeType: string }
-          | { type: "text"; text: string }
+          { type: "image"; data: string; mimeType: string } | { type: "text"; text: string }
         > = [
           {
             type: "image" as const,
@@ -602,8 +573,7 @@ export function registerObservationTools(
   tools["charlotte:screenshot_delete"] = server.registerTool(
     "charlotte:screenshot_delete",
     {
-      description:
-        "Delete a saved screenshot artifact by its ID. Removes the file from disk.",
+      description: "Delete a saved screenshot artifact by its ID. Removes the file from disk.",
       inputSchema: {
         id: z.string().describe("Screenshot artifact ID to delete"),
       },
@@ -649,9 +619,7 @@ export function registerObservationTools(
         snapshot_id: z
           .number()
           .optional()
-          .describe(
-            "Compare against a specific snapshot ID (default: previous snapshot)",
-          ),
+          .describe("Compare against a specific snapshot ID (default: previous snapshot)"),
         scope: z
           .enum(["all", "structure", "interactive", "content"])
           .optional()

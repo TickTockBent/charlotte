@@ -5,11 +5,7 @@ import { logger } from "../utils/logger.js";
 import type { DetailLevel } from "../renderer/renderer-pipeline.js";
 import type { RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ToolDependencies } from "./tool-helpers.js";
-import {
-  renderActivePage,
-  formatPageResponse,
-  handleToolError,
-} from "./tool-helpers.js";
+import { renderActivePage, formatPageResponse, handleToolError } from "./tool-helpers.js";
 
 const detailSchema = z
   .enum(["minimal", "summary", "full"])
@@ -37,10 +33,7 @@ export function registerNavigationTools(
           .describe(
             'Wait condition: "load" (default), "domcontentloaded", "networkidle". Note: "networkidle" is unreliable on SPAs with persistent WebSocket connections.',
           ),
-        timeout: z
-          .number()
-          .optional()
-          .describe("Max wait in ms (default: 30000)"),
+        timeout: z.number().optional().describe("Max wait in ms (default: 30000)"),
         detail: detailSchema,
       },
     },
@@ -71,9 +64,7 @@ export function registerNavigationTools(
           });
         } catch (navigationError: unknown) {
           const errorMessage =
-            navigationError instanceof Error
-              ? navigationError.message
-              : String(navigationError);
+            navigationError instanceof Error ? navigationError.message : String(navigationError);
 
           // Check for timeout specifically
           if (errorMessage.includes("timeout") || errorMessage.includes("Timeout")) {
@@ -91,7 +82,10 @@ export function registerNavigationTools(
         }
 
         const detailLevel: DetailLevel = detail ?? "minimal";
-        const representation = await renderActivePage(deps, { detail: detailLevel, source: "action" });
+        const representation = await renderActivePage(deps, {
+          detail: detailLevel,
+          source: "action",
+        });
         return formatPageResponse(representation);
       } catch (error: unknown) {
         return handleToolError(error);
@@ -128,7 +122,10 @@ export function registerNavigationTools(
         }
 
         const detailLevel: DetailLevel = detail ?? "minimal";
-        const representation = await renderActivePage(deps, { detail: detailLevel, source: "action" });
+        const representation = await renderActivePage(deps, {
+          detail: detailLevel,
+          source: "action",
+        });
         return formatPageResponse(representation);
       } catch (error: unknown) {
         return handleToolError(error);
@@ -165,7 +162,10 @@ export function registerNavigationTools(
         }
 
         const detailLevel: DetailLevel = detail ?? "minimal";
-        const representation = await renderActivePage(deps, { detail: detailLevel, source: "action" });
+        const representation = await renderActivePage(deps, {
+          detail: detailLevel,
+          source: "action",
+        });
         return formatPageResponse(representation);
       } catch (error: unknown) {
         return handleToolError(error);
@@ -176,13 +176,9 @@ export function registerNavigationTools(
   tools["charlotte:reload"] = server.registerTool(
     "charlotte:reload",
     {
-      description:
-        "Reload the current page. Returns page representation after reload.",
+      description: "Reload the current page. Returns page representation after reload.",
       inputSchema: {
-        hard: z
-          .boolean()
-          .optional()
-          .describe("Bypass cache (default: false)"),
+        hard: z.boolean().optional().describe("Bypass cache (default: false)"),
         detail: detailSchema,
       },
     },
@@ -208,7 +204,10 @@ export function registerNavigationTools(
         }
 
         const detailLevel: DetailLevel = detail ?? "minimal";
-        const representation = await renderActivePage(deps, { detail: detailLevel, source: "action" });
+        const representation = await renderActivePage(deps, {
+          detail: detailLevel,
+          source: "action",
+        });
         return formatPageResponse(representation);
       } catch (error: unknown) {
         return handleToolError(error);

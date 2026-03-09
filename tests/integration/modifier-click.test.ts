@@ -10,10 +10,7 @@ import { SnapshotStore } from "../../src/state/snapshot-store.js";
 import { ArtifactStore } from "../../src/state/artifact-store.js";
 import { createDefaultConfig } from "../../src/types/config.js";
 import type { ToolDependencies } from "../../src/tools/tool-helpers.js";
-import {
-  renderActivePage,
-  resolveElement,
-} from "../../src/tools/tool-helpers.js";
+import { renderActivePage, resolveElement } from "../../src/tools/tool-helpers.js";
 
 const MODIFIER_CLICK_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/modifier-click.html")}`;
 
@@ -41,6 +38,7 @@ describe("Modifier click integration", () => {
     deps = {
       browserManager,
       pageManager,
+      cdpSessionManager,
       rendererPipeline,
       elementIdGenerator,
       snapshotStore: new SnapshotStore(config.snapshotDepth),
@@ -66,9 +64,7 @@ describe("Modifier click integration", () => {
   /**
    * Helper: find the modifier test button element
    */
-  function findModifierButton(
-    representation: Awaited<ReturnType<typeof renderActivePage>>,
-  ) {
+  function findModifierButton(representation: Awaited<ReturnType<typeof renderActivePage>>) {
     return representation.interactive.find((el) =>
       el.label.toLowerCase().includes("modifier test button"),
     );
@@ -92,10 +88,8 @@ describe("Modifier click integration", () => {
       });
       if (!model) throw new Error("No box model");
       const contentQuad = model.content;
-      const centerX =
-        (contentQuad[0] + contentQuad[2] + contentQuad[4] + contentQuad[6]) / 4;
-      const centerY =
-        (contentQuad[1] + contentQuad[3] + contentQuad[5] + contentQuad[7]) / 4;
+      const centerX = (contentQuad[0] + contentQuad[2] + contentQuad[4] + contentQuad[6]) / 4;
+      const centerY = (contentQuad[1] + contentQuad[3] + contentQuad[5] + contentQuad[7]) / 4;
 
       const modifierKeyMap: Record<string, string> = {
         ctrl: "Control",

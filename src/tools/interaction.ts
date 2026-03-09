@@ -56,10 +56,8 @@ async function clickElementByBackendNodeId(
 
     // content quad: [x1,y1, x2,y2, x3,y3, x4,y4]
     const contentQuad = model.content;
-    const centerX =
-      (contentQuad[0] + contentQuad[2] + contentQuad[4] + contentQuad[6]) / 4;
-    const centerY =
-      (contentQuad[1] + contentQuad[3] + contentQuad[5] + contentQuad[7]) / 4;
+    const centerX = (contentQuad[0] + contentQuad[2] + contentQuad[4] + contentQuad[6]) / 4;
+    const centerY = (contentQuad[1] + contentQuad[3] + contentQuad[5] + contentQuad[7]) / 4;
 
     // Hold down modifier keys before the click
     for (const modifier of modifiers) {
@@ -131,7 +129,10 @@ export async function waitForPossibleNavigation(
     };
     page.on("dialog", handler);
     // Clean up on timeout — if no dialog fires, we don't need this listener
-    setTimeout(() => { page.off("dialog", handler); resolve(); }, detectionWindowMs);
+    setTimeout(() => {
+      page.off("dialog", handler);
+      resolve();
+    }, detectionWindowMs);
   });
 
   // Race: action vs dialog
@@ -172,10 +173,7 @@ export async function waitForPossibleNavigation(
 /**
  * Focus an element by backend node ID using CDP.
  */
-async function focusElementByBackendNodeId(
-  page: Page,
-  backendNodeId: number,
-): Promise<void> {
+async function focusElementByBackendNodeId(page: Page, backendNodeId: number): Promise<void> {
   const cdpSession = await page.createCDPSession();
   try {
     await cdpSession.send("DOM.focus", { backendNodeId });
@@ -185,27 +183,9 @@ async function focusElementByBackendNodeId(
 }
 
 /**
- * Scroll an element into view by backend node ID.
- */
-async function scrollIntoViewByBackendNodeId(
-  page: Page,
-  backendNodeId: number,
-): Promise<void> {
-  const cdpSession = await page.createCDPSession();
-  try {
-    await cdpSession.send("DOM.scrollIntoViewIfNeeded", { backendNodeId });
-  } finally {
-    await cdpSession.detach();
-  }
-}
-
-/**
  * Hover over an element by backend node ID.
  */
-async function hoverElementByBackendNodeId(
-  page: Page,
-  backendNodeId: number,
-): Promise<void> {
+async function hoverElementByBackendNodeId(page: Page, backendNodeId: number): Promise<void> {
   const cdpSession = await page.createCDPSession();
   try {
     await cdpSession.send("DOM.scrollIntoViewIfNeeded", { backendNodeId });
@@ -221,10 +201,8 @@ async function hoverElementByBackendNodeId(
     }
 
     const contentQuad = model.content;
-    const centerX =
-      (contentQuad[0] + contentQuad[2] + contentQuad[4] + contentQuad[6]) / 4;
-    const centerY =
-      (contentQuad[1] + contentQuad[3] + contentQuad[5] + contentQuad[7]) / 4;
+    const centerX = (contentQuad[0] + contentQuad[2] + contentQuad[4] + contentQuad[6]) / 4;
+    const centerY = (contentQuad[1] + contentQuad[3] + contentQuad[5] + contentQuad[7]) / 4;
 
     await page.mouse.move(centerX, centerY);
   } finally {
@@ -375,10 +353,7 @@ async function selectOptionByBackendNodeId(
 /**
  * Submit a form by backend node ID — calls form.submit() via CDP.
  */
-async function submitFormByBackendNodeId(
-  page: Page,
-  backendNodeId: number,
-): Promise<void> {
+async function submitFormByBackendNodeId(page: Page, backendNodeId: number): Promise<void> {
   const cdpSession = await page.createCDPSession();
   try {
     const { object } = await cdpSession.send("DOM.resolveNode", {
@@ -418,8 +393,7 @@ async function setFileInputFiles(
     const isFileInput =
       node.nodeName === "INPUT" &&
       (node.attributes ?? []).some(
-        (attr: string, i: number, arr: string[]) =>
-          attr === "type" && arr[i + 1] === "file",
+        (attr: string, i: number, arr: string[]) => attr === "type" && arr[i + 1] === "file",
       );
     if (!isFileInput) {
       throw new CharlotteError(
@@ -477,12 +451,7 @@ export function registerInteractionTools(
         });
 
         await waitForPossibleNavigation(page, () =>
-          clickElementByBackendNodeId(
-            page,
-            backendNodeId,
-            clickVariant,
-            activeModifiers,
-          ),
+          clickElementByBackendNodeId(page, backendNodeId, clickVariant, activeModifiers),
         );
 
         const representation = await renderAfterAction(deps);
@@ -597,13 +566,7 @@ export function registerInteractionTools(
           pressEnter: shouldPressEnter,
         });
 
-        await typeIntoElement(
-          page,
-          backendNodeId,
-          text,
-          shouldClearFirst,
-          shouldPressEnter,
-        );
+        await typeIntoElement(page, backendNodeId, text, shouldClearFirst, shouldPressEnter);
 
         const representation = await renderAfterAction(deps);
         return formatPageResponse(representation);
@@ -707,11 +670,7 @@ export function registerInteractionTools(
             submitButton: form.submit,
           });
           await waitForPossibleNavigation(page, () =>
-            clickElementByBackendNodeId(
-              page,
-              submitResolved.backendNodeId,
-              "left",
-            ),
+            clickElementByBackendNodeId(page, submitResolved.backendNodeId, "left"),
           );
         } else {
           // Fall back to dispatching submit event on the form itself
@@ -743,19 +702,12 @@ export function registerInteractionTools(
       description:
         "Scroll the page or a specific container. Returns full page representation after scrolling.",
       inputSchema: {
-        direction: z
-          .enum(["up", "down", "left", "right"])
-          .describe("Scroll direction"),
+        direction: z.enum(["up", "down", "left", "right"]).describe("Scroll direction"),
         amount: z
           .string()
           .optional()
-          .describe(
-            'Scroll amount: "page" (default), "half", or pixel value (e.g. "200")',
-          ),
-        element_id: z
-          .string()
-          .optional()
-          .describe("Scroll within a specific container element"),
+          .describe('Scroll amount: "page" (default), "half", or pixel value (e.g. "200")'),
+        element_id: z.string().optional().describe("Scroll within a specific container element"),
       },
     },
     async ({ direction, amount, element_id }) => {
@@ -774,14 +726,10 @@ export function registerInteractionTools(
         let pixelDistance: number;
         if (scrollAmount === "page") {
           pixelDistance =
-            direction === "left" || direction === "right"
-              ? viewportWidth
-              : viewportHeight;
+            direction === "left" || direction === "right" ? viewportWidth : viewportHeight;
         } else if (scrollAmount === "half") {
           pixelDistance =
-            direction === "left" || direction === "right"
-              ? viewportWidth / 2
-              : viewportHeight / 2;
+            direction === "left" || direction === "right" ? viewportWidth / 2 : viewportHeight / 2;
         } else {
           pixelDistance = parseInt(scrollAmount, 10);
           if (isNaN(pixelDistance)) {
@@ -892,14 +840,8 @@ export function registerInteractionTools(
     async ({ source_id, target_id }) => {
       try {
         await deps.browserManager.ensureConnected();
-        const { page, backendNodeId: sourceNodeId } = await resolveElement(
-          deps,
-          source_id,
-        );
-        const { backendNodeId: targetNodeId } = await resolveElement(
-          deps,
-          target_id,
-        );
+        const { page, backendNodeId: sourceNodeId } = await resolveElement(deps, source_id);
+        const { backendNodeId: targetNodeId } = await resolveElement(deps, target_id);
 
         logger.info("Dragging element", { source_id, target_id });
 
@@ -921,7 +863,7 @@ export function registerInteractionTools(
     "charlotte:key",
     {
       description:
-        'Send keyboard input to the page or a specific element. Supports single key with modifiers, or a sequence of keys. Use for keyboard-driven UIs (games, terminals, code editors) and non-input elements with keydown listeners.',
+        "Send keyboard input to the page or a specific element. Supports single key with modifiers, or a sequence of keys. Use for keyboard-driven UIs (games, terminals, code editors) and non-input elements with keydown listeners.",
       inputSchema: {
         key: z
           .string()
@@ -938,15 +880,21 @@ export function registerInteractionTools(
         modifiers: z
           .array(z.enum(["ctrl", "shift", "alt", "meta"]))
           .optional()
-          .describe('Modifier keys to hold during a single key press. Only valid with key, not keys.'),
+          .describe(
+            "Modifier keys to hold during a single key press. Only valid with key, not keys.",
+          ),
         element_id: z
           .string()
           .optional()
-          .describe("Element to focus before sending keys. If omitted, keys go to the currently focused element."),
+          .describe(
+            "Element to focus before sending keys. If omitted, keys go to the currently focused element.",
+          ),
         delay: z
           .number()
           .optional()
-          .describe("Milliseconds between key presses in a sequence (default: 0). Only valid with keys."),
+          .describe(
+            "Milliseconds between key presses in a sequence (default: 0). Only valid with keys.",
+          ),
       },
     },
     async ({ key, keys, modifiers, element_id, delay }) => {
@@ -1021,10 +969,7 @@ export function registerInteractionTools(
         "Set files on a file input element. Validates that files exist and that the target is a file input. Returns full page representation after upload.",
       inputSchema: {
         element_id: z.string().describe("Target file input element ID"),
-        paths: z
-          .array(z.string())
-          .min(1)
-          .describe("Absolute file paths to upload"),
+        paths: z.array(z.string()).min(1).describe("Absolute file paths to upload"),
       },
     },
     async ({ element_id, paths }) => {
@@ -1064,30 +1009,15 @@ export function registerInteractionTools(
       description:
         "Wait for a condition to be met on the page. Returns page representation when the condition is satisfied, or a TIMEOUT error.",
       inputSchema: {
-        element_id: z
-          .string()
-          .optional()
-          .describe("Wait for specific element to appear/change"),
+        element_id: z.string().optional().describe("Wait for specific element to appear/change"),
         state: z
           .enum(["visible", "hidden", "enabled", "disabled", "exists", "removed"])
           .optional()
           .describe("Target element state to wait for"),
-        text: z
-          .string()
-          .optional()
-          .describe("Wait for text to appear on the page"),
-        selector: z
-          .string()
-          .optional()
-          .describe("Wait for CSS selector to match"),
-        js: z
-          .string()
-          .optional()
-          .describe("Wait for JS expression to return truthy"),
-        timeout: z
-          .number()
-          .optional()
-          .describe("Max wait in ms (default: 10000)"),
+        text: z.string().optional().describe("Wait for text to appear on the page"),
+        selector: z.string().optional().describe("Wait for CSS selector to match"),
+        js: z.string().optional().describe("Wait for JS expression to return truthy"),
+        timeout: z.number().optional().describe("Max wait in ms (default: 10000)"),
       },
     },
     async ({ element_id, state, text, selector, js, timeout }) => {
@@ -1177,11 +1107,7 @@ async function pollWaitForCondition(
     // Check element_id + state condition
     if (condition.element_id) {
       const targetState = condition.state ?? "exists";
-      const elementSatisfied = await checkElementCondition(
-        deps,
-        condition.element_id,
-        targetState,
-      );
+      const elementSatisfied = await checkElementCondition(deps, condition.element_id, targetState);
       if (!elementSatisfied) allSatisfied = false;
     }
 
@@ -1203,7 +1129,7 @@ async function pollWaitForCondition(
     if (allSatisfied && condition.js) {
       try {
         const jsResult = await page.evaluate((expression) => {
-          return !!new Function('return ' + expression)();
+          return !!new Function("return " + expression)();
         }, condition.js);
         if (!jsResult) allSatisfied = false;
       } catch {
@@ -1216,9 +1142,7 @@ async function pollWaitForCondition(
     const remainingTime = deadline - Date.now();
     if (remainingTime <= 0) break;
 
-    await new Promise((resolve) =>
-      setTimeout(resolve, Math.min(pollInterval, remainingTime)),
-    );
+    await new Promise((resolve) => setTimeout(resolve, Math.min(pollInterval, remainingTime)));
   }
 
   return false;
@@ -1252,9 +1176,7 @@ async function checkElementCondition(
     case "disabled": {
       // Re-render to get fresh state
       const representation = await renderActivePage(deps, { detail: "minimal" });
-      const element = representation.interactive.find(
-        (el) => el.id === elementId,
-      );
+      const element = representation.interactive.find((el) => el.id === elementId);
       if (!element) {
         // Element doesn't exist — "hidden" and "disabled" are satisfied, others not
         return targetState === "hidden" || targetState === "disabled";

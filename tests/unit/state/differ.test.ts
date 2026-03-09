@@ -3,14 +3,9 @@ import { diffRepresentations } from "../../../src/state/differ.js";
 import type {
   PageRepresentation,
   InteractiveElement,
-  Landmark,
-  Heading,
-  FormRepresentation,
 } from "../../../src/types/page-representation.js";
 
-function createMockRepresentation(
-  overrides?: Partial<PageRepresentation>,
-): PageRepresentation {
+function createMockRepresentation(overrides?: Partial<PageRepresentation>): PageRepresentation {
   return {
     url: "https://example.com",
     title: "Test Page",
@@ -29,9 +24,7 @@ function createMockRepresentation(
   };
 }
 
-function createInteractiveElement(
-  overrides?: Partial<InteractiveElement>,
-): InteractiveElement {
+function createInteractiveElement(overrides?: Partial<InteractiveElement>): InteractiveElement {
   return {
     id: "btn-0001",
     type: "button",
@@ -76,9 +69,7 @@ describe("diffRepresentations", () => {
     it("detects removed landmarks", () => {
       const before = createMockRepresentation({
         structure: {
-          landmarks: [
-            { role: "main", label: "Content", bounds: { x: 0, y: 0, w: 800, h: 600 } },
-          ],
+          landmarks: [{ role: "main", label: "Content", bounds: { x: 0, y: 0, w: 800, h: 600 } }],
           headings: [],
           content_summary: "",
         },
@@ -95,18 +86,14 @@ describe("diffRepresentations", () => {
     it("detects moved landmarks", () => {
       const before = createMockRepresentation({
         structure: {
-          landmarks: [
-            { role: "main", label: "Content", bounds: { x: 0, y: 0, w: 800, h: 600 } },
-          ],
+          landmarks: [{ role: "main", label: "Content", bounds: { x: 0, y: 0, w: 800, h: 600 } }],
           headings: [],
           content_summary: "",
         },
       });
       const after = createMockRepresentation({
         structure: {
-          landmarks: [
-            { role: "main", label: "Content", bounds: { x: 0, y: 50, w: 800, h: 600 } },
-          ],
+          landmarks: [{ role: "main", label: "Content", bounds: { x: 0, y: 50, w: 800, h: 600 } }],
           headings: [],
           content_summary: "",
         },
@@ -270,9 +257,7 @@ describe("diffRepresentations", () => {
       const diff = diffRepresentations(before, after, 1, 2);
       const valueChange = diff.changes.find(
         (change) =>
-          change.type === "changed" &&
-          change.element === "inp-0001" &&
-          change.property === "value",
+          change.type === "changed" && change.element === "inp-0001" && change.property === "value",
       );
       expect(valueChange).toBeDefined();
       expect(valueChange!.from).toBe("old");
@@ -281,21 +266,15 @@ describe("diffRepresentations", () => {
 
     it("detects label changes", () => {
       const before = createMockRepresentation({
-        interactive: [
-          createInteractiveElement({ id: "btn-0001", label: "Save" }),
-        ],
+        interactive: [createInteractiveElement({ id: "btn-0001", label: "Save" })],
       });
       const after = createMockRepresentation({
-        interactive: [
-          createInteractiveElement({ id: "btn-0001", label: "Saving..." }),
-        ],
+        interactive: [createInteractiveElement({ id: "btn-0001", label: "Saving..." })],
       });
 
       const diff = diffRepresentations(before, after, 1, 2);
       const labelChange = diff.changes.find(
-        (change) =>
-          change.type === "changed" &&
-          change.property === "label",
+        (change) => change.type === "changed" && change.property === "label",
       );
       expect(labelChange).toBeDefined();
       expect(labelChange!.from).toBe("Save");
@@ -335,9 +314,7 @@ describe("diffRepresentations", () => {
         forms: [{ id: "frm-0001", fields: ["inp-a"], submit: "btn-sub" }],
       });
       const after = createMockRepresentation({
-        forms: [
-          { id: "frm-0001", fields: ["inp-a", "inp-b"], submit: "btn-sub" },
-        ],
+        forms: [{ id: "frm-0001", fields: ["inp-a", "inp-b"], submit: "btn-sub" }],
       });
 
       const diff = diffRepresentations(before, after, 1, 2);
@@ -357,9 +334,7 @@ describe("diffRepresentations", () => {
       const after = createMockRepresentation({ url: "https://example.com/b" });
 
       const diff = diffRepresentations(before, after, 1, 2);
-      const urlChange = diff.changes.find(
-        (change) => change.property === "url",
-      );
+      const urlChange = diff.changes.find((change) => change.property === "url");
       expect(urlChange).toBeDefined();
       expect(urlChange!.from).toBe("https://example.com/a");
       expect(urlChange!.to).toBe("https://example.com/b");
@@ -370,9 +345,7 @@ describe("diffRepresentations", () => {
       const after = createMockRepresentation({ title: "New Title" });
 
       const diff = diffRepresentations(before, after, 1, 2);
-      const titleChange = diff.changes.find(
-        (change) => change.property === "title",
-      );
+      const titleChange = diff.changes.find((change) => change.property === "title");
       expect(titleChange).toBeDefined();
     });
 
@@ -393,9 +366,7 @@ describe("diffRepresentations", () => {
       });
 
       const diff = diffRepresentations(before, after, 1, 2);
-      const summaryChange = diff.changes.find(
-        (change) => change.property === "content_summary",
-      );
+      const summaryChange = diff.changes.find((change) => change.property === "content_summary");
       expect(summaryChange).toBeDefined();
     });
   });
@@ -404,9 +375,7 @@ describe("diffRepresentations", () => {
     const before = createMockRepresentation({
       url: "https://example.com/a",
       structure: {
-        landmarks: [
-          { role: "main", label: "Content", bounds: { x: 0, y: 0, w: 800, h: 600 } },
-        ],
+        landmarks: [{ role: "main", label: "Content", bounds: { x: 0, y: 0, w: 800, h: 600 } }],
         headings: [],
         content_summary: "original",
       },
@@ -420,9 +389,7 @@ describe("diffRepresentations", () => {
         headings: [{ level: 1, text: "New", id: "h-0001" }],
         content_summary: "updated",
       },
-      interactive: [
-        createInteractiveElement({ id: "btn-0002", label: "New Button" }),
-      ],
+      interactive: [createInteractiveElement({ id: "btn-0002", label: "New Button" })],
     });
 
     it("scope 'structure' only includes landmarks and headings", () => {
@@ -458,8 +425,7 @@ describe("diffRepresentations", () => {
       expect(hasInteractiveChange).toBe(true);
 
       const hasStructuralChange = diff.changes.some(
-        (change) =>
-          change.detail?.includes("Landmark") || change.detail?.includes("Heading"),
+        (change) => change.detail?.includes("Landmark") || change.detail?.includes("Heading"),
       );
       expect(hasStructuralChange).toBe(false);
     });
@@ -472,8 +438,8 @@ describe("diffRepresentations", () => {
       );
       expect(hasContentChange).toBe(true);
 
-      const hasStructuralChange = diff.changes.some(
-        (change) => change.detail?.includes("Landmark"),
+      const hasStructuralChange = diff.changes.some((change) =>
+        change.detail?.includes("Landmark"),
       );
       expect(hasStructuralChange).toBe(false);
     });
@@ -494,9 +460,7 @@ describe("diffRepresentations", () => {
   describe("summary generation", () => {
     it("generates a summary with change counts", () => {
       const before = createMockRepresentation({
-        interactive: [
-          createInteractiveElement({ id: "btn-0001" }),
-        ],
+        interactive: [createInteractiveElement({ id: "btn-0001" })],
       });
       const after = createMockRepresentation({
         interactive: [

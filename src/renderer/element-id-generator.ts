@@ -5,6 +5,7 @@ import { hashToHex4 } from "../utils/hash.js";
 export class ElementIdGenerator {
   private idToBackendNodeId = new Map<string, number>();
   private backendNodeIdToId = new Map<number, string>();
+  private idToFrameId = new Map<string, string>();
   private usedIds = new Set<string>();
 
   generateId(
@@ -13,6 +14,7 @@ export class ElementIdGenerator {
     name: string,
     domPath: DOMPathSignature,
     backendDOMNodeId: number | null,
+    frameId?: string | null,
   ): string {
     const prefix = TYPE_PREFIX_MAP[elementType] ?? "el";
 
@@ -24,6 +26,7 @@ export class ElementIdGenerator {
       domPath.nearestLandmarkLabel ?? "",
       domPath.nearestLabelledContainer ?? "",
       String(domPath.siblingIndex),
+      frameId ?? "",
     ].join("|");
 
     const hexHash = hashToHex4(compositeKey);
@@ -45,6 +48,10 @@ export class ElementIdGenerator {
       this.backendNodeIdToId.set(backendDOMNodeId, candidateId);
     }
 
+    if (frameId) {
+      this.idToFrameId.set(candidateId, frameId);
+    }
+
     return candidateId;
   }
 
@@ -52,23 +59,23 @@ export class ElementIdGenerator {
     return this.idToBackendNodeId.get(elementId) ?? null;
   }
 
+  /** Returns the CDP frame ID for an element, or null if it belongs to the main frame. */
+  resolveFrame(elementId: string): string | null {
+    return this.idToFrameId.get(elementId) ?? null;
+  }
+
   getIdForBackendNode(backendDOMNodeId: number): string | null {
     return this.backendNodeIdToId.get(backendDOMNodeId) ?? null;
   }
 
-  findSimilar(
-    elementId: string,
-    currentElements: InteractiveElement[],
-  ): InteractiveElement | null {
+  findSimilar(elementId: string, currentElements: InteractiveElement[]): InteractiveElement | null {
     // Extract type prefix from the missing ID
     const dashIndex = elementId.indexOf("-");
     if (dashIndex === -1) return null;
     const prefix = elementId.substring(0, dashIndex);
 
     // Find elements with the same prefix (same type)
-    const sameType = currentElements.filter((el) =>
-      el.id.startsWith(prefix + "-"),
-    );
+    const sameType = currentElements.filter((el) => el.id.startsWith(prefix + "-"));
 
     if (sameType.length === 0) return null;
 
@@ -82,6 +89,7 @@ export class ElementIdGenerator {
   clear(): void {
     this.idToBackendNodeId.clear();
     this.backendNodeIdToId.clear();
+    this.idToFrameId.clear();
     this.usedIds.clear();
   }
 
@@ -93,6 +101,7 @@ export class ElementIdGenerator {
   replaceWith(other: ElementIdGenerator): void {
     this.idToBackendNodeId = new Map(other.idToBackendNodeId);
     this.backendNodeIdToId = new Map(other.backendNodeIdToId);
+    this.idToFrameId = new Map(other.idToFrameId);
     this.usedIds = new Set(other.usedIds);
   }
 }

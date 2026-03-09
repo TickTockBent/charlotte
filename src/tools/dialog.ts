@@ -4,11 +4,7 @@ import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 import { logger } from "../utils/logger.js";
 import type { RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ToolDependencies } from "./tool-helpers.js";
-import {
-  renderAfterAction,
-  stripEmptyFields,
-  handleToolError,
-} from "./tool-helpers.js";
+import { renderAfterAction, stripEmptyFields, handleToolError } from "./tool-helpers.js";
 
 export function registerDialogTools(
   server: McpServer,
@@ -23,13 +19,13 @@ export function registerDialogTools(
       description:
         "Handle a pending JavaScript dialog (alert, confirm, prompt, beforeunload). Accept or dismiss the dialog. Returns page representation after the dialog is resolved.",
       inputSchema: {
-        accept: z
-          .boolean()
-          .describe("true to accept/OK the dialog, false to dismiss/Cancel"),
+        accept: z.boolean().describe("true to accept/OK the dialog, false to dismiss/Cancel"),
         prompt_text: z
           .string()
           .optional()
-          .describe('Text to enter for "prompt" dialogs before accepting. Ignored for other dialog types.'),
+          .describe(
+            'Text to enter for "prompt" dialogs before accepting. Ignored for other dialog types.',
+          ),
       },
     },
     async ({ accept, prompt_text }) => {

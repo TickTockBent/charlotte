@@ -45,10 +45,7 @@ async function main(): Promise<void> {
   // Initialize renderer pipeline
   const cdpSessionManager = new CDPSessionManager();
   const elementIdGenerator = new ElementIdGenerator();
-  const rendererPipeline = new RendererPipeline(
-    cdpSessionManager,
-    elementIdGenerator,
-  );
+  const rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator, config);
   const snapshotStore = new SnapshotStore(config.snapshotDepth);
 
   // Initialize screenshot artifact store
@@ -63,6 +60,7 @@ async function main(): Promise<void> {
     {
       browserManager,
       pageManager,
+      cdpSessionManager,
       rendererPipeline,
       elementIdGenerator,
       snapshotStore,

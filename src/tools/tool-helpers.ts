@@ -1,22 +1,21 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import type { Page } from "puppeteer";
+import type { Page, CDPSession } from "puppeteer";
 import type { PageManager } from "../browser/page-manager.js";
 import type { BrowserManager } from "../browser/browser-manager.js";
+import type { CDPSessionManager } from "../browser/cdp-session.js";
 import type { RendererPipeline } from "../renderer/renderer-pipeline.js";
 import type { ElementIdGenerator } from "../renderer/element-id-generator.js";
 import type { SnapshotStore } from "../state/snapshot-store.js";
 import type { ArtifactStore } from "../state/artifact-store.js";
 import type { CharlotteConfig } from "../types/config.js";
 import type { DevModeState } from "../dev/dev-mode-state.js";
-import type {
-  PageRepresentation,
-  InteractiveElement,
-} from "../types/page-representation.js";
+import type { PageRepresentation, InteractiveElement } from "../types/page-representation.js";
 import type { DetailLevel } from "../renderer/renderer-pipeline.js";
 import { z } from "zod";
 import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 import { diffRepresentations } from "../state/differ.js";
+import { logger } from "../utils/logger.js";
 
 /**
  * Boolean schema that accepts both native booleans and string representations
@@ -31,6 +30,7 @@ export const coercedBoolean = z.preprocess(
 export interface ToolDependencies {
   browserManager: BrowserManager;
   pageManager: PageManager;
+  cdpSessionManager: CDPSessionManager;
   rendererPipeline: RendererPipeline;
   elementIdGenerator: ElementIdGenerator;
   snapshotStore: SnapshotStore;
@@ -126,6 +126,13 @@ export async function renderActivePage(
   return representation;
 }
 
+export interface ResolvedElement {
+  page: Page;
+  backendNodeId: number;
+  /** CDP frame ID if the element is in an iframe, null for main frame. */
+  frameId: string | null;
+}
+
 /**
  * Resolve an element ID to a Puppeteer ElementHandle via CDP backend node ID.
  * If the ID is stale (not found after re-render), throws ELEMENT_NOT_FOUND
@@ -134,27 +141,26 @@ export async function renderActivePage(
 export async function resolveElement(
   deps: ToolDependencies,
   elementId: string,
-): Promise<{ page: Page; backendNodeId: number }> {
+): Promise<ResolvedElement> {
   const page = deps.pageManager.getActivePage();
 
   // Step 1: Check current map
   let backendNodeId = deps.elementIdGenerator.resolveId(elementId);
   if (backendNodeId !== null) {
-    return { page, backendNodeId };
+    const frameId = deps.elementIdGenerator.resolveFrame(elementId);
+    return { page, backendNodeId, frameId };
   }
 
   // Step 2: Re-render and check again (map was invalidated)
   const freshRepresentation = await renderActivePage(deps, { detail: "minimal" });
   backendNodeId = deps.elementIdGenerator.resolveId(elementId);
   if (backendNodeId !== null) {
-    return { page, backendNodeId };
+    const frameId = deps.elementIdGenerator.resolveFrame(elementId);
+    return { page, backendNodeId, frameId };
   }
 
   // Step 3: Element is genuinely gone — suggest similar
-  const similar = deps.elementIdGenerator.findSimilar(
-    elementId,
-    freshRepresentation.interactive,
-  );
+  const similar = deps.elementIdGenerator.findSimilar(elementId, freshRepresentation.interactive);
 
   const suggestion = similar
     ? `Element '${elementId}' not found. Did you mean '${similar.id}' (${similar.type}: "${similar.label}")?`
@@ -168,13 +174,34 @@ export async function resolveElement(
 }
 
 /**
+ * Get the appropriate CDP session for an element.
+ * Returns the frame-specific session for iframe elements, or the main page session.
+ */
+export async function getSessionForElement(
+  deps: ToolDependencies,
+  resolved: ResolvedElement,
+): Promise<CDPSession> {
+  if (resolved.frameId) {
+    // Find the frame by ID and get its session
+    const allFrames = resolved.page.frames();
+    const targetFrame = allFrames.find(
+      (f) => deps.cdpSessionManager.getFrameId(f) === resolved.frameId,
+    );
+    if (targetFrame) {
+      return deps.cdpSessionManager.getFrameSession(targetFrame);
+    }
+    // Fallback to main session if frame not found (frame may have navigated away)
+    logger.warn(`Frame ${resolved.frameId} not found, falling back to main session`);
+  }
+  return deps.cdpSessionManager.getSession(resolved.page);
+}
+
+/**
  * Render after an interaction action and attach a delta diff.
  * Captures the pre-action snapshot (latest in store), renders post-action
  * state, and computes a structural diff between them.
  */
-export async function renderAfterAction(
-  deps: ToolDependencies,
-): Promise<PageRepresentation> {
+export async function renderAfterAction(deps: ToolDependencies): Promise<PageRepresentation> {
   const preActionSnapshot = deps.snapshotStore.getLatest();
 
   const representation = await renderActivePage(deps, { source: "action" });
@@ -240,6 +267,11 @@ export function stripEmptyFields(representation: PageRepresentation): Record<str
     }
 
     cleaned.structure = structure;
+  }
+
+  // Strip empty iframes
+  if (!representation.iframes || representation.iframes.length === 0) {
+    delete cleaned.iframes;
   }
 
   // Strip absent pending_dialog

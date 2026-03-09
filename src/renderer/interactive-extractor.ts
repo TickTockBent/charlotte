@@ -3,7 +3,6 @@ import type { ParsedAXNode } from "./accessibility-extractor.js";
 import { isInteractiveRole } from "./accessibility-extractor.js";
 import type { ElementIdGenerator } from "./element-id-generator.js";
 import { computeDOMPathSignature } from "./dom-path.js";
-import { ZERO_BOUNDS } from "./layout-extractor.js";
 import type {
   Bounds,
   InteractiveElement,
@@ -77,6 +76,7 @@ export class InteractiveExtractor {
     rootNodes: ParsedAXNode[],
     boundsMap: Map<number, Bounds>,
     idGenerator: ElementIdGenerator,
+    frameId?: string,
   ): ExtractionResult {
     const elements: InteractiveElement[] = [];
     const formNodes: ParsedAXNode[] = [];
@@ -95,6 +95,7 @@ export class InteractiveExtractor {
           node.name,
           domPath,
           node.backendDOMNodeId,
+          frameId,
         );
 
         let bounds: Bounds | null = null;
@@ -135,10 +136,7 @@ export class InteractiveExtractor {
         if (elementType === "select") {
           const options: string[] = [];
           const collectOptions = (optionNode: ParsedAXNode) => {
-            if (
-              optionNode.role === "option" ||
-              optionNode.role === "listitem"
-            ) {
+            if (optionNode.role === "option" || optionNode.role === "listitem") {
               options.push(optionNode.name || optionNode.value || "");
             }
             for (const child of optionNode.children) {
@@ -166,7 +164,7 @@ export class InteractiveExtractor {
     }
 
     // Build form representations
-    const forms = this.buildFormRepresentations(formNodes, elements, idGenerator, boundsMap);
+    const forms = this.buildFormRepresentations(formNodes, elements, idGenerator, boundsMap, frameId);
 
     return { elements, forms };
   }
@@ -175,7 +173,8 @@ export class InteractiveExtractor {
     formNodes: ParsedAXNode[],
     interactiveElements: InteractiveElement[],
     idGenerator: ElementIdGenerator,
-    boundsMap: Map<number, Bounds>,
+    _boundsMap: Map<number, Bounds>,
+    frameId?: string,
   ): FormRepresentation[] {
     const forms: FormRepresentation[] = [];
 
@@ -187,6 +186,7 @@ export class InteractiveExtractor {
         formNode.name,
         domPath,
         formNode.backendDOMNodeId,
+        frameId,
       );
 
       // Collect IDs of interactive elements that are descendants of this form
@@ -205,8 +205,7 @@ export class InteractiveExtractor {
           if (matchingElement) {
             if (
               node.role === "button" &&
-              (node.properties["type"] === "submit" ||
-                node.name?.toLowerCase().includes("submit"))
+              (node.properties["type"] === "submit" || node.name?.toLowerCase().includes("submit"))
             ) {
               submitButtonId = matchingElement.id;
             } else {

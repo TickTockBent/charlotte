@@ -104,7 +104,10 @@ export class PageManager {
       logger.info("Dialog appeared", { tabId, type: dialogType, message: dialog.message() });
 
       // Auto-dismiss logic
-      if (autoDismiss === "accept_all" || (autoDismiss === "accept_alerts" && dialogType === "alert")) {
+      if (
+        autoDismiss === "accept_all" ||
+        (autoDismiss === "accept_alerts" && dialogType === "alert")
+      ) {
         await dialog.accept();
         return;
       }
@@ -146,10 +149,7 @@ export class PageManager {
   async switchTab(tabId: string): Promise<Page> {
     const managedPage = this.pages.get(tabId);
     if (!managedPage) {
-      throw new CharlotteError(
-        CharlotteErrorCode.SESSION_ERROR,
-        `Tab '${tabId}' not found`,
-      );
+      throw new CharlotteError(CharlotteErrorCode.SESSION_ERROR, `Tab '${tabId}' not found`);
     }
 
     this.activeTabId = tabId;
@@ -160,10 +160,7 @@ export class PageManager {
   async closeTab(tabId: string): Promise<void> {
     const managedPage = this.pages.get(tabId);
     if (!managedPage) {
-      throw new CharlotteError(
-        CharlotteErrorCode.SESSION_ERROR,
-        `Tab '${tabId}' not found`,
-      );
+      throw new CharlotteError(CharlotteErrorCode.SESSION_ERROR, `Tab '${tabId}' not found`);
     }
 
     await managedPage.page.close();
@@ -212,10 +209,7 @@ export class PageManager {
 
   getActiveTabId(): string {
     if (!this.activeTabId) {
-      throw new CharlotteError(
-        CharlotteErrorCode.SESSION_ERROR,
-        "No active tab",
-      );
+      throw new CharlotteError(CharlotteErrorCode.SESSION_ERROR, "No active tab");
     }
     return this.activeTabId;
   }

@@ -10,14 +10,11 @@ import { SnapshotStore } from "../../src/state/snapshot-store.js";
 import { ArtifactStore } from "../../src/state/artifact-store.js";
 import { createDefaultConfig } from "../../src/types/config.js";
 import type { ToolDependencies } from "../../src/tools/tool-helpers.js";
-import {
-  renderActivePage,
-  formatPageResponse,
-} from "../../src/tools/tool-helpers.js";
+import { renderActivePage, formatPageResponse } from "../../src/tools/tool-helpers.js";
 
 const SIMPLE_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/simple.html")}`;
 const SPA_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/spa.html")}`;
-const DYNAMIC_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/dynamic.html")}`;
+const _DYNAMIC_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/dynamic.html")}`;
 
 describe("Navigation integration", () => {
   let browserManager: BrowserManager;
@@ -36,13 +33,12 @@ describe("Navigation integration", () => {
     elementIdGenerator = new ElementIdGenerator();
     rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator);
     const config = createDefaultConfig();
-    const artifactStore = new ArtifactStore(
-      path.join(os.tmpdir(), "charlotte-nav-test-artifacts"),
-    );
+    const artifactStore = new ArtifactStore(path.join(os.tmpdir(), "charlotte-nav-test-artifacts"));
     await artifactStore.initialize();
     deps = {
       browserManager,
       pageManager,
+      cdpSessionManager,
       rendererPipeline,
       elementIdGenerator,
       snapshotStore: new SnapshotStore(config.snapshotDepth),
@@ -122,9 +118,7 @@ describe("Navigation integration", () => {
       // Same page content after reload
       expect(afterReload.url).toBe(beforeReload.url);
       expect(afterReload.title).toBe(beforeReload.title);
-      expect(afterReload.structure.landmarks.length).toBe(
-        beforeReload.structure.landmarks.length,
-      );
+      expect(afterReload.structure.landmarks.length).toBe(beforeReload.structure.landmarks.length);
     });
   });
 

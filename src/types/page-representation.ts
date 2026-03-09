@@ -10,12 +10,16 @@ export interface Landmark {
   role: string;
   label: string;
   bounds: Bounds;
+  /** Source frame URL. Omitted for main frame. */
+  frame?: string;
 }
 
 export interface Heading {
   level: 1 | 2 | 3 | 4 | 5 | 6;
   text: string;
   id: string;
+  /** Source frame URL. Omitted for main frame. */
+  frame?: string;
 }
 
 export interface ElementState {
@@ -53,6 +57,8 @@ export interface InteractiveElement {
   placeholder?: string;
   value?: string;
   options?: string[];
+  /** Source frame URL. Omitted for main frame. */
+  frame?: string;
 }
 
 export interface FormRepresentation {
@@ -61,6 +67,8 @@ export interface FormRepresentation {
   method?: string;
   fields: string[];
   submit: string | null;
+  /** Source frame URL. Omitted for main frame. */
+  frame?: string;
 }
 
 export interface PageStructure {
@@ -87,8 +95,14 @@ export interface ReloadEvent {
 export interface PendingDialog {
   type: "alert" | "confirm" | "prompt" | "beforeunload";
   message: string;
-  default_value?: string;  // Only present for "prompt" dialogs
-  timestamp: string;       // ISO 8601
+  default_value?: string; // Only present for "prompt" dialogs
+  timestamp: string; // ISO 8601
+}
+
+export interface IframeInfo {
+  frame_id: string;
+  url: string;
+  bounds: Bounds | null;
 }
 
 export interface PageRepresentation {
@@ -105,6 +119,7 @@ export interface PageRepresentation {
     network: Array<{ url: string; status: number; statusText: string }>;
   };
   interactive_summary?: InteractiveSummary;
+  iframes?: IframeInfo[];
   reload_event?: ReloadEvent;
   pending_dialog?: PendingDialog;
   delta?: import("./snapshot.js").SnapshotDiff;

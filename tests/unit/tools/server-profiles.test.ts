@@ -8,9 +8,7 @@ import {
 
 describe("server profile integration", () => {
   describe("profile resolution consistency", () => {
-    const allProfiles: ToolProfile[] = [
-      "core", "browse", "interact", "develop", "audit", "full",
-    ];
+    const allProfiles: ToolProfile[] = ["core", "browse", "interact", "develop", "audit", "full"];
 
     for (const profile of allProfiles) {
       it(`${profile} profile resolves to valid tool names`, () => {
@@ -67,8 +65,14 @@ describe("server profile integration", () => {
 
     it("all groups together equals full profile", () => {
       const allGroups = resolveGroups([
-        "navigation", "observation", "interaction", "session",
-        "dev_mode", "dialog", "evaluate", "monitoring",
+        "navigation",
+        "observation",
+        "interaction",
+        "session",
+        "dev_mode",
+        "dialog",
+        "evaluate",
+        "monitoring",
       ]);
       const full = resolveProfile("full");
       expect(allGroups.size).toBe(full.size);

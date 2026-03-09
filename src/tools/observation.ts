@@ -152,7 +152,7 @@ export function registerObservationTools(
     "charlotte:observe",
     {
       description:
-        'Get current page state without performing any action. Use detail levels to control verbosity: "minimal" for landmarks, headings, and interactive element counts by landmark (use charlotte:find to get specific elements with actionable IDs, or observe({ detail: "summary" }) to see all elements), "summary" (default) for content summaries and full element list, "full" for all text content. Use view: "tree" for a compact structural outline — cheapest way to orient on page structure.',
+        'Get current page state without performing any action. Use detail levels to control verbosity: "minimal" for landmarks, headings, and interactive element counts by landmark (use charlotte:find to get specific elements with actionable IDs, or observe({ detail: "summary" }) to see all elements), "summary" (default) for content summaries and full element list, "full" for all text content. Use view: "tree" for a compact structural outline (cheapest orientation tool), or view: "tree-labeled" to include labels on interactive elements (still much cheaper than minimal JSON, and shows which button/link/input is which).',
       inputSchema: {
         detail: z
           .enum(["minimal", "summary", "full"])
@@ -161,10 +161,10 @@ export function registerObservationTools(
             '"summary" (default), "full" (includes all text content), "minimal" (landmarks + interactive only)',
           ),
         view: z
-          .enum(["default", "tree"])
+          .enum(["default", "tree", "tree-labeled"])
           .optional()
           .describe(
-            '"default" (structured JSON) or "tree" (compact structural outline showing landmarks, headings, and element types without text content — cheapest orientation tool)',
+            '"default" (structured JSON), "tree" (compact structural outline — element types only, cheapest), or "tree-labeled" (structural outline with interactive element labels — shows which button/link/input is which, still ~70% cheaper than minimal JSON)',
           ),
         selector: z.string().optional().describe("CSS selector to scope observation to a subtree"),
         include_styles: z
@@ -183,8 +183,8 @@ export function registerObservationTools(
       try {
         await deps.browserManager.ensureConnected();
 
-        // Tree view: lightweight structural outline, skips full render pipeline
-        if (view === "tree") {
+        // Tree views: lightweight structural outline, skips full render pipeline
+        if (view === "tree" || view === "tree-labeled") {
           const page = deps.pageManager.getActivePage();
           const pendingDialogInfo = deps.pageManager.getPendingDialogInfo();
           if (pendingDialogInfo) {
@@ -192,8 +192,9 @@ export function registerObservationTools(
               content: [{ type: "text" as const, text: "(dialog blocking page)" }],
             };
           }
-          logger.info("Rendering structural tree view");
-          const tree = await deps.rendererPipeline.renderTree(page);
+          const labelInteractive = view === "tree-labeled";
+          logger.info("Rendering structural tree view", { labeled: labelInteractive });
+          const tree = await deps.rendererPipeline.renderTree(page, { labelInteractive });
           return {
             content: [{ type: "text" as const, text: tree }],
           };

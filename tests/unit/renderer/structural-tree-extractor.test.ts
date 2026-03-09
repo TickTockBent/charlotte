@@ -394,4 +394,93 @@ describe("extractStructuralTree", () => {
     expect(result).toContain("checkbox");
     expect(result).toContain("toggle");
   });
+
+  // ─── labelInteractive option ───
+
+  it("omits interactive labels by default", () => {
+    const main = createNode({
+      role: "main",
+      children: [
+        createNode({ role: "button", name: "Submit" }),
+        createNode({ role: "link", name: "Home" }),
+        createNode({ role: "textbox", name: "Email" }),
+      ],
+    });
+    for (const child of main.children) child.parent = main;
+
+    const result = extractStructuralTree([main]);
+    expect(result).not.toContain("Submit");
+    expect(result).not.toContain("Home");
+    expect(result).not.toContain("Email");
+  });
+
+  it("includes interactive labels when labelInteractive is true", () => {
+    const main = createNode({
+      role: "main",
+      children: [
+        createNode({ role: "button", name: "Submit" }),
+        createNode({ role: "link", name: "Home" }),
+        createNode({ role: "textbox", name: "Email" }),
+      ],
+    });
+    for (const child of main.children) child.parent = main;
+
+    const result = extractStructuralTree([main], undefined, { labelInteractive: true });
+    expect(result).toContain('button "Submit"');
+    expect(result).toContain('link "Home"');
+    expect(result).toContain('input "Email"');
+  });
+
+  it("labeled interactive elements are not collapsed", () => {
+    const main = createNode({
+      role: "main",
+      children: [
+        createNode({ role: "link", name: "Home" }),
+        createNode({ role: "link", name: "About" }),
+        createNode({ role: "link", name: "Contact" }),
+      ],
+    });
+    for (const child of main.children) child.parent = main;
+
+    const result = extractStructuralTree([main], undefined, { labelInteractive: true });
+    expect(result).toContain('link "Home"');
+    expect(result).toContain('link "About"');
+    expect(result).toContain('link "Contact"');
+    expect(result).not.toContain("×");
+  });
+
+  it("collapses unlabeled interactive elements even when labelInteractive is true", () => {
+    const main = createNode({
+      role: "main",
+      children: [
+        createNode({ role: "button", name: "" }),
+        createNode({ role: "button", name: "" }),
+        createNode({ role: "button", name: "" }),
+      ],
+    });
+    for (const child of main.children) child.parent = main;
+
+    const result = extractStructuralTree([main], undefined, { labelInteractive: true });
+    expect(result).toContain("button × 3");
+  });
+
+  it("labeled option propagates into lists with interactive children", () => {
+    const list = createNode({
+      role: "list",
+      children: [
+        createNode({
+          role: "listitem",
+          children: [createNode({ role: "link", name: "Home" })],
+        }),
+        createNode({
+          role: "listitem",
+          children: [createNode({ role: "link", name: "About" })],
+        }),
+      ],
+    });
+
+    const result = extractStructuralTree([list], undefined, { labelInteractive: true });
+    expect(result).toContain('link "Home"');
+    expect(result).toContain('link "About"');
+  });
 });

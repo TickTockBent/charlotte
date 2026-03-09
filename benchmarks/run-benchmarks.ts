@@ -25,6 +25,8 @@ import { toolDefinitionsTest } from "./tests/10-tool-definitions.js";
 import { browseSessionTest } from "./tests/11-browse-session.js";
 import { interactiveSessionTest } from "./tests/12-interactive-session.js";
 import { runtimeToggleTest } from "./tests/13-runtime-toggle.js";
+import { detailLevelsTest } from "./tests/20-detail-levels.js";
+import { treeOrientationTest } from "./tests/21-tree-orientation.js";
 import type { BenchmarkTest } from "./harness/test-runner.js";
 import type { ServerConfig } from "./harness/mcp-client.js";
 
@@ -43,12 +45,18 @@ const PROFILE_TESTS: BenchmarkTest[] = [
   runtimeToggleTest,
 ];
 
-const ALL_TESTS: BenchmarkTest[] = [...COMPARISON_TESTS, ...PROFILE_TESTS];
+const DETAIL_LEVEL_TESTS: BenchmarkTest[] = [
+  detailLevelsTest,
+  treeOrientationTest,
+];
+
+const ALL_TESTS: BenchmarkTest[] = [...COMPARISON_TESTS, ...PROFILE_TESTS, ...DETAIL_LEVEL_TESTS];
 
 const COMPARISON_SERVERS = ["charlotte", "playwright", "chrome-devtools"];
 const PROFILE_SERVERS = ["charlotte-full", "charlotte-browse", "charlotte-core"];
+const DETAIL_LEVEL_SERVERS = ["charlotte-browse"];
 
-type Suite = "comparison" | "profiles";
+type Suite = "comparison" | "profiles" | "detail-levels";
 
 function parseArgs(): { servers: string[]; tests: string[]; suite: Suite | null } {
   const args = process.argv.slice(2);
@@ -63,16 +71,24 @@ function parseArgs(): { servers: string[]; tests: string[]; suite: Suite | null 
       tests.push(args[++i]);
     } else if (args[i] === "--suite" && args[i + 1]) {
       const suiteArg = args[++i];
-      if (suiteArg === "comparison" || suiteArg === "profiles") {
+      if (suiteArg === "comparison" || suiteArg === "profiles" || suiteArg === "detail-levels") {
         suite = suiteArg;
       } else {
-        console.error(`Unknown suite: ${suiteArg}. Valid suites: comparison, profiles`);
+        console.error(`Unknown suite: ${suiteArg}. Valid suites: comparison, profiles, detail-levels`);
         process.exit(1);
       }
     }
   }
 
   // Apply suite defaults if no explicit servers/tests
+  if (suite === "detail-levels") {
+    return {
+      servers: servers.length > 0 ? servers : DETAIL_LEVEL_SERVERS,
+      tests: tests.length > 0 ? tests : [],
+      suite,
+    };
+  }
+
   if (suite === "profiles") {
     return {
       servers: servers.length > 0 ? servers : PROFILE_SERVERS,
@@ -108,6 +124,8 @@ const TEST_ID_TO_NAME: Record<string, string> = {
   "11": "Browse Session",
   "12": "Interactive Session",
   "13": "Runtime Toggle",
+  "20": "Detail Levels",
+  "21": "Tree Orientation",
 };
 
 function filterTests(tests: BenchmarkTest[], testFilter: string[]): BenchmarkTest[] {
@@ -130,7 +148,9 @@ async function main() {
 
   // Select test pool based on suite
   let testPool: BenchmarkTest[];
-  if (suite === "profiles") {
+  if (suite === "detail-levels") {
+    testPool = DETAIL_LEVEL_TESTS;
+  } else if (suite === "profiles") {
     testPool = PROFILE_TESTS;
   } else if (suite === "comparison") {
     testPool = COMPARISON_TESTS;
@@ -140,11 +160,13 @@ async function main() {
 
   const testsToRun = filterTests(testPool, testFilter);
 
-  const suiteName = suite === "profiles"
-    ? "Profile Comparison"
-    : suite === "comparison"
-      ? "Server Comparison"
-      : "Charlotte Benchmark";
+  const suiteName = suite === "detail-levels"
+    ? "Detail Level Comparison"
+    : suite === "profiles"
+      ? "Profile Comparison"
+      : suite === "comparison"
+        ? "Server Comparison"
+        : "Charlotte Benchmark";
 
   console.log(`=== ${suiteName} Suite ===\n`);
   console.log(`Servers: ${serverNames.join(", ")}`);
@@ -153,7 +175,9 @@ async function main() {
 
   // Compute output directory early so raw results go to the right place
   let outputDir: string | undefined;
-  if (suite === "profiles") {
+  if (suite === "detail-levels") {
+    outputDir = join(import.meta.dirname, "results", "raw", "detail-levels-v1");
+  } else if (suite === "profiles") {
     outputDir = join(import.meta.dirname, "results", "raw", "tiered-profiles-v1");
   }
 

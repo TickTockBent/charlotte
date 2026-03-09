@@ -99,9 +99,19 @@ function getHeadingLevel(node: ParsedAXNode): number {
   return 2;
 }
 
+// ─── Options ───
+
+export interface StructuralTreeOptions {
+  /** Include accessible names on interactive elements. Default: false. */
+  labelInteractive?: boolean;
+}
+
 // ─── Tree building ───
 
-function buildDisplayTree(nodes: ParsedAXNode[]): DisplayNode[] {
+function buildDisplayTree(
+  nodes: ParsedAXNode[],
+  options: StructuralTreeOptions = {},
+): DisplayNode[] {
   const result: DisplayNode[] = [];
 
   for (const node of nodes) {
@@ -113,7 +123,7 @@ function buildDisplayTree(nodes: ParsedAXNode[]): DisplayNode[] {
       result.push({
         tag: node.role,
         label,
-        children: buildDisplayTree(node.children),
+        children: buildDisplayTree(node.children, options),
         collapsible: false,
       });
       continue;
@@ -132,10 +142,13 @@ function buildDisplayTree(nodes: ParsedAXNode[]): DisplayNode[] {
     }
 
     if (isInteractiveRole(node.role)) {
+      const tag = INTERACTIVE_TAG[node.role] ?? node.role;
+      const label = options.labelInteractive ? (node.name || undefined) : undefined;
       result.push({
-        tag: INTERACTIVE_TAG[node.role] ?? node.role,
+        tag,
+        label,
         children: [],
-        collapsible: true,
+        collapsible: !label,
       });
       continue;
     }
@@ -152,7 +165,7 @@ function buildDisplayTree(nodes: ParsedAXNode[]): DisplayNode[] {
     // Lists: passthrough if they contain interactive elements, marker otherwise
     if (node.role === "list") {
       if (containsInteractive(node)) {
-        result.push(...buildDisplayTree(node.children));
+        result.push(...buildDisplayTree(node.children, options));
       } else {
         const count = countListItems(node);
         result.push({
@@ -168,7 +181,7 @@ function buildDisplayTree(nodes: ParsedAXNode[]): DisplayNode[] {
     // Tables: passthrough if they contain interactive elements, marker otherwise
     if (node.role === "table") {
       if (containsInteractive(node)) {
-        result.push(...buildDisplayTree(node.children));
+        result.push(...buildDisplayTree(node.children, options));
       } else {
         const dims = getTableDimensions(node);
         result.push({
@@ -182,7 +195,7 @@ function buildDisplayTree(nodes: ParsedAXNode[]): DisplayNode[] {
     }
 
     // Everything else: passthrough — flatten children into parent
-    result.push(...buildDisplayTree(node.children));
+    result.push(...buildDisplayTree(node.children, options));
   }
 
   return collapseConsecutive(result);
@@ -284,8 +297,9 @@ function renderLines(
 export function extractStructuralTree(
   rootNodes: ParsedAXNode[],
   pageTitle?: string,
+  options?: StructuralTreeOptions,
 ): string {
-  const displayTree = buildDisplayTree(rootNodes);
+  const displayTree = buildDisplayTree(rootNodes, options);
   const treeLines = renderLines(displayTree);
 
   const parts: string[] = [];

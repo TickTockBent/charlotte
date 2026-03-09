@@ -115,4 +115,41 @@ describe("Structural tree view integration", () => {
     // Tree should be at least 50% smaller than minimal JSON
     expect(treeTokenEstimate).toBeLessThan(jsonTokenEstimate * 0.5);
   });
+
+  it("tree-labeled includes interactive element names", async () => {
+    await page.goto(`file://${SANDBOX_DIR}/forms.html`, { waitUntil: "load" });
+    const tree = await pipeline.renderTree(page, { labelInteractive: true });
+
+    // Should include labels on interactive elements
+    expect(tree).toMatch(/button ".+"/);
+    expect(tree).toMatch(/input ".+"/);
+
+    console.log("\n=== Sandbox Forms (labeled) ===");
+    console.log(tree);
+    console.log(`\n(${tree.length} chars)\n`);
+  });
+
+  it("tree-labeled is still much cheaper than minimal JSON", async () => {
+    await page.goto(`file://${SANDBOX_DIR}/index.html`, { waitUntil: "load" });
+
+    const unlabeled = await pipeline.renderTree(page);
+    const labeled = await pipeline.renderTree(page, { labelInteractive: true });
+    const minimalRender = await pipeline.render(page, { detail: "minimal" });
+    const minimalJson = JSON.stringify(minimalRender);
+
+    const unlabeledTokens = unlabeled.length / 4;
+    const labeledTokens = labeled.length / 4;
+    const jsonTokens = minimalJson.length / 3.5;
+
+    console.log("\n=== Token Comparison (3-way) ===");
+    console.log(`Tree (unlabeled): ${unlabeled.length} chars (~${Math.round(unlabeledTokens)} tokens)`);
+    console.log(`Tree (labeled):   ${labeled.length} chars (~${Math.round(labeledTokens)} tokens)`);
+    console.log(`Minimal JSON:     ${minimalJson.length} chars (~${Math.round(jsonTokens)} tokens)`);
+    console.log(`Labeled vs JSON savings: ${Math.round((1 - labeledTokens / jsonTokens) * 100)}%\n`);
+
+    // Labeled tree should still be at least 30% smaller than minimal JSON
+    expect(labeledTokens).toBeLessThan(jsonTokens * 0.7);
+    // Unlabeled should be smaller than labeled
+    expect(unlabeledTokens).toBeLessThan(labeledTokens);
+  });
 });

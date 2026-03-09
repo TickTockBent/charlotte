@@ -199,6 +199,7 @@ export class InteractiveExtractor {
           const matchingElement = interactiveElements.find((el) => {
             if (node.backendDOMNodeId === null) return false;
             const resolvedId = idGenerator.resolveId(el.id);
+            if (resolvedId === null) return false;
             return resolvedId === node.backendDOMNodeId;
           });
 

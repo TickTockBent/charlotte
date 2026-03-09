@@ -469,8 +469,8 @@ export function registerSessionTools(
       description:
         "Change the browser viewport dimensions. Use a device preset or specify custom width/height. Returns page representation at the new viewport size.",
       inputSchema: {
-        width: z.number().optional().describe("Viewport width in pixels"),
-        height: z.number().optional().describe("Viewport height in pixels"),
+        width: z.number().min(1).optional().describe("Viewport width in pixels"),
+        height: z.number().min(1).optional().describe("Viewport height in pixels"),
         device: z
           .enum(["mobile", "tablet", "desktop"])
           .optional()

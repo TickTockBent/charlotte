@@ -891,6 +891,7 @@ export function registerInteractionTools(
           ),
         delay: z
           .number()
+          .min(0)
           .optional()
           .describe(
             "Milliseconds between key presses in a sequence (default: 0). Only valid with keys.",

@@ -34,10 +34,12 @@ export function parseCliArgs(argv: string[] = process.argv.slice(2)): {
     logger.warn("Both --profile and --tools provided; --profile takes precedence");
   }
 
-  const outputDir = outputDirArg ? outputDirArg.split("=")[1] : undefined;
+  const outputDir = outputDirArg
+    ? outputDirArg.substring(outputDirArg.indexOf("=") + 1)
+    : undefined;
 
   if (profileArg) {
-    const profile = profileArg.split("=")[1] as ToolProfile;
+    const profile = profileArg.substring(profileArg.indexOf("=") + 1) as ToolProfile;
     if (!VALID_PROFILES.includes(profile)) {
       throw new Error(`Invalid profile: ${profile}. Valid profiles: ${VALID_PROFILES.join(", ")}`);
     }
@@ -45,7 +47,9 @@ export function parseCliArgs(argv: string[] = process.argv.slice(2)): {
   }
 
   if (toolsArg) {
-    const groups = toolsArg.split("=")[1].split(",") as ToolGroupName[];
+    const groups = toolsArg
+      .substring(toolsArg.indexOf("=") + 1)
+      .split(",") as ToolGroupName[];
     for (const group of groups) {
       if (!VALID_GROUPS.includes(group)) {
         throw new Error(`Invalid tool group: ${group}. Valid groups: ${VALID_GROUPS.join(", ")}`);

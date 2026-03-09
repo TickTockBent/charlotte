@@ -79,7 +79,9 @@ function extractProperties(
   if (!rawProperties) return properties;
 
   for (const prop of rawProperties) {
-    properties[prop.name] = prop.value.value;
+    if (prop.value?.value !== undefined) {
+      properties[prop.name] = prop.value.value;
+    }
   }
   return properties;
 }

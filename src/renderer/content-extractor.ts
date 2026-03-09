@@ -1,5 +1,6 @@
 import type { ParsedAXNode } from "./accessibility-extractor.js";
 import { isLandmarkRole } from "./accessibility-extractor.js";
+import { logger } from "../utils/logger.js";
 
 interface LandmarkCounts {
   role: string;
@@ -160,7 +161,11 @@ export class ContentExtractor {
     };
 
     for (const root of rootNodes) {
-      traverse(root);
+      try {
+        traverse(root);
+      } catch (error) {
+        logger.warn("Skipping malformed AX node during content extraction", error);
+      }
     }
 
     return textParts.join("\n");

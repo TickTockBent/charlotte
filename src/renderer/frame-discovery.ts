@@ -103,15 +103,19 @@ async function traverseFrames(
       });
 
       // Recurse into nested iframes
-      await traverseFrames(
-        childFrame,
-        frameSession,
-        cdpSessionManager,
-        contentOffset,
-        currentDepth + 1,
-        maxDepth,
-        discovered,
-      );
+      try {
+        await traverseFrames(
+          childFrame,
+          frameSession,
+          cdpSessionManager,
+          contentOffset,
+          currentDepth + 1,
+          maxDepth,
+          discovered,
+        );
+      } catch (error) {
+        logger.debug(`Failed to traverse nested frames in ${frameUrl}`, error);
+      }
     } catch (error) {
       logger.debug(`Failed to discover frame ${frameUrl}`, error);
     }

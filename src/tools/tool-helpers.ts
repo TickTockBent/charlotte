@@ -371,10 +371,24 @@ export async function resolveOutputPath(
     ? outputFile
     : path.resolve(baseDir, outputFile);
 
-  // Ensure parent directory exists
+  // Normalize the path (resolve . and .. segments) without touching the filesystem.
+  // This catches obvious traversal attempts before any side effects (mkdir).
+  const normalized = path.resolve(resolved);
+  if (!normalized.startsWith(baseDir + path.sep) && normalized !== baseDir) {
+    throw new CharlotteError(
+      CharlotteErrorCode.SESSION_ERROR,
+      `Output path '${outputFile}' resolves outside the allowed directory '${baseDir}'.`,
+      "Use a relative path or configure output_dir to an appropriate directory.",
+    );
+  }
+
+  // Ensure baseDir exists (may not have been created yet when set via --output-dir)
+  await fs.mkdir(baseDir, { recursive: true });
+
+  // Ensure parent directory exists (safe — we validated it's within baseDir)
   await fs.mkdir(path.dirname(resolved), { recursive: true });
 
-  // Resolve symlinks to get the real path and validate boundary
+  // Resolve symlinks to get the real path and catch symlink-based traversal
   const realParent = await fs.realpath(path.dirname(resolved));
   const realResolved = path.join(realParent, path.basename(resolved));
   const realBase = await fs.realpath(baseDir);

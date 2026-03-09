@@ -376,12 +376,10 @@ export function registerObservationTools(
     async ({ selector, format, quality, save, output_file }) => {
       try {
         if (save && output_file) {
-          return handleToolError(
-            new CharlotteError(
-              CharlotteErrorCode.SESSION_ERROR,
-              "Cannot use both 'save' and 'output_file' on the same screenshot call.",
-              "Use 'save: true' to persist as an artifact, or 'output_file' to write to a specific path — not both.",
-            ),
+          throw new CharlotteError(
+            CharlotteErrorCode.SESSION_ERROR,
+            "Cannot use both 'save' and 'output_file' on the same screenshot call.",
+            "Use 'save: true' to persist as an artifact, or 'output_file' to write to a specific path — not both.",
           );
         }
 

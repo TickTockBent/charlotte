@@ -1125,15 +1125,23 @@ async function pollWaitForCondition(
       if (!selectorMatched) allSatisfied = false;
     }
 
-    // Check JS condition
+    // Check JS condition via CDP Runtime.evaluate (matches evaluate.ts pattern)
     if (allSatisfied && condition.js) {
+      const cdpSession = await page.createCDPSession();
       try {
-        const jsResult = await page.evaluate((expression) => {
-          return !!new Function("return " + expression)();
-        }, condition.js);
-        if (!jsResult) allSatisfied = false;
+        const evalResult = await cdpSession.send("Runtime.evaluate", {
+          expression: condition.js,
+          returnByValue: true,
+          awaitPromise: true,
+          timeout: Math.max(0, deadline - Date.now()),
+        });
+        const isTruthy =
+          !evalResult.exceptionDetails && !!evalResult.result.value;
+        if (!isTruthy) allSatisfied = false;
       } catch {
         allSatisfied = false;
+      } finally {
+        await cdpSession.detach().catch(() => {});
       }
     }
 

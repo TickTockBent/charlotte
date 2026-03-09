@@ -44,6 +44,13 @@ export class BrowserManager {
     // Prevent concurrent relaunch attempts
     if (this.launching) {
       await this.launching;
+      // Verify the concurrent launch actually succeeded
+      if (!this.browser || !this.browser.connected) {
+        throw new CharlotteError(
+          CharlotteErrorCode.SESSION_ERROR,
+          "Browser launch failed during concurrent reconnection attempt.",
+        );
+      }
       return;
     }
 
@@ -64,19 +71,19 @@ export class BrowserManager {
     }
   }
 
-  getBrowser(): Browser {
+  async getBrowser(): Promise<Browser> {
+    await this.ensureConnected();
     if (!this.browser || !this.browser.connected) {
       throw new CharlotteError(
         CharlotteErrorCode.SESSION_ERROR,
-        "Browser is not connected. Call ensureConnected() first.",
+        "Browser is not connected after ensureConnected().",
       );
     }
     return this.browser;
   }
 
   async newPage(): Promise<Page> {
-    await this.ensureConnected();
-    const browser = this.getBrowser();
+    const browser = await this.getBrowser();
     return browser.newPage();
   }
 

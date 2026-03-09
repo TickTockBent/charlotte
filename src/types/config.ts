@@ -9,6 +9,8 @@ export interface CharlotteConfig {
   dialogAutoDismiss: DialogAutoDismiss;
   /** Directory for persistent screenshot artifacts. Defaults to OS temp dir. */
   screenshotDir?: string;
+  /** Directory for large tool output files. When set, tools with output_file support write here. */
+  outputDir?: string;
   /** Whether to include iframe content in page representations. Default: false. */
   includeIframes: boolean;
   /** Maximum iframe nesting depth to traverse. Default: 3. */

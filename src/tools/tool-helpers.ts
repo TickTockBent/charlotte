@@ -1,3 +1,5 @@
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import type { Page, CDPSession } from "puppeteer";
 import type { PageManager } from "../browser/page-manager.js";
 import type { BrowserManager } from "../browser/browser-manager.js";
@@ -349,4 +351,97 @@ export function handleToolError(error: unknown): {
     `Unexpected error: ${error instanceof Error ? error.message : String(error)}`,
   );
   return formatErrorResponse(sessionError);
+}
+
+/**
+ * Resolve an output file path from the `output_file` parameter.
+ * If the path is relative, it is resolved against `config.outputDir`
+ * (or cwd if outputDir is not set). Ensures the parent directory exists.
+ *
+ * Security: the resolved path must fall within `outputDir` (or
+ * `allowedWorkspaceRoot` when outputDir is unset). Symlinks are
+ * resolved after mkdir to catch traversal via symlinked parents.
+ */
+export async function resolveOutputPath(
+  outputFile: string,
+  config: CharlotteConfig,
+): Promise<string> {
+  const baseDir = config.outputDir ?? config.allowedWorkspaceRoot ?? process.cwd();
+  const resolved = path.isAbsolute(outputFile)
+    ? outputFile
+    : path.resolve(baseDir, outputFile);
+
+  // Normalize the path (resolve . and .. segments) without touching the filesystem.
+  // This catches obvious traversal attempts before any side effects (mkdir).
+  const normalized = path.resolve(resolved);
+  if (!normalized.startsWith(baseDir + path.sep) && normalized !== baseDir) {
+    throw new CharlotteError(
+      CharlotteErrorCode.SESSION_ERROR,
+      `Output path '${outputFile}' resolves outside the allowed directory '${baseDir}'.`,
+      "Use a relative path or configure output_dir to an appropriate directory.",
+    );
+  }
+
+  // Ensure baseDir exists (may not have been created yet when set via --output-dir)
+  await fs.mkdir(baseDir, { recursive: true });
+
+  // Ensure parent directory exists (safe — we validated it's within baseDir)
+  await fs.mkdir(path.dirname(resolved), { recursive: true });
+
+  // Resolve symlinks to get the real path and catch symlink-based traversal
+  const realParent = await fs.realpath(path.dirname(resolved));
+  const realResolved = path.join(realParent, path.basename(resolved));
+  const realBase = await fs.realpath(baseDir);
+
+  if (!realResolved.startsWith(realBase + path.sep) && realResolved !== realBase) {
+    throw new CharlotteError(
+      CharlotteErrorCode.SESSION_ERROR,
+      `Output path '${outputFile}' resolves outside the allowed directory '${baseDir}'.`,
+      "Use a relative path or configure output_dir to an appropriate directory.",
+    );
+  }
+
+  return realResolved;
+}
+
+/**
+ * Write text content to a file and return a brief confirmation response.
+ */
+export async function writeOutputFile(
+  filePath: string,
+  content: string,
+): Promise<{ content: Array<{ type: "text"; text: string }> }> {
+  await fs.writeFile(filePath, content, "utf-8");
+  return {
+    content: [
+      {
+        type: "text" as const,
+        text: JSON.stringify({
+          output_file: filePath,
+          size: Buffer.byteLength(content, "utf-8"),
+        }),
+      },
+    ],
+  };
+}
+
+/**
+ * Write binary content to a file and return a brief confirmation response.
+ */
+export async function writeBinaryOutputFile(
+  filePath: string,
+  data: Buffer,
+): Promise<{ content: Array<{ type: "text"; text: string }> }> {
+  await fs.writeFile(filePath, data);
+  return {
+    content: [
+      {
+        type: "text" as const,
+        text: JSON.stringify({
+          output_file: filePath,
+          size: data.length,
+        }),
+      },
+    ],
+  };
 }

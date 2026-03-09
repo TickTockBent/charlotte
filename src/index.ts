@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { BrowserManager } from "./browser/browser-manager.js";
 import { PageManager } from "./browser/page-manager.js";
@@ -28,6 +30,11 @@ async function main(): Promise<void> {
 
   // Initialize config first (needed by PageManager for dialog handling)
   const config = createDefaultConfig();
+  if (cliOptions.outputDir) {
+    const resolvedOutputDir = path.resolve(cliOptions.outputDir);
+    config.outputDir = resolvedOutputDir;
+    await fs.mkdir(resolvedOutputDir, { recursive: true });
+  }
 
   // Initialize browser
   const browserManager = new BrowserManager();

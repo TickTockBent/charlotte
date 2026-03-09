@@ -14,6 +14,10 @@ import {
   formatPageResponse,
   formatElementsResponse,
   handleToolError,
+  resolveOutputPath,
+  writeOutputFile,
+  writeBinaryOutputFile,
+  stripEmptyFields,
 } from "./tool-helpers.js";
 
 /** Lightweight result from CSS selector queries. */
@@ -161,9 +165,15 @@ export function registerObservationTools(
           .boolean()
           .optional()
           .describe("Include computed styles for visible elements (default: false)"),
+        output_file: z
+          .string()
+          .optional()
+          .describe(
+            "Write observation data to this file path instead of returning inline. Relative paths resolve against output_dir (see charlotte:configure). Returns only a confirmation with the file path and size.",
+          ),
       },
     },
-    async ({ detail, selector, include_styles }) => {
+    async ({ detail, selector, include_styles, output_file }) => {
       try {
         await deps.browserManager.ensureConnected();
 
@@ -176,6 +186,14 @@ export function registerObservationTools(
           includeStyles: include_styles,
           source: "observe",
         });
+
+        if (output_file) {
+          const resolvedPath = await resolveOutputPath(output_file, deps.config);
+          const cleaned = stripEmptyFields(representation);
+          // Pretty-printed for readability (inline responses use compact JSON)
+          return await writeOutputFile(resolvedPath, JSON.stringify(cleaned, null, 2));
+        }
+
         return formatPageResponse(representation);
       } catch (error: unknown) {
         return handleToolError(error);
@@ -347,10 +365,24 @@ export function registerObservationTools(
           .describe(
             "Save as a persistent file artifact (default: false). When true, the screenshot is written to disk and artifact metadata is returned alongside the image.",
           ),
+        output_file: z
+          .string()
+          .optional()
+          .describe(
+            "Write screenshot to this file path instead of returning base64 inline. Relative paths resolve against output_dir (see charlotte:configure). Returns only a confirmation with the file path and size.",
+          ),
       },
     },
-    async ({ selector, format, quality, save }) => {
+    async ({ selector, format, quality, save, output_file }) => {
       try {
+        if (save && output_file) {
+          throw new CharlotteError(
+            CharlotteErrorCode.SESSION_ERROR,
+            "Cannot use both 'save' and 'output_file' on the same screenshot call.",
+            "Use 'save: true' to persist as an artifact, or 'output_file' to write to a specific path — not both.",
+          );
+        }
+
         await deps.browserManager.ensureConnected();
         const page = deps.pageManager.getActivePage();
 
@@ -388,6 +420,13 @@ export function registerObservationTools(
             encoding: "base64",
             fullPage: true,
           })) as string;
+        }
+
+        // Write to file and return brief confirmation instead of inline base64
+        if (output_file) {
+          const resolvedPath = await resolveOutputPath(output_file, deps.config);
+          const buffer = Buffer.from(screenshotBase64, "base64");
+          return await writeBinaryOutputFile(resolvedPath, buffer);
         }
 
         const content: Array<

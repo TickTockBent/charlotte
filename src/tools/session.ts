@@ -1,3 +1,5 @@
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { logger } from "../utils/logger.js";
@@ -241,6 +243,12 @@ export function registerSessionTools(
           .describe(
             'Auto-dismiss behavior for JS dialogs. "none" (default) queues for charlotte:dialog.',
           ),
+        output_dir: z
+          .string()
+          .optional()
+          .describe(
+            "Directory for large tool output files (used by output_file parameter on observe, screenshot, console, requests). Created automatically if it doesn't exist.",
+          ),
         include_iframes: coercedBoolean
           .optional()
           .describe(
@@ -252,7 +260,7 @@ export function registerSessionTools(
           .describe("Maximum iframe nesting depth to traverse (default: 3, min: 1, max: 10)"),
       },
     },
-    async ({ snapshot_depth, auto_snapshot, screenshot_dir, dialog_auto_dismiss, include_iframes, iframe_depth }) => {
+    async ({ snapshot_depth, auto_snapshot, screenshot_dir, dialog_auto_dismiss, output_dir, include_iframes, iframe_depth }) => {
       try {
         logger.info("Configuring Charlotte", { snapshot_depth, auto_snapshot, screenshot_dir });
 
@@ -274,6 +282,12 @@ export function registerSessionTools(
           deps.config.dialogAutoDismiss = dialog_auto_dismiss as DialogAutoDismiss;
         }
 
+        if (output_dir !== undefined) {
+          const resolvedOutputDir = path.resolve(output_dir);
+          deps.config.outputDir = resolvedOutputDir;
+          await fs.mkdir(resolvedOutputDir, { recursive: true });
+        }
+
         if (include_iframes !== undefined) {
           deps.config.includeIframes = include_iframes;
         }
@@ -293,6 +307,7 @@ export function registerSessionTools(
                   auto_snapshot: deps.config.autoSnapshot,
                   screenshot_dir: deps.artifactStore.screenshotDir,
                   dialog_auto_dismiss: deps.config.dialogAutoDismiss,
+                  output_dir: deps.config.outputDir ?? null,
                   include_iframes: deps.config.includeIframes,
                   iframe_depth: deps.config.iframeDepth,
                 },

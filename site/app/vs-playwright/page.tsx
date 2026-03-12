@@ -346,7 +346,7 @@ export default function VsPlaywrightPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background" data-axiom-page-type="article" data-axiom-page-purpose="Compare Charlotte and Playwright MCP with real benchmark data across response sizes, token costs, and feature matrices. Determine which browser MCP server fits your use case.">
+    <div className="min-h-screen bg-background" data-asm-page-type="article" data-asm-page-purpose="Compare Charlotte and Playwright MCP with real benchmark data across response sizes, token costs, and feature matrices. Determine which browser MCP server fits your use case.">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

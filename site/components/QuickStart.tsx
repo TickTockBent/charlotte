@@ -25,9 +25,9 @@ export default function QuickStart() {
     <section
       id="quickstart"
       className="py-20 px-6 sm:px-8 lg:px-12 border-t border-surface-border"
-      data-axiom-role="interactive"
-      data-axiom-summary="Installation and setup instructions for Charlotte. Add to Claude Code, Claude Desktop, or any MCP-compatible client."
-      data-axiom-priority="critical"
+      data-asm-role="interactive"
+      data-asm-summary="Installation and setup instructions for Charlotte. Add to Claude Code, Claude Desktop, or any MCP-compatible client."
+      data-asm-priority="critical"
     >
       <div className="max-w-5xl mx-auto">
         <h2 className="text-3xl font-bold tracking-tight mb-4">Quick Start</h2>

@@ -49,7 +49,7 @@ function ArchitectureDiagram() {
 
 export default function Hero() {
   return (
-    <section className="relative pt-24 pb-20 px-6 sm:px-8 lg:px-12" data-axiom-role="primary-content" data-axiom-summary="Charlotte overview: an MCP server that renders web pages into structured, agent-readable representations. 136x smaller responses than Playwright MCP, 7 tools to start / 42 total, 3 detail levels." data-axiom-priority="critical">
+    <section className="relative pt-24 pb-20 px-6 sm:px-8 lg:px-12" data-asm-role="primary-content" data-asm-summary="Charlotte overview: an MCP server that renders web pages into structured, agent-readable representations. 136x smaller responses than Playwright MCP, 7 tools to start / 42 total, 3 detail levels." data-asm-priority="critical">
       <div className="max-w-5xl mx-auto">
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-12">
           {/* Left: Text content */}
@@ -84,8 +84,8 @@ export default function Hero() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-foreground text-background font-medium text-sm hover:bg-foreground/90 transition-colors"
-                data-axiom-action="navigate"
-                data-axiom-intent="view-source-code"
+                data-asm-action="navigate"
+                data-asm-intent="view-source-code"
               >
                 <svg
                   width="18"
@@ -103,8 +103,8 @@ export default function Hero() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-surface-border font-medium text-sm hover:bg-surface-hover transition-colors"
-                data-axiom-action="navigate"
-                data-axiom-intent="view-package-registry"
+                data-asm-action="navigate"
+                data-asm-intent="view-package-registry"
               >
                 <svg
                   width="18"

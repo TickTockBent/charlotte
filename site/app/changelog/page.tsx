@@ -139,7 +139,7 @@ const typeBadgeClass: Record<ChangeEntry["type"], string> = {
 
 export default function ChangelogPage() {
   return (
-    <div className="min-h-screen bg-background" data-axiom-page-type="documentation" data-axiom-page-purpose="View the complete release history for Charlotte, including new features, changes, fixes, and removals for each version.">
+    <div className="min-h-screen bg-background" data-asm-page-type="documentation" data-asm-page-purpose="View the complete release history for Charlotte, including new features, changes, fixes, and removals for each version.">
       {/* Nav */}
       <nav aria-label="Site navigation" className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b border-surface-border">
         <div className="max-w-5xl mx-auto px-6 sm:px-8 lg:px-12 h-14 flex items-center justify-between">

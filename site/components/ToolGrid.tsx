@@ -148,9 +148,9 @@ export default function ToolGrid() {
     <section
       id="tools"
       className="py-20 px-6 sm:px-8 lg:px-12 border-t border-surface-border"
-      data-axiom-role="primary-content"
-      data-axiom-summary="All 40 Charlotte tools organized into 8 categories: Navigation, Observation, Interaction, Session, Dev Mode, Utility, Monitoring, and Meta."
-      data-axiom-priority="high"
+      data-asm-role="primary-content"
+      data-asm-summary="All 40 Charlotte tools organized into 8 categories: Navigation, Observation, Interaction, Session, Dev Mode, Utility, Monitoring, and Meta."
+      data-asm-priority="high"
     >
       <div className="max-w-5xl mx-auto">
         <h2 className="text-3xl font-bold tracking-tight mb-4">

@@ -100,7 +100,7 @@ export default function Benchmarks() {
   const activeTabInfo = tabs.find((t) => t.key === activeTab)!;
 
   return (
-    <section id="benchmarks" className="py-20 px-6 sm:px-8 lg:px-12 border-t border-surface-border" data-axiom-role="primary-content" data-axiom-summary="Performance benchmarks comparing Charlotte vs Playwright MCP response sizes and token costs across real websites." data-axiom-priority="high">
+    <section id="benchmarks" className="py-20 px-6 sm:px-8 lg:px-12 border-t border-surface-border" data-asm-role="primary-content" data-asm-summary="Performance benchmarks comparing Charlotte vs Playwright MCP response sizes and token costs across real websites." data-asm-priority="high">
       <div className="max-w-5xl mx-auto">
         <h2 className="text-3xl font-bold tracking-tight mb-4">
           Benchmarks

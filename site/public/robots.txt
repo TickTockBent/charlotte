@@ -2,4 +2,4 @@ User-Agent: *
 Allow: /
 
 Sitemap: https://charlotte-rose.vercel.app/sitemap.xml
-Axiom: /axiom.json
+ASM: /agents.json

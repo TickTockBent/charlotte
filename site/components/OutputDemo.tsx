@@ -80,7 +80,7 @@ export default function OutputDemo() {
   const [activeDetail, setActiveDetail] = useState<DetailTab>("minimal");
 
   return (
-    <section id="output" className="py-20 px-6 sm:px-8 lg:px-12" data-axiom-role="primary-content" data-axiom-summary="Example Charlotte responses at minimal and summary detail levels. Shows the structured JSON format agents receive." data-axiom-priority="high">
+    <section id="output" className="py-20 px-6 sm:px-8 lg:px-12" data-asm-role="primary-content" data-asm-summary="Example Charlotte responses at minimal and summary detail levels. Shows the structured JSON format agents receive." data-asm-priority="high">
       <div className="max-w-5xl mx-auto">
         <h2 className="text-3xl font-bold tracking-tight mb-4">
           What Charlotte Returns

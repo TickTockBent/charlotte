@@ -1,6 +1,6 @@
 export default function BuiltWithCharlotte() {
   return (
-    <section className="py-20 px-6 sm:px-8 lg:px-12 border-t border-surface-border" data-axiom-role="supplementary" data-axiom-summary="Story of how this website was built entirely by an AI agent using Charlotte for visual feedback." data-axiom-priority="low">
+    <section className="py-20 px-6 sm:px-8 lg:px-12 border-t border-surface-border" data-asm-role="supplementary" data-asm-summary="Story of how this website was built entirely by an AI agent using Charlotte for visual feedback." data-asm-priority="low">
       <div className="max-w-2xl mx-auto">
         <h2 className="text-2xl font-bold tracking-tight mb-6">
           This page was built by an agent.

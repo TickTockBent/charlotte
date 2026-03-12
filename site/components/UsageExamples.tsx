@@ -61,9 +61,9 @@ export default function UsageExamples() {
     <section
       id="examples"
       className="py-20 px-6 sm:px-8 lg:px-12 border-t border-surface-border"
-      data-axiom-role="primary-content"
-      data-axiom-summary="Code examples showing Charlotte tool usage for browsing websites, filling forms, and local development with hot reload."
-      data-axiom-priority="medium"
+      data-asm-role="primary-content"
+      data-asm-summary="Code examples showing Charlotte tool usage for browsing websites, filling forms, and local development with hot reload."
+      data-asm-priority="medium"
     >
       <div className="max-w-5xl mx-auto">
         <h2 className="text-3xl font-bold tracking-tight mb-4">

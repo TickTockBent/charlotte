@@ -18,7 +18,7 @@ Charlotte decomposes each page into a typed, structured representation — landm
 
 ### Benchmarks
 
-Charlotte v0.5.0 vs Playwright MCP, measured by characters returned per tool call on real websites:
+Charlotte v0.5.1 vs Playwright MCP, measured by characters returned per tool call on real websites:
 
 **Navigation** (first contact with a page):
 
@@ -439,7 +439,7 @@ Charlotte includes a test website in `tests/sandbox/` that exercises all tools w
 dev_serve({ path: "tests/sandbox" })
 ```
 
-Four pages cover navigation, forms, interactive elements, delayed content, scroll containers, and more. See [docs/sandbox.md](docs/sandbox.md) for the full page reference and a tool-by-tool exercise checklist.
+Five pages cover navigation, forms, interactive elements, popups, delayed content, scroll containers, and more. See [docs/sandbox.md](docs/sandbox.md) for the full page reference and a tool-by-tool exercise checklist.
 
 ## Known Issues
 

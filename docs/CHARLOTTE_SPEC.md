@@ -1,6 +1,6 @@
 # Charlotte Technical Specification
 
-**Version:** 0.5.0
+**Version:** 0.5.1
 
 Charlotte is an MCP server that renders web pages into structured, agent-readable `PageRepresentation` objects using headless Chromium and Puppeteer. It communicates over stdio using the Model Context Protocol.
 
@@ -71,7 +71,7 @@ Each render executes these stages in order:
 | `source` | `"observe" \| "action" \| "internal"` | `"action"` | Controls auto-snapshot behavior |
 | `forceSnapshot` | `boolean` | `false` | Override auto-snapshot decision |
 
-After rendering, it attaches console/network errors, optionally pushes a snapshot, and consumes any pending reload event from `DevModeState`. When a JavaScript dialog is blocking the page, returns a stub representation with `pending_dialog` instead of attempting to render (since CDP calls like `page.title()` hang while dialogs are open).
+After rendering, it attaches console/network errors, optionally pushes a snapshot, consumes any pending reload event from `DevModeState`, and drains any new tabs captured by the popup handler (surfaced as `opened_tabs`). When a JavaScript dialog is blocking the page, returns a stub representation with `pending_dialog` instead of attempting to render (since CDP calls like `page.title()` hang while dialogs are open).
 
 **`renderAfterAction(deps)`** — Used by interaction tools. Captures a pre-action snapshot, calls `renderActivePage` with `source: "action"`, computes a structural diff, and attaches the `delta` field to the response.
 
@@ -99,6 +99,7 @@ interface PageRepresentation {
   iframes?: IframeInfo[];                     // Present when child frames are discovered
   reload_event?: ReloadEvent;                // Present when dev_serve detects file changes
   pending_dialog?: PendingDialog;            // Present when a JS dialog is blocking
+  opened_tabs?: string[];                    // Tab IDs of pages opened by popups since the last tool call
   delta?: SnapshotDiff;                      // Present after interaction tools
 }
 ```

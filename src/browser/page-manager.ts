@@ -50,24 +50,20 @@ export class PageManager {
   private pages = new Map<string, ManagedPage>();
   private activeTabId: string | null = null;
   private config: CharlotteConfig;
+  /** Tab IDs of pages opened by popups since the last drain. */
+  private newTabQueue: string[] = [];
 
   constructor(config?: CharlotteConfig) {
     // Accept optional config; callers without config get a permissive default
     this.config = config ?? createDefaultConfig();
   }
 
-  async openTab(browserManager: BrowserManager, url?: string): Promise<string> {
-    const page = await browserManager.newPage();
-    const tabId = generateTabId();
-
-    const managedPage: ManagedPage = {
-      id: tabId,
-      page,
-      consoleMessages: [],
-      networkRequests: [],
-      pendingDialog: null,
-      pendingDialogInfo: null,
-    };
+  /**
+   * Wire up event listeners on a managed page: console, network, dialog,
+   * framenavigated, popup, and close. Shared by openTab() and the popup handler.
+   */
+  private wirePageListeners(managedPage: ManagedPage): void {
+    const { page, id: tabId } = managedPage;
 
     // Collect all console messages
     page.on("console", (msg) => {
@@ -139,6 +135,73 @@ export class PageManager {
       }
     });
 
+    // Capture popups (target="_blank" links, window.open()) as managed tabs
+    page.on("popup", (popupPage) => {
+      if (popupPage) {
+        this.registerPopupPage(popupPage);
+      }
+    });
+
+    // Auto-clean when a page closes itself (window.close(), site-initiated)
+    page.on("close", () => {
+      if (this.pages.has(tabId)) {
+        this.pages.delete(tabId);
+        logger.info(`Tab ${tabId} closed by page`);
+        if (this.activeTabId === tabId) {
+          const remaining = this.pages.keys().next();
+          this.activeTabId = remaining.done ? null : remaining.value;
+        }
+      }
+    });
+  }
+
+  /**
+   * Register a popup page as a managed tab. Called by the popup event handler.
+   */
+  private registerPopupPage(popupPage: Page): void {
+    const popupTabId = generateTabId();
+    const managedPopup: ManagedPage = {
+      id: popupTabId,
+      page: popupPage,
+      consoleMessages: [],
+      networkRequests: [],
+      pendingDialog: null,
+      pendingDialogInfo: null,
+    };
+
+    this.wirePageListeners(managedPopup);
+    this.pages.set(popupTabId, managedPopup);
+    this.newTabQueue.push(popupTabId);
+
+    logger.info(`Captured popup as ${popupTabId}`, { url: popupPage.url() });
+  }
+
+  /**
+   * Drain the new-tab queue. Returns tab IDs of pages opened by popups since
+   * the last call, then clears the queue (single-consumption semantics).
+   */
+  consumeNewTabs(): string[] {
+    if (this.newTabQueue.length === 0) return [];
+    const tabs = [...this.newTabQueue];
+    this.newTabQueue = [];
+    return tabs;
+  }
+
+  async openTab(browserManager: BrowserManager, url?: string): Promise<string> {
+    const page = await browserManager.newPage();
+    const tabId = generateTabId();
+
+    const managedPage: ManagedPage = {
+      id: tabId,
+      page,
+      consoleMessages: [],
+      networkRequests: [],
+      pendingDialog: null,
+      pendingDialogInfo: null,
+    };
+
+    this.wirePageListeners(managedPage);
+
     this.pages.set(tabId, managedPage);
     this.activeTabId = tabId;
 
@@ -171,6 +234,8 @@ export class PageManager {
     managedPage.page.removeAllListeners("response");
     managedPage.page.removeAllListeners("dialog");
     managedPage.page.removeAllListeners("framenavigated");
+    managedPage.page.removeAllListeners("popup");
+    managedPage.page.removeAllListeners("close");
     await managedPage.page.close();
     this.pages.delete(tabId);
 

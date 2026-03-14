@@ -122,5 +122,7 @@ export interface PageRepresentation {
   iframes?: IframeInfo[];
   reload_event?: ReloadEvent;
   pending_dialog?: PendingDialog;
+  /** Tab IDs of pages opened by popups or target="_blank" links since the last tool call. */
+  opened_tabs?: string[];
   delta?: import("./snapshot.js").SnapshotDiff;
 }

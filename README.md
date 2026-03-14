@@ -481,6 +481,14 @@ See [docs/CHARLOTTE_SPEC.md](docs/CHARLOTTE_SPEC.md) for the complete specificat
 
 [MIT](LICENSE)
 
+## Community
+
+- Open a [bug report](https://github.com/TickTockBent/charlotte/issues/new?template=bug_report.md) for reproducible defects, regressions, or MCP-client-specific problems.
+- Open a [feature request](https://github.com/TickTockBent/charlotte/issues/new?template=feature_request.md) for workflow improvements or new capabilities.
+- Open a [tool request](https://github.com/TickTockBent/charlotte/issues/new?template=tool_request.md) if you want to propose a new tool, parameter surface, or profile placement.
+- Browse [open issues](https://github.com/TickTockBent/charlotte/issues) to find current work and discussion.
+- Check the planned [good first issue filter](https://github.com/TickTockBent/charlotte/issues?q=is%3Aopen+label%3A%22good+first+issue%22) as maintainers tag starter-friendly tasks.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.

@@ -123,6 +123,12 @@ export async function renderActivePage(
     representation.reload_event = pendingReloadEvent;
   }
 
+  // Attach any tabs opened by popups since the last tool call
+  const newTabs = deps.pageManager.consumeNewTabs();
+  if (newTabs.length > 0) {
+    representation.opened_tabs = newTabs;
+  }
+
   return representation;
 }
 
@@ -277,6 +283,11 @@ export function stripEmptyFields(representation: PageRepresentation): Record<str
   // Strip absent pending_dialog
   if (!cleaned.pending_dialog) {
     delete cleaned.pending_dialog;
+  }
+
+  // Strip empty opened_tabs
+  if (!representation.opened_tabs || representation.opened_tabs.length === 0) {
+    delete cleaned.opened_tabs;
   }
 
   return cleaned;

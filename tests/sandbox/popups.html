@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Popup and new tab testing page for Charlotte MCP">
+  <title>Popups - Charlotte Test Sandbox</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; line-height: 1.6; color: #333; }
+    header { background: #2563eb; color: white; padding: 1rem 2rem; }
+    nav { background: #1e40af; padding: 0.5rem 2rem; }
+    nav a { color: #93c5fd; margin-right: 1.5rem; text-decoration: none; }
+    main { padding: 2rem; max-width: 900px; }
+    h2 { margin-top: 1.5rem; margin-bottom: 0.75rem; }
+    p { margin-bottom: 1rem; }
+    section { margin-bottom: 2rem; padding: 1rem; border: 1px solid #e5e7eb; border-radius: 8px; }
+    a.test-link { display: inline-block; margin: 0.25rem 0.5rem 0.25rem 0; padding: 0.4rem 0.8rem; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px; color: #1d4ed8; text-decoration: none; }
+    a.test-link:hover { background: #dbeafe; }
+    button { padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer; font-size: 0.9rem; margin-right: 0.5rem; margin-bottom: 0.5rem; }
+    button:hover { background: #f3f4f6; }
+    .btn-primary { background: #2563eb; color: white; border-color: #2563eb; }
+    .btn-primary:hover { background: #1d4ed8; }
+    footer { background: #f3f4f6; padding: 1rem 2rem; margin-top: 2rem; border-top: 1px solid #e5e7eb; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Popup & New Tab Testing</h1>
+  </header>
+
+  <nav aria-label="Main navigation">
+    <a href="index.html">Home</a>
+    <a href="forms.html">Forms</a>
+    <a href="interactive.html">Interactive</a>
+    <a href="popups.html">Popups</a>
+    <a href="about.html">About</a>
+  </nav>
+
+  <main>
+    <h2>target="_blank" Links</h2>
+    <section>
+      <p>These links use <code>target="_blank"</code> and should open in new tabs. Charlotte should capture them automatically via the popup event handler.</p>
+      <a id="blank-about" class="test-link" href="about.html" target="_blank">About (new tab)</a>
+      <a id="blank-forms" class="test-link" href="forms.html" target="_blank">Forms (new tab)</a>
+      <a id="blank-interactive" class="test-link" href="interactive.html" target="_blank">Interactive (new tab)</a>
+    </section>
+
+    <h2>window.open()</h2>
+    <section>
+      <p>These buttons use <code>window.open()</code> to open pages programmatically.</p>
+      <button id="open-about" class="btn-primary" onclick="window.open('about.html', '_blank')">Open About</button>
+      <button id="open-forms" onclick="window.open('forms.html', '_blank')">Open Forms</button>
+    </section>
+
+    <h2>Same-tab Navigation (control)</h2>
+    <section>
+      <p>These links navigate in the same tab. No popup should be captured.</p>
+      <a id="same-tab-about" class="test-link" href="about.html">About (same tab)</a>
+      <a id="same-tab-forms" class="test-link" href="forms.html">Forms (same tab)</a>
+    </section>
+  </main>
+
+  <footer>
+    <p>Charlotte Test Sandbox - Popup Testing</p>
+  </footer>
+</body>
+</html>

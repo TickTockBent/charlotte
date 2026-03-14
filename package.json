@@ -1,6 +1,6 @@
 {
   "name": "@ticktockbent/charlotte",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Token-efficient browser MCP server — structured web pages for AI agents, not raw accessibility dumps",
   "type": "module",
   "main": "dist/index.js",

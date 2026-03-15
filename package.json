@@ -80,5 +80,8 @@
   "mcpName": "io.github.TickTockBent/charlotte",
   "publishConfig": {
     "access": "public"
+  },
+  "overrides": {
+    "yauzl": "3.2.1"
   }
 }

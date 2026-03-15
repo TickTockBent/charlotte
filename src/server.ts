@@ -79,11 +79,10 @@ export function createServer(deps: ServerDeps, options: ServerOptions = {}): Cre
     instructionLines.push("Call charlotte:tools to list groups or enable/disable them.");
   }
 
-
   const server = new McpServer(
     {
       name: "charlotte",
-      version: version,
+      version,
     },
     {
       capabilities: {

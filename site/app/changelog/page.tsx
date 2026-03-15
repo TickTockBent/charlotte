@@ -19,6 +19,15 @@ interface Release {
 
 const releases: Release[] = [
   {
+    version: "0.5.1",
+    date: "2026-03-14",
+    entries: [
+      { type: "added", text: "Popup and target=\"_blank\" tab capture — Clicks on target=\"_blank\" links and window.open() now auto-capture the new tab in PageManager. Surfaced as opened_tabs in tool responses. Fixes #103, #98." },
+      { type: "added", text: "Contributor issue templates — Bug report, feature request, and tool request templates. Community links in README." },
+      { type: "changed", text: "Renamed AXIOM to ASM across Charlotte site." },
+    ],
+  },
+  {
     version: "0.5.0",
     date: "2026-03-09",
     entries: [

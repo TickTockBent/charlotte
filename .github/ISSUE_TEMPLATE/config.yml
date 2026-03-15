@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Contribution guide
+    url: https://github.com/TickTockBent/charlotte/blob/main/CONTRIBUTING.md
+    about: Read the contribution workflow, test expectations, and project structure before opening a larger change.

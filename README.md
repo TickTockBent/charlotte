@@ -18,7 +18,7 @@ Charlotte decomposes each page into a typed, structured representation — landm
 
 ### Benchmarks
 
-Charlotte v0.5.0 vs Playwright MCP, measured by characters returned per tool call on real websites:
+Charlotte v0.5.1 vs Playwright MCP, measured by characters returned per tool call on real websites:
 
 **Navigation** (first contact with a page):
 
@@ -439,7 +439,7 @@ Charlotte includes a test website in `tests/sandbox/` that exercises all tools w
 dev_serve({ path: "tests/sandbox" })
 ```
 
-Four pages cover navigation, forms, interactive elements, delayed content, scroll containers, and more. See [docs/sandbox.md](docs/sandbox.md) for the full page reference and a tool-by-tool exercise checklist.
+Five pages cover navigation, forms, interactive elements, popups, delayed content, scroll containers, and more. See [docs/sandbox.md](docs/sandbox.md) for the full page reference and a tool-by-tool exercise checklist.
 
 ## Known Issues
 
@@ -480,6 +480,14 @@ See [docs/CHARLOTTE_SPEC.md](docs/CHARLOTTE_SPEC.md) for the complete specificat
 ## License
 
 [MIT](LICENSE)
+
+## Community
+
+- Open a [bug report](https://github.com/TickTockBent/charlotte/issues/new?template=bug_report.md) for reproducible defects, regressions, or MCP-client-specific problems.
+- Open a [feature request](https://github.com/TickTockBent/charlotte/issues/new?template=feature_request.md) for workflow improvements or new capabilities.
+- Open a [tool request](https://github.com/TickTockBent/charlotte/issues/new?template=tool_request.md) if you want to propose a new tool, parameter surface, or profile placement.
+- Browse [open issues](https://github.com/TickTockBent/charlotte/issues) to find current work and discussion.
+- Check the planned [good first issue filter](https://github.com/TickTockBent/charlotte/issues?q=is%3Aopen+label%3A%22good+first+issue%22) as maintainers tag starter-friendly tasks.
 
 ## Contributing
 

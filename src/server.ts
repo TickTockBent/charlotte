@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { dirname, resolve } from "node:path";
+
+const { version } = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf-8"),
+);
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { BrowserManager } from "./browser/browser-manager.js";
 import type { PageManager } from "./browser/page-manager.js";
@@ -77,16 +79,11 @@ export function createServer(deps: ServerDeps, options: ServerOptions = {}): Cre
     instructionLines.push("Call charlotte:tools to list groups or enable/disable them.");
   }
 
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = dirname(__filename);
-  const pkg = JSON.parse(
-    readFileSync(resolve(__dirname, "..", "package.json"), "utf-8"),
-  );
 
   const server = new McpServer(
     {
       name: "charlotte",
-      version: pkg.version,
+      version: version,
     },
     {
       capabilities: {

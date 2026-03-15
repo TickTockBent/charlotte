@@ -11,10 +11,7 @@ export const MODIFIER_KEY_MAP: Record<string, KeyInput> = {
 };
 
 /**
- * Click an element by backend node ID using CDP to get coordinates,
- * or more simply by resolving to an XPath/selector and using page.click.
- *
- * The most reliable approach: use CDP to get the element's coordinates, then click at those coords.
+ * Click an element by backend node ID using CDP to get coordinates, then click at those coords.
  */
 export async function clickElementByBackendNodeId(
   page: Page,
@@ -207,7 +204,7 @@ export async function hoverElementByBackendNodeId(
  * Get the center coordinates of an element by backend node ID.
  * Scrolls the element into view first.
  */
-export async function getElementCenter(
+async function getElementCenter(
   page: Page,
   backendNodeId: number,
 ): Promise<{ x: number; y: number }> {

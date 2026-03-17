@@ -27,8 +27,18 @@ export class LayoutExtractor {
         w: Math.round(maxX - minX),
         h: Math.round(maxY - minY),
       };
-    } catch {
-      // Element may be invisible, detached, or zero-size
+    } catch (error) {
+      // Expected: element is invisible, detached, or has no layout box
+      if (
+        error instanceof Error &&
+        (error.message.includes("Could not find node") ||
+          error.message.includes("No node with given id found") ||
+          error.message.includes("DOM agent is not enabled"))
+      ) {
+        return null;
+      }
+      // Unexpected: CDP session corruption, protocol errors, etc.
+      logger.debug(`Unexpected layout extraction error for node ${backendNodeId}`, error);
       return null;
     }
   }

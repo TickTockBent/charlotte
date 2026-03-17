@@ -9,9 +9,13 @@ const MAX_DEPTH = 500;
  * Ring-buffer store for page snapshots. Snapshots have monotonically
  * increasing integer IDs and are evicted oldest-first when the buffer
  * reaches its configured depth.
+ *
+ * A secondary Map index provides O(1) lookup by snapshot ID alongside
+ * the ring buffer used for ordered access (latest, previous, oldest).
  */
 export class SnapshotStore {
   private buffer: Snapshot[] = [];
+  private index: Map<number, Snapshot> = new Map();
   private nextSnapshotId = 1;
   private maxDepth: number;
 
@@ -38,10 +42,14 @@ export class SnapshotStore {
     };
 
     this.buffer.push(snapshot);
+    this.index.set(snapshotId, snapshot);
 
     // Evict oldest if over capacity
     while (this.buffer.length > this.maxDepth) {
-      this.buffer.shift();
+      const evicted = this.buffer.shift();
+      if (evicted !== undefined) {
+        this.index.delete(evicted.id);
+      }
     }
 
     return snapshotId;
@@ -51,7 +59,7 @@ export class SnapshotStore {
    * Retrieve a snapshot by its ID. Returns null if evicted or never existed.
    */
   get(snapshotId: number): Snapshot | null {
-    return this.buffer.find((snapshot) => snapshot.id === snapshotId) ?? null;
+    return this.index.get(snapshotId) ?? null;
   }
 
   /**
@@ -99,7 +107,10 @@ export class SnapshotStore {
   setDepth(newDepth: number): void {
     this.maxDepth = Math.max(MIN_DEPTH, Math.min(MAX_DEPTH, newDepth));
     while (this.buffer.length > this.maxDepth) {
-      this.buffer.shift();
+      const evicted = this.buffer.shift();
+      if (evicted !== undefined) {
+        this.index.delete(evicted.id);
+      }
     }
   }
 
@@ -108,6 +119,7 @@ export class SnapshotStore {
    */
   clear(): void {
     this.buffer = [];
+    this.index.clear();
     this.nextSnapshotId = 1;
   }
 }

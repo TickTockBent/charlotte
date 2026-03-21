@@ -495,8 +495,8 @@ export function registerSessionTools(
           viewportWidth = width;
           viewportHeight = height;
         } else {
-          viewportWidth = width ?? 1280;
-          viewportHeight = height ?? 720;
+          viewportWidth = width ?? 1440;
+          viewportHeight = height ?? 900;
         }
 
         logger.info("Setting viewport", {

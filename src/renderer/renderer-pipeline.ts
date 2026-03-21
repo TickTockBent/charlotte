@@ -144,7 +144,7 @@ export class RendererPipeline {
     // Step 11: Get page metadata
     const url = page.url();
     const title = await page.title();
-    const viewport = page.viewport() ?? { width: 1280, height: 720 };
+    const viewport = page.viewport() ?? { width: 1440, height: 900 };
 
     const representation: PageRepresentation = {
       url,

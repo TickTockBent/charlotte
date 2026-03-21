@@ -39,9 +39,13 @@ describe("File output integration", () => {
     cdpSessionManager = new CDPSessionManager();
     elementIdGenerator = new ElementIdGenerator();
     rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator);
-    outputDir = await fs.mkdtemp(path.join(os.tmpdir(), "charlotte-file-output-test-"));
-    artifactStoreDir = await fs.mkdtemp(
-      path.join(os.tmpdir(), "charlotte-file-output-test-artifacts-"),
+    // Resolve symlinks so assertions match realpath output from resolveOutputPath.
+    // On macOS, /var is a symlink to /private/var.
+    outputDir = await fs.realpath(
+      await fs.mkdtemp(path.join(os.tmpdir(), "charlotte-file-output-test-")),
+    );
+    artifactStoreDir = await fs.realpath(
+      await fs.mkdtemp(path.join(os.tmpdir(), "charlotte-file-output-test-artifacts-")),
     );
     const config = createDefaultConfig();
     config.outputDir = outputDir;

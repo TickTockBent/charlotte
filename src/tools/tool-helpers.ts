@@ -440,12 +440,16 @@ export async function waitForCompositorFrame(page: Page): Promise<void> {
         });
       });
     });
-    // Suppress unhandled rejection if the timeout wins the race.
+    // Prevent unhandled rejection if the page navigates or the timeout wins the race.
     rafFlush.catch(() => {});
-    await Promise.race([
-      rafFlush,
-      new Promise<void>((resolve) => setTimeout(resolve, 1000)),
-    ]);
+
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const timeout = new Promise<void>((resolve) => {
+      timeoutId = setTimeout(resolve, 1000);
+    });
+
+    await Promise.race([rafFlush, timeout]);
+    clearTimeout(timeoutId!);
   } catch {
     // No JS context available — proceed without compositor flush.
   }

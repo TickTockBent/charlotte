@@ -10,6 +10,7 @@ export class BrowserManager {
   async launch(options?: LaunchOptions): Promise<void> {
     this.launchOptions = {
       headless: true,
+      defaultViewport: { width: 1440, height: 900 },
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",

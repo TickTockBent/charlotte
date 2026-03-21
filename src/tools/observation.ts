@@ -18,6 +18,7 @@ import {
   writeOutputFile,
   writeBinaryOutputFile,
   stripEmptyFields,
+  waitForCompositorFrame,
 } from "./tool-helpers.js";
 
 /** Lightweight result from CSS selector queries. */
@@ -408,6 +409,12 @@ export function registerObservationTools(
 
         await deps.browserManager.ensureConnected();
         const page = deps.pageManager.getActivePage();
+
+        // Ensure the compositor has a fresh frame before capturing.
+        // Without this, SPAs that replace a loading state with rendered
+        // content via React/Vue/etc. may produce a stale screenshot
+        // showing the old loading spinner.
+        await waitForCompositorFrame(page);
 
         const screenshotFormat = format ?? "png";
         logger.info("Taking screenshot", {

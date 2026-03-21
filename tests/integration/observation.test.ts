@@ -14,6 +14,7 @@ import {
   renderActivePage,
   resolveElement,
   formatElementsResponse,
+  waitForCompositorFrame,
 } from "../../src/tools/tool-helpers.js";
 import type { InteractiveElement, Bounds } from "../../src/types/page-representation.js";
 
@@ -259,6 +260,64 @@ describe("Observation integration", () => {
 
       expect(typeof screenshotBuffer).toBe("string");
       expect((screenshotBuffer as string).length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("waitForCompositorFrame", () => {
+    it("completes without error on a normal page", async () => {
+      const page = pageManager.getActivePage();
+      await page.goto(SIMPLE_FIXTURE, { waitUntil: "load" });
+
+      // Should resolve without throwing
+      await expect(waitForCompositorFrame(page)).resolves.toBeUndefined();
+    });
+
+    it("does not break screenshot capture on a static page", async () => {
+      const page = pageManager.getActivePage();
+      await page.goto(SIMPLE_FIXTURE, { waitUntil: "load" });
+
+      await waitForCompositorFrame(page);
+
+      const screenshotBase64 = (await page.screenshot({
+        type: "png",
+        encoding: "base64",
+        fullPage: true,
+      })) as string;
+
+      expect(typeof screenshotBase64).toBe("string");
+      expect(screenshotBase64.length).toBeGreaterThan(0);
+    });
+
+    it("does not break screenshot after JS-driven DOM mutation", async () => {
+      const page = pageManager.getActivePage();
+      await page.goto(DYNAMIC_FIXTURE, { waitUntil: "load" });
+
+      // Mutate the DOM
+      await page.evaluate(() => {
+        (document.getElementById("add-item-btn") as HTMLElement).click();
+      });
+
+      await waitForCompositorFrame(page);
+
+      const screenshotBase64 = (await page.screenshot({
+        type: "png",
+        encoding: "base64",
+        fullPage: true,
+      })) as string;
+
+      expect(screenshotBase64.length).toBeGreaterThan(0);
+
+      // Verify the DOM reflects the mutation (not stale)
+      const content = await page.evaluate(() => document.getElementById("status")?.textContent);
+      expect(content).toContain("Added item");
+    });
+
+    it("fails silently on about:blank (no JS context issue)", async () => {
+      const page = pageManager.getActivePage();
+      await page.goto("about:blank");
+
+      // Should not throw — degrades gracefully
+      await expect(waitForCompositorFrame(page)).resolves.toBeUndefined();
     });
   });
 

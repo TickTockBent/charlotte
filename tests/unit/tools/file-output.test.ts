@@ -16,7 +16,9 @@ describe("file output helpers", () => {
   let config: CharlotteConfig;
 
   beforeEach(async () => {
-    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "charlotte-test-"));
+    // Resolve symlinks so assertions match realpath output from resolveOutputPath.
+    // On macOS, /var is a symlink to /private/var — without this, paths won't match.
+    tmpDir = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "charlotte-test-")));
     config = createDefaultConfig();
     config.outputDir = tmpDir;
   });

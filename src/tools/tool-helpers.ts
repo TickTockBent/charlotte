@@ -432,6 +432,7 @@ export async function resolveOutputPath(
  * which is the pre-fix behavior.
  */
 export async function waitForCompositorFrame(page: Page): Promise<void> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
   try {
     const rafFlush = page.evaluate(() => {
       return new Promise<void>((resolve) => {
@@ -443,15 +444,15 @@ export async function waitForCompositorFrame(page: Page): Promise<void> {
     // Prevent unhandled rejection if the page navigates or the timeout wins the race.
     rafFlush.catch(() => {});
 
-    let timeoutId: ReturnType<typeof setTimeout>;
     const timeout = new Promise<void>((resolve) => {
       timeoutId = setTimeout(resolve, 1000);
     });
 
     await Promise.race([rafFlush, timeout]);
-    clearTimeout(timeoutId!);
   } catch {
     // No JS context available — proceed without compositor flush.
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 

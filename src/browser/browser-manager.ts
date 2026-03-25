@@ -11,6 +11,7 @@ export class BrowserManager {
   private config: CharlotteConfig;
 
   constructor(config?: CharlotteConfig) {
+    // Accept optional config; callers without config get a permissive default
     this.config = config ?? createDefaultConfig();
   }
 

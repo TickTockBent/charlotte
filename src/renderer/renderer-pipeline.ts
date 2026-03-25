@@ -53,6 +53,7 @@ export class RendererPipeline {
     private elementIdGenerator: ElementIdGenerator,
     config?: CharlotteConfig,
   ) {
+    // Accept optional config; callers without config get a permissive default
     this.config = config ?? createDefaultConfig();
   }
 

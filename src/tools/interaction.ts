@@ -340,8 +340,9 @@ export function registerInteractionTools(
 
         // Calculate pixel distance
         const viewport = page.viewport();
-        const viewportWidth = viewport?.width ?? 1440;
-        const viewportHeight = viewport?.height ?? 900;
+        const { defaultViewport } = deps.config;
+        const viewportWidth = viewport?.width ?? defaultViewport.width;
+        const viewportHeight = viewport?.height ?? defaultViewport.height;
 
         let pixelDistance: number;
         if (scrollAmount === "page") {

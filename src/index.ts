@@ -37,7 +37,7 @@ async function main(): Promise<void> {
   }
 
   // Initialize browser
-  const browserManager = new BrowserManager();
+  const browserManager = new BrowserManager(config);
   await browserManager.launch();
 
   // Initialize page management

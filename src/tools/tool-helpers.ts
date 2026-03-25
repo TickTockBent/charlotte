@@ -75,7 +75,7 @@ export async function renderActivePage(
   // JS-dependent CDP calls will hang. Return a stub with dialog info.
   const pendingDialogInfo = deps.pageManager.getPendingDialogInfo();
   if (pendingDialogInfo) {
-    const viewport = page.viewport() ?? { width: 1440, height: 900 };
+    const viewport = page.viewport() ?? deps.config.defaultViewport;
     return {
       url: page.url(),
       title: "(dialog blocking)",

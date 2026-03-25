@@ -6,7 +6,7 @@ function createMockRepresentation(overrides?: Partial<PageRepresentation>): Page
   return {
     url: "https://example.com",
     title: "Test Page",
-    viewport: { width: 1280, height: 720 },
+    viewport: { width: 1440, height: 900 },
     snapshot_id: 0,
     timestamp: "",
     structure: {

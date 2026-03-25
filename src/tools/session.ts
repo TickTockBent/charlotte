@@ -3,7 +3,7 @@ import * as path from "node:path";
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { logger } from "../utils/logger.js";
-import type { AutoSnapshotMode, DialogAutoDismiss } from "../types/config.js";
+import type { AutoSnapshotMode, DeviceType, DialogAutoDismiss } from "../types/config.js";
 import type { RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ToolDependencies } from "./tool-helpers.js";
 import {
@@ -457,12 +457,6 @@ export function registerSessionTools(
 
   // ─── charlotte:viewport ───
 
-  const DEVICE_PRESETS: Record<string, { width: number; height: number }> = {
-    mobile: { width: 375, height: 667 },
-    tablet: { width: 768, height: 1024 },
-    desktop: { width: 1280, height: 720 },
-  };
-
   tools["charlotte:viewport"] = server.registerTool(
     "charlotte:viewport",
     {
@@ -475,7 +469,7 @@ export function registerSessionTools(
           .enum(["mobile", "tablet", "desktop"])
           .optional()
           .describe(
-            'Device preset (overrides width/height). "mobile" = 375×667, "tablet" = 768×1024, "desktop" = 1280×720',
+            'Device preset (overrides width/height). "mobile" = 393×852, "tablet" = 768×1024, "desktop" = 1440×900',
           ),
       },
     },
@@ -483,20 +477,21 @@ export function registerSessionTools(
       try {
         await deps.browserManager.ensureConnected();
         const page = deps.pageManager.getActivePage();
+        const { defaultViewport, deviceViewportPresets } = deps.config;
 
         let viewportWidth: number;
         let viewportHeight: number;
 
         if (device) {
-          const preset = DEVICE_PRESETS[device];
+          const preset = deviceViewportPresets[device as DeviceType];
           viewportWidth = preset.width;
           viewportHeight = preset.height;
         } else if (width !== undefined && height !== undefined) {
           viewportWidth = width;
           viewportHeight = height;
         } else {
-          viewportWidth = width ?? 1440;
-          viewportHeight = height ?? 900;
+          viewportWidth = width ?? defaultViewport.width;
+          viewportHeight = height ?? defaultViewport.height;
         }
 
         logger.info("Setting viewport", {

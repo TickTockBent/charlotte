@@ -1,16 +1,23 @@
 import puppeteer, { type Browser, type Page, type LaunchOptions } from "puppeteer";
 import { logger } from "../utils/logger.js";
 import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
+import { createDefaultConfig } from "../types/config.js";
+import type { CharlotteConfig } from "../types/config.js";
 
 export class BrowserManager {
   private browser: Browser | null = null;
   private launchOptions: LaunchOptions = {};
   private launching: Promise<void> | null = null;
+  private config: CharlotteConfig;
+
+  constructor(config?: CharlotteConfig) {
+    this.config = config ?? createDefaultConfig();
+  }
 
   async launch(options?: LaunchOptions): Promise<void> {
     this.launchOptions = {
       headless: true,
-      defaultViewport: { width: 1440, height: 900 },
+      defaultViewport: this.config.defaultViewport,
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",

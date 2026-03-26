@@ -28,6 +28,7 @@ import type {
   Heading,
   Bounds,
 } from "../types/page-representation.js";
+import { createDefaultConfig } from "../types/config.js";
 import type { CharlotteConfig } from "../types/config.js";
 import { logger } from "../utils/logger.js";
 
@@ -45,11 +46,16 @@ export class RendererPipeline {
   private interactiveExtractor = new InteractiveExtractor();
   private contentExtractor = new ContentExtractor();
 
+  private config: CharlotteConfig;
+
   constructor(
     private cdpSessionManager: CDPSessionManager,
     private elementIdGenerator: ElementIdGenerator,
-    private config?: CharlotteConfig,
-  ) {}
+    config?: CharlotteConfig,
+  ) {
+    // Accept optional config; callers without config get a permissive default
+    this.config = config ?? createDefaultConfig();
+  }
 
   async render(page: Page, options: RenderOptions): Promise<PageRepresentation> {
     const startTime = Date.now();
@@ -144,7 +150,7 @@ export class RendererPipeline {
     // Step 11: Get page metadata
     const url = page.url();
     const title = await page.title();
-    const viewport = page.viewport() ?? { width: 1280, height: 720 };
+    const viewport = page.viewport() ?? this.config.defaultViewport;
 
     const representation: PageRepresentation = {
       url,

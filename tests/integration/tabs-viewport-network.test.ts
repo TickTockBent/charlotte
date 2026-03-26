@@ -187,14 +187,14 @@ describe("Tabs, viewport, and network integration", () => {
     it("sets viewport to mobile preset dimensions", async () => {
       const page = pageManager.getActivePage();
 
-      await page.setViewport({ width: 375, height: 667 });
+      await page.setViewport({ width: 393, height: 852 });
 
       const representation = await renderActivePage(deps, {
         source: "action",
       });
 
-      expect(representation.viewport.width).toBe(375);
-      expect(representation.viewport.height).toBe(667);
+      expect(representation.viewport.width).toBe(393);
+      expect(representation.viewport.height).toBe(852);
     });
 
     it("sets viewport to tablet preset dimensions", async () => {
@@ -213,14 +213,14 @@ describe("Tabs, viewport, and network integration", () => {
     it("sets viewport to desktop preset dimensions", async () => {
       const page = pageManager.getActivePage();
 
-      await page.setViewport({ width: 1280, height: 720 });
+      await page.setViewport({ width: 1440, height: 900 });
 
       const representation = await renderActivePage(deps, {
         source: "action",
       });
 
-      expect(representation.viewport.width).toBe(1280);
-      expect(representation.viewport.height).toBe(720);
+      expect(representation.viewport.width).toBe(1440);
+      expect(representation.viewport.height).toBe(900);
     });
 
     it("layout changes after viewport resize", async () => {
@@ -228,20 +228,20 @@ describe("Tabs, viewport, and network integration", () => {
       await page.goto(SIMPLE_FIXTURE, { waitUntil: "load" });
 
       // Render at desktop size
-      await page.setViewport({ width: 1280, height: 720 });
+      await page.setViewport({ width: 1440, height: 900 });
       const desktopRepresentation = await renderActivePage(deps, {
         source: "action",
       });
 
       // Render at mobile size
-      await page.setViewport({ width: 375, height: 667 });
+      await page.setViewport({ width: 393, height: 852 });
       const mobileRepresentation = await renderActivePage(deps, {
         source: "action",
       });
 
       // The viewport values should differ
-      expect(desktopRepresentation.viewport.width).toBe(1280);
-      expect(mobileRepresentation.viewport.width).toBe(375);
+      expect(desktopRepresentation.viewport.width).toBe(1440);
+      expect(mobileRepresentation.viewport.width).toBe(393);
 
       // Interactive elements should still be detected at both sizes
       expect(desktopRepresentation.interactive.length).toBeGreaterThan(0);

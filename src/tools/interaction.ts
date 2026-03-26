@@ -170,23 +170,44 @@ export function registerInteractionTools(
         press_enter: coercedBoolean
           .optional()
           .describe("Press Enter after typing (default: false)"),
+        slowly: coercedBoolean
+          .optional()
+          .describe(
+            "Type one character at a time with a delay between keystrokes. Use for sites with autocomplete, search-as-you-type, or per-key validation (default: false)",
+          ),
+        character_delay: z
+          .number()
+          .min(1)
+          .optional()
+          .describe(
+            "Milliseconds between keystrokes (implies slowly: true). Default when slowly is true: 50ms",
+          ),
       },
     },
-    async ({ element_id, text, clear_first, press_enter }) => {
+    async ({ element_id, text, clear_first, press_enter, slowly, character_delay }) => {
       try {
         await deps.browserManager.ensureConnected();
         const { page, backendNodeId } = await resolveElement(deps, element_id);
         const shouldClearFirst = clear_first ?? true;
         const shouldPressEnter = press_enter ?? false;
+        const delayMs = character_delay ?? (slowly ? 50 : undefined);
 
         logger.info("Typing into element", {
           element_id,
           textLength: text.length,
           clearFirst: shouldClearFirst,
           pressEnter: shouldPressEnter,
+          characterDelay: delayMs,
         });
 
-        await typeIntoElement(page, backendNodeId, text, shouldClearFirst, shouldPressEnter);
+        await typeIntoElement(
+          page,
+          backendNodeId,
+          text,
+          shouldClearFirst,
+          shouldPressEnter,
+          delayMs,
+        );
 
         const representation = await renderAfterAction(deps);
         return formatPageResponse(representation);

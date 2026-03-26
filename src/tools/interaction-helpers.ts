@@ -275,6 +275,7 @@ export async function typeIntoElement(
   text: string,
   clearFirst: boolean,
   pressEnter: boolean,
+  characterDelay?: number,
 ): Promise<void> {
   // Focus the element
   await focusElementByBackendNodeId(page, backendNodeId);
@@ -287,8 +288,9 @@ export async function typeIntoElement(
     await page.keyboard.press("Backspace");
   }
 
-  // Type the text character by character
-  await page.keyboard.type(text);
+  // Type the text — with optional per-character delay for sites with
+  // key-by-key event handlers (autocomplete, search-as-you-type, etc.)
+  await page.keyboard.type(text, characterDelay ? { delay: characterDelay } : undefined);
 
   if (pressEnter) {
     await page.keyboard.press("Enter");

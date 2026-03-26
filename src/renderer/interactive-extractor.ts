@@ -132,12 +132,17 @@ export class InteractiveExtractor {
           element.value = node.value ?? "";
         }
 
-        // Extract options for select/combobox from children
+        // Extract options for select/combobox from children (capped to avoid bloat)
         if (elementType === "select") {
+          const maxOptions = 50;
           const options: string[] = [];
+          let totalCount = 0;
           const collectOptions = (optionNode: ParsedAXNode) => {
             if (optionNode.role === "option" || optionNode.role === "listitem") {
-              options.push(optionNode.name || optionNode.value || "");
+              totalCount++;
+              if (options.length < maxOptions) {
+                options.push(optionNode.name || optionNode.value || "");
+              }
             }
             for (const child of optionNode.children) {
               collectOptions(child);
@@ -147,6 +152,9 @@ export class InteractiveExtractor {
             collectOptions(child);
           }
           if (options.length > 0) {
+            if (totalCount > maxOptions) {
+              options.push(`... and ${totalCount - maxOptions} more options`);
+            }
             element.options = options;
           }
         }

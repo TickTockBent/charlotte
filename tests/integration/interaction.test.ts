@@ -12,6 +12,7 @@ import { ArtifactStore } from "../../src/state/artifact-store.js";
 import { createDefaultConfig } from "../../src/types/config.js";
 import type { ToolDependencies } from "../../src/tools/tool-helpers.js";
 import { renderActivePage, resolveElement } from "../../src/tools/tool-helpers.js";
+import { typeIntoElement } from "../../src/tools/interaction-helpers.js";
 
 const INTERACTION_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/interaction.html")}`;
 const _FORM_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/form.html")}`;
@@ -320,6 +321,77 @@ describe("Interaction integration", () => {
       // The search input has an oninput handler that updates #result
       const resultText = await getResultText();
       expect(resultText).toBe("Typed: test query");
+    });
+
+    it("types slowly with character delay", async () => {
+      const representation = await renderActivePage(deps, { detail: "minimal" });
+      const emptyInput = findElementByType(representation, "text_input", "Empty Input");
+      expect(emptyInput).toBeDefined();
+
+      const { backendNodeId } = await resolveElement(deps, emptyInput!.id);
+
+      const page = pageManager.getActivePage();
+      const textToType = "hello";
+      const delayMs = 60;
+
+      const startTime = Date.now();
+      await typeIntoElement(page, backendNodeId, textToType, true, false, delayMs);
+      const elapsed = Date.now() - startTime;
+
+      // Verify text was typed
+      const inputValue = await page.evaluate(() => {
+        return (document.getElementById("empty-input") as HTMLInputElement)?.value ?? "";
+      });
+      expect(inputValue).toBe("hello");
+
+      // With 5 chars at 60ms delay, expect at least 4 inter-key delays (~240ms)
+      expect(elapsed).toBeGreaterThanOrEqual(200);
+    });
+
+    it("slow typing fires per-character input events", async () => {
+      const representation = await renderActivePage(deps, { detail: "minimal" });
+      const searchInput = findElementByType(representation, "text_input", "Search");
+      expect(searchInput).toBeDefined();
+
+      const { backendNodeId } = await resolveElement(deps, searchInput!.id);
+
+      const page = pageManager.getActivePage();
+
+      // Set up a listener that records each input event value
+      await page.evaluate(() => {
+        (window as any).__inputEvents = [];
+        document.getElementById("search-input")!.addEventListener("input", (e) => {
+          (window as any).__inputEvents.push((e.target as HTMLInputElement).value);
+        });
+      });
+
+      await typeIntoElement(page, backendNodeId, "abc", true, false, 30);
+
+      const inputEvents = await page.evaluate(() => (window as any).__inputEvents);
+      // Should see incremental values: "a", "ab", "abc"
+      expect(inputEvents).toEqual(["a", "ab", "abc"]);
+    });
+
+    it("types at full speed without character delay", async () => {
+      const representation = await renderActivePage(deps, { detail: "minimal" });
+      const emptyInput = findElementByType(representation, "text_input", "Empty Input");
+      expect(emptyInput).toBeDefined();
+
+      const { backendNodeId } = await resolveElement(deps, emptyInput!.id);
+
+      const page = pageManager.getActivePage();
+
+      const startTime = Date.now();
+      await typeIntoElement(page, backendNodeId, "fast typing test", true, false);
+      const elapsed = Date.now() - startTime;
+
+      const inputValue = await page.evaluate(() => {
+        return (document.getElementById("empty-input") as HTMLInputElement)?.value ?? "";
+      });
+      expect(inputValue).toBe("fast typing test");
+
+      // Without delay, typing should be fast (well under 500ms)
+      expect(elapsed).toBeLessThan(500);
     });
   });
 

@@ -416,6 +416,47 @@ export async function resolveOutputPath(
 }
 
 /**
+ * Wait for the browser compositor to produce a fresh frame.
+ *
+ * Puppeteer's page.screenshot() can capture stale compositor frames on SPAs
+ * where the initial paint (e.g. a loading spinner) is replaced by framework-
+ * rendered content via DOM mutations. The compositor doesn't automatically
+ * flush its frame cache after JS-driven DOM updates.
+ *
+ * Double-rAF ensures:
+ *   1st rAF: browser processes pending style/layout changes
+ *   2nd rAF: compositor produces a new frame with those changes
+ *
+ * Fails silently if the page has no JS execution context (e.g. crashed tab,
+ * about:blank, PDF) — in that case the screenshot proceeds without the flush,
+ * which is the pre-fix behavior.
+ */
+export async function waitForCompositorFrame(page: Page): Promise<void> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const rafFlush = page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve());
+        });
+      });
+    });
+    // Prevent unhandled rejection if the page navigates or the timeout wins the race.
+    rafFlush.catch(() => {});
+
+    const timeout = new Promise<void>((resolve) => {
+      timeoutId = setTimeout(resolve, 1000);
+    });
+
+    await Promise.race([rafFlush, timeout]);
+  } catch {
+    // No JS context available — proceed without compositor flush.
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+/**
  * Write text content to a file and return a brief confirmation response.
  */
 export async function writeOutputFile(

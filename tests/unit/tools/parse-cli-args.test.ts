@@ -48,6 +48,10 @@ describe("parseCliArgs", () => {
       expect(result).toEqual({ profile: "core", headless: false });
     });
 
+    it("throws on invalid profile", () => {
+      expect(() => parseCliArgs(["--profile=invalid"])).toThrow("Invalid profile: invalid");
+    });
+
     it("throws on invalid profile (space-separated)", () => {
       expect(() => parseCliArgs(["--profile", "invalid"])).toThrow("Invalid profile: invalid");
     });

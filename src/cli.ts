@@ -40,7 +40,7 @@ export function parseCliArgs(argv: string[] = process.argv.slice(2)): {
   profile?: ToolProfile;
   toolGroups?: ToolGroupName[];
   outputDir?: string;
-  headless?: boolean;
+  headless: boolean;
 } {
   const { values } = parseArgs({
     args: argv,

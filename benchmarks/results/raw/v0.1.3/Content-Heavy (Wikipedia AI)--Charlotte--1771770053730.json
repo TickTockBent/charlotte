@@ -3,7 +3,7 @@
   "serverName": "Charlotte",
   "calls": [
     {
-      "toolName": "charlotte:navigate",
+      "toolName": "charlotte_navigate",
       "arguments": {
         "url": "https://en.wikipedia.org/wiki/Artificial_intelligence"
       },
@@ -13,7 +13,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "detail": "minimal"
       },
@@ -23,7 +23,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "detail": "summary"
       },
@@ -33,7 +33,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "detail": "full"
       },

@@ -10,9 +10,9 @@ export function registerMonitoringTools(
 ): Record<string, RegisteredTool> {
   const tools: Record<string, RegisteredTool> = {};
 
-  // ─── charlotte:console ───
-  tools["charlotte:console"] = server.registerTool(
-    "charlotte:console",
+  // ─── charlotte_console ───
+  tools["charlotte_console"] = server.registerTool(
+    "charlotte_console",
     {
       description:
         "Retrieve console messages from the active page. Returns messages at all severity levels (log, info, warning, error, debug, etc.) with timestamps. Useful for debugging JavaScript behavior.",
@@ -28,7 +28,7 @@ export function registerMonitoringTools(
           .string()
           .optional()
           .describe(
-            "Write console messages to this file path instead of returning inline. Relative paths resolve against output_dir (see charlotte:configure). Returns only a confirmation with the file path and size.",
+            "Write console messages to this file path instead of returning inline. Relative paths resolve against output_dir (see charlotte_configure). Returns only a confirmation with the file path and size.",
           ),
       },
     },
@@ -75,9 +75,9 @@ export function registerMonitoringTools(
     },
   );
 
-  // ─── charlotte:requests ───
-  tools["charlotte:requests"] = server.registerTool(
-    "charlotte:requests",
+  // ─── charlotte_requests ───
+  tools["charlotte_requests"] = server.registerTool(
+    "charlotte_requests",
     {
       description:
         "Retrieve network request history from the active page. Returns all HTTP requests with method, status, resource type, and timestamps. Useful for debugging API calls and resource loading.",
@@ -115,7 +115,7 @@ export function registerMonitoringTools(
           .string()
           .optional()
           .describe(
-            "Write network requests to this file path instead of returning inline. Relative paths resolve against output_dir (see charlotte:configure). Returns only a confirmation with the file path and size.",
+            "Write network requests to this file path instead of returning inline. Relative paths resolve against output_dir (see charlotte_configure). Returns only a confirmation with the file path and size.",
           ),
       },
     },

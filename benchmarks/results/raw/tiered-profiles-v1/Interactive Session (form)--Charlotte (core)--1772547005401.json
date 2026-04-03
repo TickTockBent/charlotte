@@ -3,7 +3,7 @@
   "serverName": "Charlotte (core)",
   "calls": [
     {
-      "toolName": "charlotte:navigate",
+      "toolName": "charlotte_navigate",
       "arguments": {
         "url": "https://httpbin.org/forms/post"
       },
@@ -13,7 +13,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "detail": "summary"
       },
@@ -23,7 +23,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:find",
+      "toolName": "charlotte_find",
       "arguments": {
         "type": "text_input"
       },
@@ -33,7 +33,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:type",
+      "toolName": "charlotte_type",
       "arguments": {
         "element_id": "inp-82f6",
         "text": "benchmark"
@@ -44,7 +44,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "detail": "minimal"
       },
@@ -54,7 +54,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:type",
+      "toolName": "charlotte_type",
       "arguments": {
         "element_id": "inp-27ea",
         "text": "test-user"
@@ -65,7 +65,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "detail": "minimal"
       },
@@ -75,7 +75,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:type",
+      "toolName": "charlotte_type",
       "arguments": {
         "element_id": "inp-9c95",
         "text": "test@example.com"
@@ -86,7 +86,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "detail": "minimal"
       },
@@ -96,7 +96,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:type",
+      "toolName": "charlotte_type",
       "arguments": {
         "element_id": "inp-15f6",
         "text": "12345"
@@ -107,7 +107,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "detail": "minimal"
       },
@@ -117,7 +117,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "detail": "minimal"
       },

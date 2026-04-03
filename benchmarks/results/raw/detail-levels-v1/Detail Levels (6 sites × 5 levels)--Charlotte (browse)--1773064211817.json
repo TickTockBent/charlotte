@@ -3,7 +3,7 @@
   "serverName": "Charlotte (browse)",
   "calls": [
     {
-      "toolName": "charlotte:navigate",
+      "toolName": "charlotte_navigate",
       "arguments": {
         "url": "https://en.wikipedia.org/wiki/Main_Page"
       },
@@ -13,7 +13,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "view": "tree"
       },
@@ -23,7 +23,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "view": "tree-labeled"
       },
@@ -33,7 +33,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "detail": "minimal"
       },
@@ -43,7 +43,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "detail": "summary"
       },
@@ -53,7 +53,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "detail": "full"
       },
@@ -63,7 +63,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:navigate",
+      "toolName": "charlotte_navigate",
       "arguments": {
         "url": "https://github.com/anthropics"
       },
@@ -73,7 +73,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "view": "tree"
       },
@@ -83,7 +83,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "view": "tree-labeled"
       },
@@ -93,7 +93,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "detail": "minimal"
       },
@@ -103,7 +103,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "detail": "summary"
       },
@@ -113,7 +113,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "detail": "full"
       },
@@ -123,7 +123,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:navigate",
+      "toolName": "charlotte_navigate",
       "arguments": {
         "url": "https://news.ycombinator.com/"
       },
@@ -133,7 +133,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "view": "tree"
       },
@@ -143,7 +143,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "view": "tree-labeled"
       },
@@ -153,7 +153,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "detail": "minimal"
       },
@@ -163,7 +163,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "detail": "summary"
       },
@@ -173,7 +173,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "detail": "full"
       },
@@ -183,7 +183,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:navigate",
+      "toolName": "charlotte_navigate",
       "arguments": {
         "url": "https://www.linkedin.com/"
       },
@@ -193,7 +193,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "view": "tree"
       },
@@ -203,7 +203,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "view": "tree-labeled"
       },
@@ -213,7 +213,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "detail": "minimal"
       },
@@ -223,7 +223,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "detail": "summary"
       },
@@ -233,7 +233,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "detail": "full"
       },
@@ -243,7 +243,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:navigate",
+      "toolName": "charlotte_navigate",
       "arguments": {
         "url": "https://stackoverflow.com/questions"
       },
@@ -253,7 +253,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "view": "tree"
       },
@@ -263,7 +263,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "view": "tree-labeled"
       },
@@ -273,7 +273,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "detail": "minimal"
       },
@@ -283,7 +283,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "detail": "summary"
       },
@@ -293,7 +293,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "detail": "full"
       },
@@ -303,7 +303,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:navigate",
+      "toolName": "charlotte_navigate",
       "arguments": {
         "url": "https://www.amazon.com/"
       },
@@ -313,7 +313,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "view": "tree"
       },
@@ -323,7 +323,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "view": "tree-labeled"
       },
@@ -333,7 +333,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "detail": "minimal"
       },
@@ -343,7 +343,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "detail": "summary"
       },
@@ -353,7 +353,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "detail": "full"
       },

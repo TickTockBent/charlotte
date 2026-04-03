@@ -23,11 +23,11 @@ export const deepNavigationTest: BenchmarkTest = {
     };
 
     if (serverName.includes("Charlotte")) {
-      await client.callTool("charlotte:navigate", { url: TARGET_URL });
-      const summaryResult = await client.callTool("charlotte:observe", {
+      await client.callTool("charlotte_navigate", { url: TARGET_URL });
+      const summaryResult = await client.callTool("charlotte_observe", {
         detail: "summary",
       });
-      const minimalResult = await client.callTool("charlotte:observe", {
+      const minimalResult = await client.callTool("charlotte_observe", {
         detail: "minimal",
       });
 

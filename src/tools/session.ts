@@ -29,9 +29,9 @@ export function registerSessionTools(
 ): Record<string, RegisteredTool> {
   const tools: Record<string, RegisteredTool> = {};
 
-  // ─── charlotte:get_cookies ───
-  tools["charlotte:get_cookies"] = server.registerTool(
-    "charlotte:get_cookies",
+  // ─── charlotte_get_cookies ───
+  tools["charlotte_get_cookies"] = server.registerTool(
+    "charlotte_get_cookies",
     {
       description:
         "Get cookies for the active page. Optionally filter by URL(s). Returns cookie name, value, domain, path, and flags.",
@@ -79,9 +79,9 @@ export function registerSessionTools(
     },
   );
 
-  // ─── charlotte:clear_cookies ───
-  tools["charlotte:clear_cookies"] = server.registerTool(
-    "charlotte:clear_cookies",
+  // ─── charlotte_clear_cookies ───
+  tools["charlotte_clear_cookies"] = server.registerTool(
+    "charlotte_clear_cookies",
     {
       description:
         "Clear cookies from the browser. Optionally filter by name(s) to remove specific cookies. Without a filter, clears all cookies for the current page.",
@@ -124,9 +124,9 @@ export function registerSessionTools(
     },
   );
 
-  // ─── charlotte:set_cookies ───
-  tools["charlotte:set_cookies"] = server.registerTool(
-    "charlotte:set_cookies",
+  // ─── charlotte_set_cookies ───
+  tools["charlotte_set_cookies"] = server.registerTool(
+    "charlotte_set_cookies",
     {
       description:
         "Set cookies on the active page. Cookies persist for subsequent navigations within matching domains.",
@@ -175,9 +175,9 @@ export function registerSessionTools(
     },
   );
 
-  // ─── charlotte:set_headers ───
-  tools["charlotte:set_headers"] = server.registerTool(
-    "charlotte:set_headers",
+  // ─── charlotte_set_headers ───
+  tools["charlotte_set_headers"] = server.registerTool(
+    "charlotte_set_headers",
     {
       description:
         "Set extra HTTP headers for subsequent requests. Headers persist for all navigations on the active page.",
@@ -215,9 +215,9 @@ export function registerSessionTools(
     },
   );
 
-  // ─── charlotte:configure ───
-  tools["charlotte:configure"] = server.registerTool(
-    "charlotte:configure",
+  // ─── charlotte_configure ───
+  tools["charlotte_configure"] = server.registerTool(
+    "charlotte_configure",
     {
       description: "Configure Charlotte runtime settings. Changes take effect immediately.",
       inputSchema: {
@@ -241,7 +241,7 @@ export function registerSessionTools(
           .enum(["none", "accept_alerts", "accept_all", "dismiss_all"])
           .optional()
           .describe(
-            'Auto-dismiss behavior for JS dialogs. "none" (default) queues for charlotte:dialog.',
+            'Auto-dismiss behavior for JS dialogs. "none" (default) queues for charlotte_dialog.',
           ),
         output_dir: z
           .string()
@@ -321,9 +321,9 @@ export function registerSessionTools(
     },
   );
 
-  // ─── charlotte:tabs ───
-  tools["charlotte:tabs"] = server.registerTool(
-    "charlotte:tabs",
+  // ─── charlotte_tabs ───
+  tools["charlotte_tabs"] = server.registerTool(
+    "charlotte_tabs",
     {
       description: "List all open browser tabs with their URLs, titles, and active status.",
       inputSchema: {},
@@ -348,9 +348,9 @@ export function registerSessionTools(
     },
   );
 
-  // ─── charlotte:tab_open ───
-  tools["charlotte:tab_open"] = server.registerTool(
-    "charlotte:tab_open",
+  // ─── charlotte_tab_open ───
+  tools["charlotte_tab_open"] = server.registerTool(
+    "charlotte_tab_open",
     {
       description:
         "Open a new browser tab. Optionally navigate to a URL. The new tab becomes the active tab.",
@@ -390,9 +390,9 @@ export function registerSessionTools(
     },
   );
 
-  // ─── charlotte:tab_switch ───
-  tools["charlotte:tab_switch"] = server.registerTool(
-    "charlotte:tab_switch",
+  // ─── charlotte_tab_switch ───
+  tools["charlotte_tab_switch"] = server.registerTool(
+    "charlotte_tab_switch",
     {
       description:
         "Switch to a different browser tab by its tab ID. Returns the page representation of the activated tab.",
@@ -418,9 +418,9 @@ export function registerSessionTools(
     },
   );
 
-  // ─── charlotte:tab_close ───
-  tools["charlotte:tab_close"] = server.registerTool(
-    "charlotte:tab_close",
+  // ─── charlotte_tab_close ───
+  tools["charlotte_tab_close"] = server.registerTool(
+    "charlotte_tab_close",
     {
       description:
         "Close a browser tab by its ID. If the closed tab was active, switches to the first remaining tab.",
@@ -455,10 +455,10 @@ export function registerSessionTools(
     },
   );
 
-  // ─── charlotte:viewport ───
+  // ─── charlotte_viewport ───
 
-  tools["charlotte:viewport"] = server.registerTool(
-    "charlotte:viewport",
+  tools["charlotte_viewport"] = server.registerTool(
+    "charlotte_viewport",
     {
       description:
         "Change the browser viewport dimensions. Use a device preset or specify custom width/height. Returns page representation at the new viewport size.",
@@ -516,7 +516,7 @@ export function registerSessionTools(
     },
   );
 
-  // ─── charlotte:network ───
+  // ─── charlotte_network ───
 
   const THROTTLE_PRESETS: Record<
     string,
@@ -553,8 +553,8 @@ export function registerSessionTools(
     },
   };
 
-  tools["charlotte:network"] = server.registerTool(
-    "charlotte:network",
+  tools["charlotte_network"] = server.registerTool(
+    "charlotte_network",
     {
       description:
         "Configure network conditions for the active page. Set throttling presets, block URL patterns, or enable request logging.",

@@ -44,7 +44,7 @@ Generated: 2026-03-03T14:14:58.664Z
 
 | # | Tool | Chars | Est. Tokens | Time (ms) |
 | ---: | :--- | ---: | ---: | ---: |
-| 1 | charlotte:navigate | 258 | 65 | 63 |
+| 1 | charlotte_navigate | 258 | 65 | 63 |
 
 ### Charlotte (browse)
 
@@ -57,7 +57,7 @@ Generated: 2026-03-03T14:14:58.664Z
 
 | # | Tool | Chars | Est. Tokens | Time (ms) |
 | ---: | :--- | ---: | ---: | ---: |
-| 1 | charlotte:navigate | 258 | 65 | 54 |
+| 1 | charlotte_navigate | 258 | 65 | 54 |
 
 ### Charlotte (core)
 
@@ -70,4 +70,4 @@ Generated: 2026-03-03T14:14:58.664Z
 
 | # | Tool | Chars | Est. Tokens | Time (ms) |
 | ---: | :--- | ---: | ---: | ---: |
-| 1 | charlotte:navigate | 258 | 65 | 27 |
+| 1 | charlotte_navigate | 258 | 65 | 27 |

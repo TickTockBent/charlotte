@@ -2,7 +2,7 @@
  * Test 13: Runtime Tool Toggle
  *
  * Start with browse profile, measure initial tool list,
- * enable monitoring group, measure expanded list, use charlotte:console,
+ * enable monitoring group, measure expanded list, use charlotte_console,
  * disable monitoring, measure contracted list.
  * Validates that tool count grows, shrinks, and restores correctly.
  */
@@ -13,7 +13,7 @@ import { BenchmarkMcpClient } from "../harness/mcp-client.js";
 export const runtimeToggleTest: BenchmarkTest = {
   name: "Runtime Toggle (meta-tool)",
   description:
-    "Start with browse profile, enable/disable monitoring group via charlotte:tools, measure tool list changes.",
+    "Start with browse profile, enable/disable monitoring group via charlotte_tools, measure tool list changes.",
   successCriteria:
     "Tool count increases after enable, monitoring tool works, tool count decreases after disable.",
   supportedServers: ["Charlotte (browse)"],
@@ -29,13 +29,13 @@ export const runtimeToggleTest: BenchmarkTest = {
     const initialToolCount = initialMetrics.toolCount;
 
     // 2. List groups to see current state
-    const listResult = await client.callTool("charlotte:tools", {
+    const listResult = await client.callTool("charlotte_tools", {
       action: "list",
     });
     const listText = responseText(listResult.response);
 
     // 3. Enable monitoring group
-    const enableResult = await client.callTool("charlotte:tools", {
+    const enableResult = await client.callTool("charlotte_tools", {
       action: "enable",
       group: "monitoring",
     });
@@ -47,14 +47,14 @@ export const runtimeToggleTest: BenchmarkTest = {
     const toolCountGrew = expandedToolCount > initialToolCount;
 
     // 5. Navigate to a page so console tool has something to work with
-    await client.callTool("charlotte:navigate", { url: "about:blank" });
+    await client.callTool("charlotte_navigate", { url: "about:blank" });
 
     // 6. Use the newly-enabled monitoring tool
-    const consoleResult = await client.callTool("charlotte:console", {});
+    const consoleResult = await client.callTool("charlotte_console", {});
     const consoleWorked = !consoleResult.isError;
 
     // 7. Disable monitoring group
-    const disableResult = await client.callTool("charlotte:tools", {
+    const disableResult = await client.callTool("charlotte_tools", {
       action: "disable",
       group: "monitoring",
     });

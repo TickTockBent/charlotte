@@ -18,9 +18,9 @@ export function registerWaitForTools(
 ): Record<string, RegisteredTool> {
   const tools: Record<string, RegisteredTool> = {};
 
-  // ─── charlotte:wait_for ───
-  tools["charlotte:wait_for"] = server.registerTool(
-    "charlotte:wait_for",
+  // ─── charlotte_wait_for ───
+  tools["charlotte_wait_for"] = server.registerTool(
+    "charlotte_wait_for",
     {
       description:
         "Wait for a condition to be met on the page. Returns page representation when the condition is satisfied, or a TIMEOUT error.",

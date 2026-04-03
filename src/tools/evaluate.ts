@@ -17,8 +17,8 @@ export function registerEvaluateTools(
 ): Record<string, RegisteredTool> {
   const tools: Record<string, RegisteredTool> = {};
 
-  tools["charlotte:evaluate"] = server.registerTool(
-    "charlotte:evaluate",
+  tools["charlotte_evaluate"] = server.registerTool(
+    "charlotte_evaluate",
     {
       description:
         "Execute JavaScript in page context. Supports single expressions and multi-statement code. Returns the completion value of the last expression-statement.",

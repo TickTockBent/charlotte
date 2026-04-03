@@ -63,7 +63,7 @@ describe("Keyboard integration", () => {
 
   /**
    * Register an element with Charlotte's ID generator via CDP, simulating
-   * what charlotte:find({ selector }) does. Returns the assigned element ID.
+   * what charlotte_find({ selector }) does. Returns the assigned element ID.
    */
   async function registerElementBySelector(selector: string): Promise<string> {
     const page = pageManager.getActivePage();
@@ -134,12 +134,12 @@ describe("Keyboard integration", () => {
     it("focuses element by registered ID before sending key", async () => {
       const page = pageManager.getActivePage();
 
-      // Register the element (simulates charlotte:find with selector)
+      // Register the element (simulates charlotte_find with selector)
       const elementId = await registerElementBySelector("#key-target");
       const backendNodeId = elementIdGenerator.resolveId(elementId);
       expect(backendNodeId).not.toBeNull();
 
-      // Focus via CDP (what charlotte:key does with element_id)
+      // Focus via CDP (what charlotte_key does with element_id)
       const cdpSession = await page.createCDPSession();
       try {
         await cdpSession.send("DOM.focus", { backendNodeId: backendNodeId! });
@@ -275,11 +275,11 @@ describe("Keyboard integration", () => {
     it("full element_id → focus → sequence → render path", async () => {
       const page = pageManager.getActivePage();
 
-      // Register grid element (simulates charlotte:find)
+      // Register grid element (simulates charlotte_find)
       const elementId = await registerElementBySelector("#grid");
       const backendNodeId = elementIdGenerator.resolveId(elementId);
 
-      // Focus (what charlotte:key does with element_id)
+      // Focus (what charlotte_key does with element_id)
       const cdpSession = await page.createCDPSession();
       try {
         await cdpSession.send("DOM.focus", { backendNodeId: backendNodeId! });
@@ -287,7 +287,7 @@ describe("Keyboard integration", () => {
         await cdpSession.detach();
       }
 
-      // Send key sequence (what charlotte:key does with keys param)
+      // Send key sequence (what charlotte_key does with keys param)
       const keysToPress = ["ArrowRight", "ArrowRight", "ArrowDown", "ArrowDown"];
       for (const k of keysToPress) {
         await page.keyboard.press(k as KeyInput);
@@ -317,7 +317,7 @@ describe("Keyboard integration", () => {
         await cdpSession.detach();
       }
 
-      // Type via keyboard (not charlotte:type, just raw keys)
+      // Type via keyboard (not charlotte_type, just raw keys)
       await page.keyboard.press("h" as KeyInput);
       await page.keyboard.press("i" as KeyInput);
       await new Promise((resolve) => setTimeout(resolve, 50));

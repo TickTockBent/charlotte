@@ -942,7 +942,7 @@ describe("Interaction integration", () => {
 
       // Call the actual tool
       const result = await mcpClient.callTool({
-        name: "charlotte:fill_form",
+        name: "charlotte_fill_form",
         arguments: {
           fields: [
             { element_id: firstName!.id, value: "Jane" },
@@ -976,7 +976,7 @@ describe("Interaction integration", () => {
       expect(newsletter).toBeDefined();
 
       const result = await mcpClient.callTool({
-        name: "charlotte:fill_form",
+        name: "charlotte_fill_form",
         arguments: {
           fields: [
             { element_id: firstName!.id, value: "Alice" },
@@ -1006,7 +1006,7 @@ describe("Interaction integration", () => {
       expect(submitButton!.type).toBe("button");
 
       const result = await mcpClient.callTool({
-        name: "charlotte:fill_form",
+        name: "charlotte_fill_form",
         arguments: {
           fields: [{ element_id: submitButton!.id, value: "anything" }],
         },
@@ -1020,7 +1020,7 @@ describe("Interaction integration", () => {
 
     it("returns error for unknown element IDs", async () => {
       const result = await mcpClient.callTool({
-        name: "charlotte:fill_form",
+        name: "charlotte_fill_form",
         arguments: {
           fields: [{ element_id: "inp-0000", value: "test" }],
         },
@@ -1041,7 +1041,7 @@ describe("Interaction integration", () => {
 
       // First field is valid, second is a button (unsupported) — should fail before any mutation
       const result = await mcpClient.callTool({
-        name: "charlotte:fill_form",
+        name: "charlotte_fill_form",
         arguments: {
           fields: [
             { element_id: firstName!.id, value: "ShouldNotAppear" },

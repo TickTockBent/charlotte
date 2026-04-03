@@ -83,7 +83,7 @@ Agents receive landmarks, headings, interactive elements with typed metadata, bo
 
 ## Tool Profiles
 
-Charlotte ships 42 tools (41 registered + the `charlotte:tools` meta-tool), but most workflows only need a subset. Startup profiles control which tools load into the agent's context, reducing definition overhead by up to 77%.
+Charlotte ships 42 tools (41 registered + the `charlotte_tools` meta-tool), but most workflows only need a subset. Startup profiles control which tools load into the agent's context, reducing definition overhead by up to 77%.
 
 ```bash
 charlotte --profile browse    # 23 tools (default) — navigate, observe, interact, tabs
@@ -97,9 +97,9 @@ charlotte --profile audit     # 14 tools — navigation + observation + dev_audi
 Agents can activate more tools mid-session without restarting:
 
 ```
-charlotte:tools enable dev_mode    → activates dev_serve, dev_audit, dev_inject
-charlotte:tools disable dev_mode   → deactivates them
-charlotte:tools list               → see what's loaded
+charlotte_tools enable dev_mode    → activates dev_serve, dev_audit, dev_inject
+charlotte_tools disable dev_mode   → deactivates them
+charlotte_tools list               → see what's loaded
 ```
 
 ## Quick Start
@@ -443,17 +443,9 @@ Five pages cover navigation, forms, interactive elements, popups, delayed conten
 
 ## Known Issues
 
-**Tool naming convention** — Charlotte uses `:` as a namespace separator in tool names (e.g., `charlotte:navigate`, `charlotte:observe`). MCP SDK v1.26.0+ logs validation warnings for this character, as the emerging [SEP standard](https://github.com/modelcontextprotocol/modelcontextprotocol/issues/986) restricts tool names to `[A-Za-z0-9_.-]`. This does not affect functionality — all tools work correctly — but produces stderr warnings on server startup. Will be addressed in a future release to comply with the SEP standard.
-
 **Shadow DOM** — Open shadow DOM works transparently. Chromium's accessibility tree pierces open shadow boundaries, so web components (e.g., GitHub's `<relative-time>`, `<tool-tip>`) render their content into Charlotte's representation without special handling. Closed shadow roots are opaque to the accessibility tree and will not be captured.
 
 ## Roadmap
-
-### Interaction Gaps
-
-**Batch Form Fill** — Add a `charlotte:fill_form` tool that accepts an array of `{element_id, value}` pairs and fills an entire form in a single tool call, reducing N sequential `type`/`select`/`toggle` calls to one.
-
-**Slow Typing** — Add a `slowly` or `character_delay` parameter to `charlotte:type` for character-by-character input. Required for sites with key-by-key event handlers (autocomplete, search-as-you-type, input validation).
 
 ### Session & Configuration
 
@@ -463,7 +455,7 @@ Five pages cover navigation, forms, interactive elements, popups, delayed conten
 
 **Configuration File** — Support a `--config` CLI argument to load settings from a JSON file, simplifying repeatable setups and CI/CD integration.
 
-**Full Device Emulation** — Extend `charlotte:viewport` to accept named devices (e.g., "iPhone 15") and configure user agent, touch support, and device pixel ratio via CDP, not just viewport dimensions.
+**Full Device Emulation** — Extend `charlotte_viewport` to accept named devices (e.g., "iPhone 15") and configure user agent, touch support, and device pixel ratio via CDP, not just viewport dimensions.
 
 ### Feature Roadmap
 

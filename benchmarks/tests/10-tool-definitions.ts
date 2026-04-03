@@ -32,7 +32,7 @@ export const toolDefinitionsTest: BenchmarkTest = {
 
     // Make one lightweight tool call so the test has non-zero call count
     // (navigate to about:blank is near-instant)
-    await client.callTool("charlotte:navigate", { url: "about:blank" });
+    await client.callTool("charlotte_navigate", { url: "about:blank" });
 
     return {
       success: countMatches && toolListMetrics.toolCount > 0,

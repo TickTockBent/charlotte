@@ -376,7 +376,7 @@ describe("Dialog integration", () => {
     });
   });
 
-  // ─── #34: Test charlotte:dialog tool response through MCP ───
+  // ─── #34: Test charlotte_dialog tool response through MCP ───
   describe("dialog tool response via MCP (#34)", () => {
     let mcpClient: Client;
     let closeTransport: () => Promise<void>;
@@ -416,16 +416,16 @@ describe("Dialog integration", () => {
       await cleanNavigate();
     });
 
-    it("charlotte:dialog accept returns dialog_handled with correct type, message, and action", async () => {
+    it("charlotte_dialog accept returns dialog_handled with correct type, message, and action", async () => {
       const page = pageManager.getActivePage();
 
       // Trigger confirm dialog
       const clickPromise = page.click("#confirm-btn");
       await new Promise((resolve) => setTimeout(resolve, 200));
 
-      // Call charlotte:dialog through MCP
+      // Call charlotte_dialog through MCP
       const result = await mcpClient.callTool({
-        name: "charlotte:dialog",
+        name: "charlotte_dialog",
         arguments: { accept: true },
       });
 
@@ -448,14 +448,14 @@ describe("Dialog integration", () => {
       expect(responsePayload.page.url).toBeTruthy();
     });
 
-    it("charlotte:dialog dismiss returns action 'dismissed'", async () => {
+    it("charlotte_dialog dismiss returns action 'dismissed'", async () => {
       const page = pageManager.getActivePage();
 
       const clickPromise = page.click("#confirm-btn");
       await new Promise((resolve) => setTimeout(resolve, 200));
 
       const result = await mcpClient.callTool({
-        name: "charlotte:dialog",
+        name: "charlotte_dialog",
         arguments: { accept: false },
       });
 
@@ -469,14 +469,14 @@ describe("Dialog integration", () => {
       expect(responsePayload.dialog_handled.type).toBe("confirm");
     });
 
-    it("charlotte:dialog with prompt_text includes text in accept", async () => {
+    it("charlotte_dialog with prompt_text includes text in accept", async () => {
       const page = pageManager.getActivePage();
 
       const clickPromise = page.click("#prompt-btn");
       await new Promise((resolve) => setTimeout(resolve, 200));
 
       const result = await mcpClient.callTool({
-        name: "charlotte:dialog",
+        name: "charlotte_dialog",
         arguments: { accept: true, prompt_text: "Test Name" },
       });
 
@@ -495,9 +495,9 @@ describe("Dialog integration", () => {
       expect(resultText).toBe("Test Name");
     });
 
-    it("charlotte:dialog returns error when no dialog is pending", async () => {
+    it("charlotte_dialog returns error when no dialog is pending", async () => {
       const result = await mcpClient.callTool({
-        name: "charlotte:dialog",
+        name: "charlotte_dialog",
         arguments: { accept: true },
       });
 
@@ -523,7 +523,7 @@ describe("Dialog integration", () => {
       await renderActivePage(deps, { detail: "summary" });
       const _alertButton = deps.elementIdGenerator.findSimilar("btn-", []);
 
-      // Use waitForPossibleNavigation with a real click action (same as charlotte:click)
+      // Use waitForPossibleNavigation with a real click action (same as charlotte_click)
       const timeoutPromise = new Promise<"timeout">((resolve) =>
         setTimeout(() => resolve("timeout"), 5000),
       );
@@ -580,7 +580,7 @@ describe("Dialog integration", () => {
     });
 
     it("full click→dialog→render path produces correct response", async () => {
-      // This tests the exact sequence charlotte:click uses:
+      // This tests the exact sequence charlotte_click uses:
       // resolveElement → waitForPossibleNavigation(click) → renderAfterAction
       const representation = await renderActivePage(deps, { detail: "summary" });
       const alertButton = representation.interactive.find((el) => el.label === "Alert");
@@ -603,7 +603,7 @@ describe("Dialog integration", () => {
         }
       });
 
-      // renderAfterAction — the same call charlotte:click makes
+      // renderAfterAction — the same call charlotte_click makes
       const afterAction = await renderAfterAction(deps);
       expect(afterAction.pending_dialog).toBeDefined();
       expect(afterAction.pending_dialog!.type).toBe("alert");

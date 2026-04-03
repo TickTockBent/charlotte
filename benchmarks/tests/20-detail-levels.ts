@@ -41,7 +41,7 @@ export const detailLevelsTest: BenchmarkTest = {
     let successfulSites = 0;
 
     for (const site of SITES) {
-      const navResult = await client.callTool("charlotte:navigate", {
+      const navResult = await client.callTool("charlotte_navigate", {
         url: site.url,
       });
 
@@ -54,7 +54,7 @@ export const detailLevelsTest: BenchmarkTest = {
       let allLevelsOk = true;
 
       for (const level of DETAIL_LEVELS) {
-        const result = await client.callTool("charlotte:observe", level.args);
+        const result = await client.callTool("charlotte_observe", level.args);
         if (result.isError) {
           allLevelsOk = false;
           levelChars[level.label] = 0;

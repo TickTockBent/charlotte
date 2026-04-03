@@ -4,6 +4,10 @@ All notable changes to Charlotte will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING: Tool name prefix migration** — All 42 MCP tool names renamed from `charlotte:xxx` to `charlotte_xxx` to comply with the MCP spec's `[A-Za-z0-9_.-]` character constraint and silence SDK v1.26.0+ validation warnings. Closes #57.
+
 ## [0.5.1] - 2026-03-14
 
 ### Added

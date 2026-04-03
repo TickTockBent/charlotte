@@ -74,10 +74,10 @@ where Charlotte has capabilities Playwright MCP does not**, for completeness.
 | Attribute | Detail |
 |-----------|--------|
 | **Playwright Tool** | `browser_drag` (snapshot mode), `browser_mouse_drag_xy` (vision mode) |
-| **Charlotte Status** | Implemented as `charlotte:drag` with `source_id` and `target_id` parameters. Uses mouse primitives (mousedown → intermediate moves → mouseup). Landmark IDs added so drop zones are referenceable. |
+| **Charlotte Status** | Implemented as `charlotte_drag` with `source_id` and `target_id` parameters. Uses mouse primitives (mousedown → intermediate moves → mouseup). Landmark IDs added so drop zones are referenceable. |
 | **Impact** | High — blocks automation of drag-sortable lists, kanban boards, sliders, file drop zones |
 | **Parameters (Playwright)** | `startElement`, `startRef`, `endElement`, `endRef` |
-| **Suggested Tool Name** | `charlotte:drag` |
+| **Suggested Tool Name** | `charlotte_drag` |
 | **Implementation Notes** | Puppeteer supports drag via `page.mouse.move()`, `page.mouse.down()`, `page.mouse.up()` sequences. Could also use CDP `Input.dispatchDragEvent`. |
 
 ### GAP-02: File Upload — *remediated in v0.4.2*
@@ -85,15 +85,15 @@ where Charlotte has capabilities Playwright MCP does not**, for completeness.
 | Attribute | Detail |
 |-----------|--------|
 | **Playwright Tool** | `browser_file_upload` |
-| **Charlotte Status** | Implemented as `charlotte:upload` with `element_id` and `paths` parameters. Uses CDP `DOM.setFileInputFiles`. File inputs now correctly detected as `file_input` type via post-extraction DOM reclassification. |
+| **Charlotte Status** | Implemented as `charlotte_upload` with `element_id` and `paths` parameters. Uses CDP `DOM.setFileInputFiles`. File inputs now correctly detected as `file_input` type via post-extraction DOM reclassification. |
 | **Impact** | High — blocks automation of any file upload workflow |
 | **Parameters (Playwright)** | `paths` (array of file paths) |
-| **Suggested Tool Name** | `charlotte:upload` |
+| **Suggested Tool Name** | `charlotte_upload` |
 | **Implementation Notes** | Puppeteer supports `elementHandle.uploadFile(paths)`. Charlotte already identifies `file_input` elements. |
 
 ### GAP-03: Dialog Handling (alert / confirm / prompt)
 
-> **Remediated in Charlotte v0.3.0** — `charlotte:dialog` tool implemented with `accept`/`prompt_text` parameters, `pending_dialog` surfacing in all tool responses, dialog-aware action racing, and configurable auto-dismiss via `charlotte:configure`.
+> **Remediated in Charlotte v0.3.0** — `charlotte_dialog` tool implemented with `accept`/`prompt_text` parameters, `pending_dialog` surfacing in all tool responses, dialog-aware action racing, and configurable auto-dismiss via `charlotte_configure`.
 
 | Attribute | Detail |
 |-----------|--------|
@@ -101,29 +101,29 @@ where Charlotte has capabilities Playwright MCP does not**, for completeness.
 | **Charlotte Status** | Not implemented |
 | **Impact** | High — JavaScript dialogs block all page interaction until dismissed. Unhandled dialogs will stall automation |
 | **Parameters (Playwright)** | `accept` (boolean), `promptText` (string, optional) |
-| **Suggested Tool Name** | `charlotte:dialog` |
+| **Suggested Tool Name** | `charlotte_dialog` |
 | **Implementation Notes** | Puppeteer emits a `'dialog'` event on Page. Charlotte could auto-queue dialogs and expose a tool to accept/dismiss them. Consider also auto-dismissing with a configurable default. |
 
-### GAP-04: Batch Form Fill
+### GAP-04: Batch Form Fill — *remediated in v0.5.1*
 
 | Attribute | Detail |
 |-----------|--------|
 | **Playwright Tool** | `browser_fill_form` |
-| **Charlotte Status** | Not implemented — requires sequential `charlotte:type` calls for each field |
+| **Charlotte Status** | Implemented — `charlotte_fill_form` accepts an array of `{element_id, value}` pairs and fills an entire form in a single tool call. Supports text inputs, textareas, selects, checkboxes, radios, toggles, date inputs, and color inputs. |
 | **Impact** | Medium — multi-field forms require N tool calls instead of 1, increasing token usage and latency |
 | **Parameters (Playwright)** | `fields` (array of `{ref, value}`) |
-| **Suggested Tool Name** | `charlotte:fill_form` |
+| **Suggested Tool Name** | `charlotte_fill_form` |
 | **Implementation Notes** | Straightforward to implement by iterating over fields internally. Should resolve each element_id, clear, and type. Could extend to also handle selects and checkboxes. |
 
-### GAP-05: Slow / Character-by-Character Typing
+### GAP-05: Slow / Character-by-Character Typing — *remediated in v0.5.1*
 
 | Attribute | Detail |
 |-----------|--------|
 | **Playwright Tool** | `browser_type` with `slowly: true` parameter |
-| **Charlotte Status** | Not implemented — `charlotte:type` fills the entire value at once |
+| **Charlotte Status** | Implemented — `charlotte_type` accepts `slowly` (boolean) and `character_delay` (ms) parameters for character-by-character input. |
 | **Impact** | Medium — some sites have key-by-key event handlers (autocomplete, search-as-you-type, input validation) that won't fire with bulk fill |
 | **Parameters (Playwright)** | `slowly` (boolean) on `browser_type` |
-| **Suggested Change** | Add `slowly` or `character_delay` parameter to `charlotte:type` |
+| **Suggested Change** | Add `slowly` or `character_delay` parameter to `charlotte_type` |
 | **Implementation Notes** | Puppeteer's `page.keyboard.type(text, {delay})` supports this natively. |
 
 ### GAP-06: Click with Modifier Keys — *remediated in v0.4.0*
@@ -131,10 +131,10 @@ where Charlotte has capabilities Playwright MCP does not**, for completeness.
 | Attribute | Detail |
 |-----------|--------|
 | **Playwright Tool** | `browser_click` with `modifiers` parameter (`["Control", "Shift", "Alt", "Meta"]`) |
-| **Charlotte Status** | Implemented — `charlotte:click` accepts `modifiers` parameter (`ctrl`, `shift`, `alt`, `meta`, or combinations). Works with all click types. |
+| **Charlotte Status** | Implemented — `charlotte_click` accepts `modifiers` parameter (`ctrl`, `shift`, `alt`, `meta`, or combinations). Works with all click types. |
 | **Impact** | Medium — blocks Ctrl+Click (open in new tab), Shift+Click (range select), etc. |
 | **Parameters (Playwright)** | `modifiers` (array of modifier key names) |
-| **Suggested Change** | Add `modifiers` parameter to `charlotte:click` |
+| **Suggested Change** | Add `modifiers` parameter to `charlotte_click` |
 | **Implementation Notes** | Puppeteer's `page.mouse.click()` doesn't directly accept modifiers, but holding keys via `page.keyboard.down('Control')` before click achieves this. |
 
 ---
@@ -148,28 +148,28 @@ Charlotte operates exclusively in semantic/accessibility mode. Playwright MCP's 
 | Attribute | Detail |
 |-----------|--------|
 | **Impact** | Medium — needed for canvas elements, custom widgets, and elements not in the accessibility tree |
-| **Charlotte Status** | Implemented as `charlotte:click_at` with `x`, `y`, `click_type`, and `modifiers` parameters. |
+| **Charlotte Status** | Implemented as `charlotte_click_at` with `x`, `y`, `click_type`, and `modifiers` parameters. |
 
 ### GAP-08: Coordinate-Based Mouse Move (`browser_mouse_move_xy`)
 
 | Attribute | Detail |
 |-----------|--------|
 | **Impact** | Medium — needed for hover effects at specific positions, canvas interaction |
-| **Suggested Tool Name** | `charlotte:mouse_move` |
+| **Suggested Tool Name** | `charlotte_mouse_move` |
 
 ### GAP-09: Coordinate-Based Drag (`browser_mouse_drag_xy`)
 
 | Attribute | Detail |
 |-----------|--------|
 | **Impact** | Medium — needed for canvas drawing, map interactions, visual editors |
-| **Suggested Tool Name** | `charlotte:drag_xy` |
+| **Suggested Tool Name** | `charlotte_drag_xy` |
 
 ### GAP-10: Mouse Button Down / Up (`browser_mouse_down` / `browser_mouse_up`)
 
 | Attribute | Detail |
 |-----------|--------|
 | **Impact** | Low — advanced use case for long-press, custom drag behaviors |
-| **Suggested Tool Name** | `charlotte:mouse_down`, `charlotte:mouse_up` |
+| **Suggested Tool Name** | `charlotte_mouse_down`, `charlotte_mouse_up` |
 
 ### GAP-11: Mouse Wheel (`browser_mouse_wheel`)
 
@@ -177,7 +177,7 @@ Charlotte operates exclusively in semantic/accessibility mode. Playwright MCP's 
 |-----------|--------|
 | **Impact** | Low — Charlotte's semantic `scroll` covers most cases; pixel-level wheel control needed for map zoom, canvas scroll |
 | **Parameters (Playwright)** | `deltaX`, `deltaY` (numbers) |
-| **Suggested Tool Name** | `charlotte:mouse_wheel` |
+| **Suggested Tool Name** | `charlotte_mouse_wheel` |
 
 > **Note**: The entire vision group could be implemented as an optional capability behind a
 > `--caps=vision` flag, mirroring Playwright MCP's approach. This aligns with Charlotte's
@@ -195,7 +195,7 @@ Charlotte operates exclusively in semantic/accessibility mode. Playwright MCP's 
 | **Charlotte Status** | Not implemented |
 | **Impact** | Low-Medium — useful for saving receipts, reports, invoices during automation |
 | **Parameters (Playwright)** | `filename` (string, optional) |
-| **Suggested Tool Name** | `charlotte:pdf` |
+| **Suggested Tool Name** | `charlotte_pdf` |
 | **Implementation Notes** | Puppeteer supports `page.pdf()` natively. Chromium-only limitation applies to both. |
 
 ### GAP-13: Save Outputs to Files — *remediated in v0.5.0*
@@ -203,7 +203,7 @@ Charlotte operates exclusively in semantic/accessibility mode. Playwright MCP's 
 | Attribute | Detail |
 |-----------|--------|
 | **Playwright Feature** | `filename` parameter on `browser_snapshot`, `browser_take_screenshot`, `browser_console_messages`, `browser_network_requests` |
-| **Charlotte Status** | Implemented — `charlotte:observe` and `charlotte:screenshot` accept `output_file` parameter to write results to disk. Relative paths resolve against `output_dir` (configurable via `charlotte:configure` or `--output-dir` CLI flag). Screenshot artifact management via `screenshots`, `screenshot_get`, `screenshot_delete` tools. |
+| **Charlotte Status** | Implemented — `charlotte_observe` and `charlotte_screenshot` accept `output_file` parameter to write results to disk. Relative paths resolve against `output_dir` (configurable via `charlotte_configure` or `--output-dir` CLI flag). Screenshot artifact management via `screenshots`, `screenshot_get`, `screenshot_delete` tools. |
 | **Impact** | Medium — file output reduces token consumption for large responses, enables post-session analysis |
 
 ---
@@ -218,7 +218,7 @@ Playwright MCP's entire `testing` capability group (5 tools) has no Charlotte eq
 |-----------|--------|
 | **Parameters** | `role` (ARIA role), `accessibleName` (string) |
 | **Impact** | Medium — enables assertion-driven automation without manual page inspection |
-| **Suggested Tool Name** | `charlotte:verify_element` |
+| **Suggested Tool Name** | `charlotte_verify_element` |
 
 ### GAP-15: Verify Text Visible (`browser_verify_text_visible`)
 
@@ -226,7 +226,7 @@ Playwright MCP's entire `testing` capability group (5 tools) has no Charlotte eq
 |-----------|--------|
 | **Parameters** | `text` (string) |
 | **Impact** | Medium — simple boolean check vs parsing full observe output |
-| **Suggested Tool Name** | `charlotte:verify_text` |
+| **Suggested Tool Name** | `charlotte_verify_text` |
 
 ### GAP-16: Verify List Contents (`browser_verify_list_visible`)
 
@@ -234,7 +234,7 @@ Playwright MCP's entire `testing` capability group (5 tools) has no Charlotte eq
 |-----------|--------|
 | **Parameters** | `element`, `ref`, `items` (array) |
 | **Impact** | Low — specialized use case |
-| **Suggested Tool Name** | `charlotte:verify_list` |
+| **Suggested Tool Name** | `charlotte_verify_list` |
 
 ### GAP-17: Verify Form Value (`browser_verify_value`)
 
@@ -242,7 +242,7 @@ Playwright MCP's entire `testing` capability group (5 tools) has no Charlotte eq
 |-----------|--------|
 | **Parameters** | `type`, `element`, `ref`, `value` |
 | **Impact** | Medium — critical for form fill verification without full page re-observation |
-| **Suggested Tool Name** | `charlotte:verify_value` |
+| **Suggested Tool Name** | `charlotte_verify_value` |
 
 ### GAP-18: Generate Locator (`browser_generate_locator`)
 
@@ -250,7 +250,7 @@ Playwright MCP's entire `testing` capability group (5 tools) has no Charlotte eq
 |-----------|--------|
 | **Parameters** | `element`, `ref` |
 | **Impact** | Low-Medium — useful when generating test code; Charlotte's element IDs aren't Playwright locators |
-| **Suggested Tool Name** | `charlotte:locator` |
+| **Suggested Tool Name** | `charlotte_locator` |
 | **Implementation Notes** | Would generate a CSS or XPath selector for a given element_id. Useful for test code generation workflows. |
 
 ---
@@ -264,7 +264,7 @@ Playwright MCP's entire `testing` capability group (5 tools) has no Charlotte eq
 | **Playwright Tools** | `browser_start_tracing`, `browser_stop_tracing` |
 | **Charlotte Status** | Not implemented |
 | **Impact** | Medium — traces capture actions, network, console, DOM snapshots, and screenshots in a `.zip` viewable in Playwright Trace Viewer |
-| **Suggested Tool Names** | `charlotte:trace_start`, `charlotte:trace_stop` |
+| **Suggested Tool Names** | `charlotte_trace_start`, `charlotte_trace_stop` |
 | **Implementation Notes** | Puppeteer supports Chrome DevTools Protocol tracing via `page.tracing.start()` / `page.tracing.stop()`. The output is a Chrome trace JSON, not a Playwright trace format. Charlotte could produce its own trace format or use CDP tracing. |
 
 ### GAP-20: Session Video Recording
@@ -282,26 +282,26 @@ Playwright MCP's entire `testing` capability group (5 tools) has no Charlotte eq
 
 ### GAP-21: Dedicated Console Message Retrieval
 
-> **Remediated in Charlotte v0.4.0** — `charlotte:console` captures all console levels with timestamps, supports level filtering and buffer clearing.
+> **Remediated in Charlotte v0.4.0** — `charlotte_console` captures all console levels with timestamps, supports level filtering and buffer clearing.
 
 | Attribute | Detail |
 |-----------|--------|
 | **Playwright Tool** | `browser_console_messages` with `level` filter and `filename` save |
 | **Charlotte Status** | Partial — captures console errors in PageRepresentation `errors.console` array, but no dedicated tool, no level filtering, no file export |
 | **Impact** | Medium — agents debugging JS errors need filtered console access |
-| **Suggested Tool Name** | `charlotte:console` |
+| **Suggested Tool Name** | `charlotte_console` |
 | **Implementation Notes** | Charlotte already listens to console events in PageManager. Needs: (1) capture all levels (not just errors), (2) expose as a dedicated tool, (3) add level filtering. |
 
 ### GAP-22: Dedicated Network Request Monitoring
 
-> **Remediated in Charlotte v0.4.0** — `charlotte:requests` captures all HTTP responses with method, status, resource type, and timestamps. Supports URL pattern, resource type, and status code filtering.
+> **Remediated in Charlotte v0.4.0** — `charlotte_requests` captures all HTTP responses with method, status, resource type, and timestamps. Supports URL pattern, resource type, and status code filtering.
 
 | Attribute | Detail |
 |-----------|--------|
 | **Playwright Tool** | `browser_network_requests` with `includeStatic` filter and `filename` save |
 | **Charlotte Status** | Partial — captures network errors in PageRepresentation `errors.network` array, but no tool for viewing all requests |
 | **Impact** | Medium — agents debugging API failures need visibility into all requests, not just errors |
-| **Suggested Tool Name** | `charlotte:requests` |
+| **Suggested Tool Name** | `charlotte_requests` |
 | **Implementation Notes** | Puppeteer's `page.on('request')` and `page.on('response')` events can capture full request/response data. Charlotte's `network` tool currently only configures throttling/blocking. |
 
 ---
@@ -313,9 +313,9 @@ Playwright MCP's entire `testing` capability group (5 tools) has no Charlotte eq
 | Attribute | Detail |
 |-----------|--------|
 | **Playwright Tool** | `browser_run_code` — executes raw Playwright code with full access to the `page` object |
-| **Charlotte Status** | Not implemented — `charlotte:evaluate` executes JS in the **page context** (browser sandbox), not in the Node.js/Puppeteer context |
+| **Charlotte Status** | Not implemented — `charlotte_evaluate` executes JS in the **page context** (browser sandbox), not in the Node.js/Puppeteer context |
 | **Impact** | Medium — `browser_run_code` is Playwright MCP's escape hatch for any unsupported operation (network interception, multi-page coordination, complex scripting). Charlotte has no equivalent escape hatch for Puppeteer-level operations |
-| **Suggested Tool Name** | `charlotte:run_code` |
+| **Suggested Tool Name** | `charlotte_run_code` |
 | **Security Considerations** | High risk — allows arbitrary Node.js code execution. Should be gated behind a capability flag. |
 
 ---
@@ -329,7 +329,7 @@ Playwright MCP's entire `testing` capability group (5 tools) has no Charlotte eq
 | **Playwright Tool** | `browser_close` |
 | **Charlotte Status** | Not implemented — browser lifecycle is managed automatically |
 | **Impact** | Low — Charlotte's auto-managed lifecycle is sufficient for most cases |
-| **Suggested Tool Name** | `charlotte:close` |
+| **Suggested Tool Name** | `charlotte_close` |
 
 ### GAP-25: Browser Installation
 
@@ -353,9 +353,9 @@ Playwright MCP's entire `testing` capability group (5 tools) has no Charlotte eq
 | Attribute | Detail |
 |-----------|--------|
 | **Playwright Feature** | `--device "iPhone 15"` — sets viewport, user agent, device scale factor, touch support from Playwright's device registry |
-| **Charlotte Status** | Partial — `charlotte:viewport` has `device` presets (`mobile`/`tablet`/`desktop`) that set dimensions only, not user agent or touch emulation |
+| **Charlotte Status** | Partial — `charlotte_viewport` has `device` presets (`mobile`/`tablet`/`desktop`) that set dimensions only, not user agent or touch emulation |
 | **Impact** | Medium — accurate mobile testing requires full device emulation |
-| **Suggested Change** | Extend `charlotte:viewport` to accept device names and configure UA, touch, DPR via CDP `Emulation.setDeviceMetricsOverride` and `Network.setUserAgentOverride` |
+| **Suggested Change** | Extend `charlotte_viewport` to accept device names and configure UA, touch, DPR via CDP `Emulation.setDeviceMetricsOverride` and `Network.setUserAgentOverride` |
 
 ### GAP-28: Proxy Configuration
 
@@ -373,7 +373,7 @@ Playwright MCP's entire `testing` capability group (5 tools) has no Charlotte eq
 | **Playwright Feature** | `--storage-state` to load cookies, localStorage, sessionStorage from a JSON file |
 | **Charlotte Status** | Partial — `set_cookies` can set cookies individually, but no bulk load from file and no localStorage/sessionStorage support |
 | **Impact** | Medium — pre-authenticated sessions require loading full storage state |
-| **Suggested Change** | Add `--storage-state` CLI arg or a `charlotte:load_state` tool |
+| **Suggested Change** | Add `--storage-state` CLI arg or a `charlotte_load_state` tool |
 
 ### GAP-30: Custom User Agent
 
@@ -382,7 +382,7 @@ Playwright MCP's entire `testing` capability group (5 tools) has no Charlotte eq
 | **Playwright Feature** | `--user-agent` CLI argument |
 | **Charlotte Status** | Not implemented |
 | **Impact** | Low-Medium — needed for testing mobile views, avoiding bot detection |
-| **Suggested Change** | Add `--user-agent` CLI argument or parameter on `charlotte:configure` |
+| **Suggested Change** | Add `--user-agent` CLI argument or parameter on `charlotte_configure` |
 
 ### GAP-31: Browser Permission Granting
 
@@ -398,7 +398,7 @@ Playwright MCP's entire `testing` capability group (5 tools) has no Charlotte eq
 | Attribute | Detail |
 |-----------|--------|
 | **Playwright Feature** | `--init-script` (JS file injected on every page load), `--init-page` (TS page initialization) |
-| **Charlotte Status** | Partial — `charlotte:dev_inject` injects CSS/JS but only once, not persistently across navigations |
+| **Charlotte Status** | Partial — `charlotte_dev_inject` injects CSS/JS but only once, not persistently across navigations |
 | **Impact** | Medium — useful for injecting polyfills, analytics blockers, or auth tokens on every page load |
 | **Suggested Change** | Add `--init-script` CLI argument that injects via `page.evaluateOnNewDocument()` |
 
@@ -416,7 +416,7 @@ Playwright MCP's entire `testing` capability group (5 tools) has no Charlotte eq
 | Attribute | Detail |
 |-----------|--------|
 | **Playwright MCP** | Does not have a dedicated `browser_navigate_forward` — forward is via `browser_press_key` with "Alt+ArrowRight" |
-| **Charlotte Status** | Charlotte has `charlotte:forward` as a dedicated tool |
+| **Charlotte Status** | Charlotte has `charlotte_forward` as a dedicated tool |
 | **Note** | This is NOT a gap for Charlotte — Charlotte actually has a cleaner API here. Listed for completeness only. |
 
 ---
@@ -457,7 +457,7 @@ Playwright MCP's entire `testing` capability group (5 tools) has no Charlotte eq
 | Attribute | Detail |
 |-----------|--------|
 | **Playwright Feature** | `--config` flag to load settings from a JSON file |
-| **Charlotte Status** | Not implemented — configuration only via `charlotte:configure` tool at runtime |
+| **Charlotte Status** | Not implemented — configuration only via `charlotte_configure` tool at runtime |
 | **Impact** | Medium — simplifies repeatable setups, CI/CD integration |
 | **Suggested Change** | Support a `charlotte.config.json` or `--config` CLI flag |
 
@@ -468,7 +468,7 @@ Playwright MCP's entire `testing` capability group (5 tools) has no Charlotte eq
 | **Playwright Feature** | `--allowed-origins`, `--blocked-origins` |
 | **Charlotte Status** | Not implemented — no URL/origin restrictions |
 | **Impact** | Medium — security feature to prevent agents from navigating to untrusted sites |
-| **Implementation Notes** | Could be implemented as navigation guards in `charlotte:navigate`. |
+| **Implementation Notes** | Could be implemented as navigation guards in `charlotte_navigate`. |
 
 ### GAP-40: Service Worker Blocking
 
@@ -512,18 +512,18 @@ Features Charlotte provides that Playwright MCP **does not** have as dedicated t
 
 | # | Charlotte Feature | Description | Playwright MCP Equivalent |
 |---|-------------------|-------------|---------------------------|
-| A1 | `charlotte:diff` | Structural diff between page snapshots | None — agents must compare snapshots manually |
-| A2 | `charlotte:find` | Search interactive elements by text, role, type, proximity, containment | None — agents must parse snapshot text |
+| A1 | `charlotte_diff` | Structural diff between page snapshots | None — agents must compare snapshots manually |
+| A2 | `charlotte_find` | Search interactive elements by text, role, type, proximity, containment | None — agents must parse snapshot text |
 | A3 | Detail levels (minimal/summary/full) | Tiered token output (336 chars vs 61K for Hacker News) | None — always returns full snapshot |
 | A4 | Stable element IDs | Hash-based IDs survive DOM mutations | Ref strings regenerated each snapshot |
-| A5 | `charlotte:network` (throttle) | Simulate 3G/4G/offline conditions | None — no network throttling tool |
-| A6 | `charlotte:network` (block URLs) | Block URL patterns | Origin blocking only, not URL patterns |
-| A7 | `charlotte:get_cookies` / `set_cookies` / `clear_cookies` | Dedicated cookie management tools | None — requires `browser_evaluate` or storage state files |
-| A8 | `charlotte:set_headers` | Set custom HTTP headers | None — no dedicated tool |
-| A9 | `charlotte:dev_serve` | Static file server with hot reload | None |
-| A10 | `charlotte:dev_audit` | Accessibility, performance, SEO, contrast, broken link auditing | None |
-| A11 | `charlotte:dev_inject` | Runtime CSS/JS injection tool | Only `--init-script` (config-time, not runtime) |
-| A12 | `charlotte:configure` | Runtime snapshot depth and auto-snapshot tuning | None — all config via CLI args only |
+| A5 | `charlotte_network` (throttle) | Simulate 3G/4G/offline conditions | None — no network throttling tool |
+| A6 | `charlotte_network` (block URLs) | Block URL patterns | Origin blocking only, not URL patterns |
+| A7 | `charlotte_get_cookies` / `set_cookies` / `clear_cookies` | Dedicated cookie management tools | None — requires `browser_evaluate` or storage state files |
+| A8 | `charlotte_set_headers` | Set custom HTTP headers | None — no dedicated tool |
+| A9 | `charlotte_dev_serve` | Static file server with hot reload | None |
+| A10 | `charlotte_dev_audit` | Accessibility, performance, SEO, contrast, broken link auditing | None |
+| A11 | `charlotte_dev_inject` | Runtime CSS/JS injection tool | Only `--init-script` (config-time, not runtime) |
+| A12 | `charlotte_configure` | Runtime snapshot depth and auto-snapshot tuning | None — all config via CLI args only |
 
 ---
 
@@ -533,18 +533,18 @@ Features Charlotte provides that Playwright MCP **does not** have as dedicated t
 
 | Gap | Tool | Rationale |
 |-----|------|-----------|
-| GAP-03 | `charlotte:dialog` | Unhandled dialogs freeze all automation — *remediated in v0.3.0* |
-| GAP-02 | `charlotte:upload` | File upload is a fundamental web interaction |
-| GAP-01 | `charlotte:drag` | Drag-and-drop is common in modern web apps — *remediated in v0.4.0* |
-| GAP-21 | `charlotte:console` | Console access is essential for debugging — *remediated in v0.4.0* |
-| GAP-22 | `charlotte:requests` | Network request visibility essential for API debugging — *remediated in v0.4.0* |
+| GAP-03 | `charlotte_dialog` | Unhandled dialogs freeze all automation — *remediated in v0.3.0* |
+| GAP-02 | `charlotte_upload` | File upload is a fundamental web interaction |
+| GAP-01 | `charlotte_drag` | Drag-and-drop is common in modern web apps — *remediated in v0.4.0* |
+| GAP-21 | `charlotte_console` | Console access is essential for debugging — *remediated in v0.4.0* |
+| GAP-22 | `charlotte_requests` | Network request visibility essential for API debugging — *remediated in v0.4.0* |
 
 ### Priority 2 — High Value (significant UX improvement)
 
 | Gap | Tool / Change | Rationale |
 |-----|---------------|-----------|
-| GAP-04 | `charlotte:fill_form` | Reduces N tool calls to 1 for multi-field forms |
-| GAP-05 | `slowly` param on `type` | Fixes autocomplete and search-as-you-type sites |
+| GAP-04 | `charlotte_fill_form` | Reduces N tool calls to 1 for multi-field forms — *remediated in v0.5.1* |
+| GAP-05 | `slowly` param on `type` | Fixes autocomplete and search-as-you-type sites — *remediated in v0.5.1* |
 | GAP-06 | `modifiers` param on `click` | Enables Ctrl+Click, Shift+Click patterns |
 | GAP-13 | `filename` param on tools | Reduces token consumption for large outputs |
 | GAP-33 | `--cdp-endpoint` CLI arg | Enables connecting to existing browser sessions |
@@ -584,8 +584,8 @@ Features Charlotte provides that Playwright MCP **does not** have as dedicated t
 | GAP-01 | Interaction | Drag and drop | `browser_drag` | Remediated in v0.4.0 | High |
 | GAP-02 | Interaction | File upload | `browser_file_upload` | Remediated in v0.4.2 | High |
 | GAP-03 | Interaction | Dialog handling | `browser_handle_dialog` | Remediated in v0.3.0 | High |
-| GAP-04 | Interaction | Batch form fill | `browser_fill_form` | Missing | Medium |
-| GAP-05 | Interaction | Slow typing | `slowly` param | Missing | Medium |
+| GAP-04 | Interaction | Batch form fill | `browser_fill_form` | Remediated in v0.5.1 | Medium |
+| GAP-05 | Interaction | Slow typing | `slowly` param | Remediated in v0.5.1 | Medium |
 | GAP-06 | Interaction | Click modifiers | `modifiers` param | Remediated in v0.4.0 | Medium |
 | GAP-07 | Vision | Coordinate click | `browser_mouse_click_xy` | Remediated in v0.4.1 | Medium |
 | GAP-08 | Vision | Coordinate move | `browser_mouse_move_xy` | Missing | Medium |

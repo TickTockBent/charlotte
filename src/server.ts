@@ -86,6 +86,7 @@ export function createServer(deps: ServerDeps, options: ServerOptions = {}): Cre
     },
     {
       capabilities: {
+        // listChanged: prep for runtime tool toggling (e.g. profile switching)
         tools: { listChanged: true },
         logging: {},
       },

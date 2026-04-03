@@ -15,7 +15,7 @@ import { renderActivePage, resolveElement } from "../../src/tools/tool-helpers.j
 import { typeIntoElement } from "../../src/tools/interaction-helpers.js";
 
 const INTERACTION_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/interaction.html")}`;
-const _FORM_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/form.html")}`;
+const FORM_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/form.html")}`;
 
 describe("Interaction integration", () => {
   let browserManager: BrowserManager;
@@ -883,6 +883,104 @@ describe("Interaction integration", () => {
         // visible is omitted when true (default stripping)
         expect(fileInput.state.visible).toBeUndefined();
       }
+    });
+  });
+
+  describe("fill_form", () => {
+    beforeEach(async () => {
+      const page = pageManager.getActivePage();
+      await page.goto(FORM_FIXTURE, { waitUntil: "load" });
+    });
+
+    it("fills multiple text inputs in a single call", async () => {
+      const representation = await renderActivePage(deps, { detail: "minimal" });
+      const firstName = findElementByLabel(representation, "First Name");
+      const lastName = findElementByLabel(representation, "Last Name");
+      const email = findElementByLabel(representation, "Email");
+      expect(firstName).toBeDefined();
+      expect(lastName).toBeDefined();
+      expect(email).toBeDefined();
+
+      // Fill all three fields
+      for (const field of [
+        { id: firstName!.id, value: "Jane" },
+        { id: lastName!.id, value: "Doe" },
+        { id: email!.id, value: "jane@example.com" },
+      ]) {
+        const { backendNodeId } = await resolveElement(deps, field.id);
+        await typeIntoElement(pageManager.getActivePage(), backendNodeId, field.value, true, false);
+      }
+
+      // Verify values were set
+      const page = pageManager.getActivePage();
+      const values = await page.evaluate(() => ({
+        firstName: (document.getElementById("first-name") as HTMLInputElement).value,
+        lastName: (document.getElementById("last-name") as HTMLInputElement).value,
+        email: (document.getElementById("email") as HTMLInputElement).value,
+      }));
+      expect(values.firstName).toBe("Jane");
+      expect(values.lastName).toBe("Doe");
+      expect(values.email).toBe("jane@example.com");
+    });
+
+    it("fills a mix of text inputs, selects, and checkboxes", async () => {
+      const representation = await renderActivePage(deps, { detail: "minimal" });
+      const firstName = findElementByLabel(representation, "First Name");
+      const country = findElementByType(representation, "select", "Country");
+      const newsletter = findElementByType(representation, "checkbox", "newsletter");
+      expect(firstName).toBeDefined();
+      expect(country).toBeDefined();
+      expect(newsletter).toBeDefined();
+
+      // Fill text input
+      const firstNameResolved = await resolveElement(deps, firstName!.id);
+      await typeIntoElement(firstNameResolved.page, firstNameResolved.backendNodeId, "Alice", true, false);
+
+      // Select dropdown
+      const { selectOptionByBackendNodeId: selectFn } = await import("../../src/tools/interaction-helpers.js");
+      const countryResolved = await resolveElement(deps, country!.id);
+      await selectFn(countryResolved.page, countryResolved.backendNodeId, "ca");
+
+      // Toggle checkbox
+      const { clickElementByBackendNodeId: clickFn } = await import("../../src/tools/interaction-helpers.js");
+      const newsletterResolved = await resolveElement(deps, newsletter!.id);
+      await clickFn(newsletterResolved.page, newsletterResolved.backendNodeId, "left");
+
+      // Verify all values
+      const page = pageManager.getActivePage();
+      const values = await page.evaluate(() => ({
+        firstName: (document.getElementById("first-name") as HTMLInputElement).value,
+        country: (document.getElementById("country") as HTMLSelectElement).value,
+        newsletter: (document.getElementById("newsletter") as HTMLInputElement).checked,
+      }));
+      expect(values.firstName).toBe("Alice");
+      expect(values.country).toBe("ca");
+      expect(values.newsletter).toBe(true);
+    });
+
+    it("rejects unsupported element types", async () => {
+      const representation = await renderActivePage(deps, { detail: "minimal" });
+      const submitButton = findElementByLabel(representation, "Register");
+      expect(submitButton).toBeDefined();
+      expect(submitButton!.type).toBe("button");
+
+      // Buttons are not fillable — the tool should reject them
+      const supportedTypes = ["text_input", "textarea", "select", "checkbox", "radio", "toggle", "date_input", "color_input"];
+      expect(supportedTypes).not.toContain(submitButton!.type);
+    });
+
+    it("fills a textarea field (classified as text_input by AX tree)", async () => {
+      const representation = await renderActivePage(deps, { detail: "minimal" });
+      const bio = findElementByLabel(representation, "Bio");
+      expect(bio).toBeDefined();
+      expect(bio!.type).toBe("text_input");
+
+      const { backendNodeId } = await resolveElement(deps, bio!.id);
+      await typeIntoElement(pageManager.getActivePage(), backendNodeId, "Hello, I am a test user.", true, false);
+
+      const page = pageManager.getActivePage();
+      const bioValue = await page.evaluate(() => (document.getElementById("bio") as HTMLTextAreaElement).value);
+      expect(bioValue).toBe("Hello, I am a test user.");
     });
   });
 

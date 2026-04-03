@@ -31,6 +31,7 @@ export const TOOL_GROUPS = {
     "charlotte:key",
     "charlotte:wait_for",
     "charlotte:upload",
+    "charlotte:fill_form",
   ],
   session: [
     "charlotte:get_cookies",
@@ -133,6 +134,7 @@ export const PROFILE_TOOLS: Record<ToolProfile, string[]> = {
     "charlotte:key",
     "charlotte:wait_for",
     "charlotte:upload",
+    "charlotte:fill_form",
     // session (tabs — inherited from browse)
     "charlotte:tabs",
     "charlotte:tab_open",
@@ -171,6 +173,7 @@ export const PROFILE_TOOLS: Record<ToolProfile, string[]> = {
     "charlotte:key",
     "charlotte:wait_for",
     "charlotte:upload",
+    "charlotte:fill_form",
     // session (tabs — inherited from browse)
     "charlotte:tabs",
     "charlotte:tab_open",
@@ -249,7 +252,7 @@ export const GROUP_DESCRIPTIONS: Record<ToolGroupName, string> = {
   navigation: "Page navigation (navigate, back, forward, reload)",
   observation: "Page inspection (observe, find, screenshot, diff)",
   interaction:
-    "DOM interaction (click, click_at, type, select, toggle, submit, scroll, hover, drag, key/sequences, wait_for, upload)",
+    "DOM interaction (click, click_at, type, select, toggle, submit, scroll, hover, drag, key/sequences, wait_for, upload, fill_form)",
   session: "Session management (cookies, headers, configure, tabs, viewport, network)",
   dev_mode: "Development tools (dev_serve, dev_inject, dev_audit)",
   dialog: "JavaScript dialog handling",

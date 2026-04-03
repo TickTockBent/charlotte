@@ -692,7 +692,7 @@ export function registerInteractionTools(
           const supportedTypes = ["text_input", "textarea", "select", "checkbox", "radio", "toggle", "date_input", "color_input"];
           if (!supportedTypes.includes(element.type)) {
             throw new CharlotteError(
-              CharlotteErrorCode.SESSION_ERROR,
+              CharlotteErrorCode.ELEMENT_NOT_INTERACTIVE,
               `Element '${field.element_id}' is type '${element.type}' which cannot be filled.`,
               "fill_form supports: text_input, textarea, select, checkbox, radio, toggle, date_input, color_input.",
             );

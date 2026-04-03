@@ -38,7 +38,7 @@ async function main(): Promise<void> {
 
   // Initialize browser
   const browserManager = new BrowserManager(config);
-  await browserManager.launch();
+  await browserManager.launch({ headless: cliOptions.headless ?? true });
 
   // Initialize page management
   const pageManager = new PageManager(config);

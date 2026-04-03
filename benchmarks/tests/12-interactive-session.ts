@@ -27,16 +27,16 @@ export const interactiveSessionTest: BenchmarkTest = {
     };
 
     // 1. Navigate
-    await client.callTool("charlotte:navigate", { url: TARGET_URL });
+    await client.callTool("charlotte_navigate", { url: TARGET_URL });
 
     // 2. Observe (summary) to understand page structure
-    const observeResult = await client.callTool("charlotte:observe", {
+    const observeResult = await client.callTool("charlotte_observe", {
       detail: "summary",
     });
     const observeText = responseText(observeResult.response);
 
     // 3. Find text inputs
-    const findInputsResult = await client.callTool("charlotte:find", {
+    const findInputsResult = await client.callTool("charlotte_find", {
       type: "text_input",
     });
     const findText = responseText(findInputsResult.response);
@@ -50,7 +50,7 @@ export const interactiveSessionTest: BenchmarkTest = {
 
     // 4-11. Type into up to 4 inputs, re-observe after each
     for (let i = 0; i < Math.min(inputIdMatches.length, 4); i++) {
-      const typeResult = await client.callTool("charlotte:type", {
+      const typeResult = await client.callTool("charlotte_type", {
         element_id: inputIdMatches[i],
         text: testValues[i],
       });
@@ -60,20 +60,20 @@ export const interactiveSessionTest: BenchmarkTest = {
       }
 
       // Re-observe (minimal) after each interaction
-      await client.callTool("charlotte:observe", { detail: "minimal" });
+      await client.callTool("charlotte_observe", { detail: "minimal" });
     }
 
     // 12. Submit if we found a form
     let submitted = false;
     if (formIdMatches.length > 0) {
-      const submitResult = await client.callTool("charlotte:submit", {
+      const submitResult = await client.callTool("charlotte_submit", {
         form_id: formIdMatches[0],
       });
       submitted = !submitResult.isError;
     }
 
     // 13. Final observe to capture post-submit state
-    await client.callTool("charlotte:observe", { detail: "minimal" });
+    await client.callTool("charlotte_observe", { detail: "minimal" });
 
     return {
       success: filledCount > 0,

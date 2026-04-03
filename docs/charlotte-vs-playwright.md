@@ -242,7 +242,7 @@ Sites visited: example.com, Hacker News, Wikipedia (MCP article), httpbin form, 
 | **audit** | 13 | Site accessibility and performance auditing |
 | **full** | 40 | No restrictions — every capability available |
 
-Profiles are selected at startup (`--profile=browse`) and can be adjusted at runtime with the `charlotte:tools` meta-tool.
+Profiles are selected at startup (`--profile=browse`) and can be adjusted at runtime with the `charlotte_tools` meta-tool.
 
 ---
 
@@ -291,18 +291,18 @@ Features Charlotte provides that Playwright MCP does not.
 
 | Feature | Description |
 |:--------|:------------|
-| `charlotte:diff` | Structural diff between page snapshots — see exactly what changed |
-| `charlotte:find` | Search interactive elements by text, role, type, proximity, containment without re-reading the full page |
+| `charlotte_diff` | Structural diff between page snapshots — see exactly what changed |
+| `charlotte_find` | Search interactive elements by text, role, type, proximity, containment without re-reading the full page |
 | Detail levels | 3 tiers (minimal / summary / full) — agents choose how much context to pay for |
 | Stable element IDs | Hash-based IDs (e.g. `btn-a3f1`) that survive DOM mutations and re-renders |
-| `charlotte:network` | Simulate 3G/4G/offline; block URL patterns |
-| `charlotte:get_cookies` / `set_cookies` / `clear_cookies` | Dedicated cookie management |
-| `charlotte:set_headers` | Custom HTTP headers per request |
-| `charlotte:dev_serve` | Static file server with hot reload for local development |
-| `charlotte:dev_audit` | Accessibility, performance, SEO, contrast, and broken link auditing |
-| `charlotte:dev_inject` | Runtime CSS and JavaScript injection |
-| `charlotte:configure` | Runtime adjustment of snapshot depth, auto-dismiss dialogs, and more |
-| `charlotte:tools` | Meta-tool to list, enable, and disable tool groups mid-session |
+| `charlotte_network` | Simulate 3G/4G/offline; block URL patterns |
+| `charlotte_get_cookies` / `set_cookies` / `clear_cookies` | Dedicated cookie management |
+| `charlotte_set_headers` | Custom HTTP headers per request |
+| `charlotte_dev_serve` | Static file server with hot reload for local development |
+| `charlotte_dev_audit` | Accessibility, performance, SEO, contrast, and broken link auditing |
+| `charlotte_dev_inject` | Runtime CSS and JavaScript injection |
+| `charlotte_configure` | Runtime adjustment of snapshot depth, auto-dismiss dialogs, and more |
+| `charlotte_tools` | Meta-tool to list, enable, and disable tool groups mid-session |
 
 ---
 

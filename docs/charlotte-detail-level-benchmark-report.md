@@ -174,12 +174,12 @@ At scale, definition overhead dominates — but the observe step savings are sti
 
 | # | Tool | Args | Chars | Est. Tokens | Time (ms) |
 |--:|:-----|:-----|------:|------------:|----------:|
-| 1 | charlotte:navigate | url: wikipedia.org | 3,070 | 768 | 2,023 |
-| 2 | charlotte:observe | view: tree | 1,948 | 487 | 45 |
-| 3 | charlotte:observe | view: tree-labeled | 8,230 | 2,058 | 40 |
-| 4 | charlotte:observe | detail: minimal | 3,070 | 768 | 70 |
-| 5 | charlotte:observe | detail: summary | 38,414 | 9,604 | 74 |
-| 6 | charlotte:observe | detail: full | 48,371 | 12,093 | 74 |
+| 1 | charlotte_navigate | url: wikipedia.org | 3,070 | 768 | 2,023 |
+| 2 | charlotte_observe | view: tree | 1,948 | 487 | 45 |
+| 3 | charlotte_observe | view: tree-labeled | 8,230 | 2,058 | 40 |
+| 4 | charlotte_observe | detail: minimal | 3,070 | 768 | 70 |
+| 5 | charlotte_observe | detail: summary | 38,414 | 9,604 | 74 |
+| 6 | charlotte_observe | detail: full | 48,371 | 12,093 | 74 |
 
 Tree view renders in ~40ms — comparable to or faster than structured modes — because it skips layout extraction, interactive extraction, and content extraction entirely.
 

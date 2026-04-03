@@ -3,7 +3,7 @@
   "serverName": "Charlotte (core)",
   "calls": [
     {
-      "toolName": "charlotte:navigate",
+      "toolName": "charlotte_navigate",
       "arguments": {
         "url": "about:blank"
       },

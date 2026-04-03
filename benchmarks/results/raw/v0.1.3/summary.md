@@ -25,8 +25,8 @@ Generated: 2026-02-22T14:21:21.069Z
 
 | # | Tool | Chars | Est. Tokens | Time (ms) |
 | ---: | :--- | ---: | ---: | ---: |
-| 1 | charlotte:navigate | 1,254 | 314 | 1625 |
-| 2 | charlotte:observe | 1,215 | 304 | 3 |
+| 1 | charlotte_navigate | 1,254 | 314 | 1625 |
+| 2 | charlotte_observe | 1,215 | 304 | 3 |
 
 ### Playwright MCP
 
@@ -55,10 +55,10 @@ Generated: 2026-02-22T14:21:21.069Z
 
 | # | Tool | Chars | Est. Tokens | Time (ms) |
 | ---: | :--- | ---: | ---: | ---: |
-| 1 | charlotte:navigate | 1,277,389 | 319,348 | 3897 |
-| 2 | charlotte:observe | 1,276,739 | 319,185 | 1027 |
-| 3 | charlotte:observe | 1,277,389 | 319,348 | 963 |
-| 4 | charlotte:observe | 1,500,637 | 375,160 | 969 |
+| 1 | charlotte_navigate | 1,277,389 | 319,348 | 3897 |
+| 2 | charlotte_observe | 1,276,739 | 319,185 | 1027 |
+| 3 | charlotte_observe | 1,277,389 | 319,348 | 963 |
+| 4 | charlotte_observe | 1,500,637 | 375,160 | 969 |
 
 ### Playwright MCP
 
@@ -87,9 +87,9 @@ Generated: 2026-02-22T14:21:21.069Z
 
 | # | Tool | Chars | Est. Tokens | Time (ms) |
 | ---: | :--- | ---: | ---: | ---: |
-| 1 | charlotte:navigate | 77,329 | 19,333 | 1997 |
-| 2 | charlotte:observe | 77,329 | 19,333 | 74 |
-| 3 | charlotte:find | 69,154 | 17,289 | 60 |
+| 1 | charlotte_navigate | 77,329 | 19,333 | 1997 |
+| 2 | charlotte_observe | 77,329 | 19,333 | 74 |
+| 3 | charlotte_find | 69,154 | 17,289 | 60 |
 
 ### Playwright MCP
 
@@ -118,9 +118,9 @@ Generated: 2026-02-22T14:21:21.069Z
 
 | # | Tool | Chars | Est. Tokens | Time (ms) |
 | ---: | :--- | ---: | ---: | ---: |
-| 1 | charlotte:navigate | 89,481 | 22,371 | 8041 |
-| 2 | charlotte:observe | 89,481 | 22,371 | 91 |
-| 3 | charlotte:observe | 89,197 | 22,300 | 80 |
+| 1 | charlotte_navigate | 89,481 | 22,371 | 8041 |
+| 2 | charlotte_observe | 89,481 | 22,371 | 91 |
+| 3 | charlotte_observe | 89,197 | 22,300 | 80 |
 
 ### Playwright MCP
 

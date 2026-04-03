@@ -80,9 +80,9 @@ describe("createServer", () => {
       expect(disabledNames.length).toBe(42 - expectedEnabled.size);
 
       // Spot-check: drag should be disabled in browse
-      expect(registry["charlotte:drag"].enabled).toBe(false);
+      expect(registry["charlotte_drag"].enabled).toBe(false);
       // Spot-check: click should be enabled in browse
-      expect(registry["charlotte:click"].enabled).toBe(true);
+      expect(registry["charlotte_click"].enabled).toBe(true);
     });
   });
 
@@ -118,11 +118,11 @@ describe("createServer", () => {
   });
 
   describe("meta-tool is always registered", () => {
-    it("charlotte:tools is not in the registry but is registered on the server", () => {
+    it("charlotte_tools is not in the registry but is registered on the server", () => {
       const { registry } = createServer(createMockDeps(), { profile: "core" });
 
       // Meta-tool is intentionally excluded from the registry
-      expect(registry["charlotte:tools"]).toBeUndefined();
+      expect(registry["charlotte_tools"]).toBeUndefined();
       // All 42 other tools are in the registry
       expect(Object.keys(registry)).toHaveLength(42);
     });

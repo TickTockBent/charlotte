@@ -3,7 +3,7 @@
   "serverName": "Charlotte",
   "calls": [
     {
-      "toolName": "charlotte:navigate",
+      "toolName": "charlotte_navigate",
       "arguments": {
         "url": "https://httpbin.org/forms/post"
       },
@@ -13,7 +13,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "detail": "summary"
       },
@@ -23,7 +23,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:find",
+      "toolName": "charlotte_find",
       "arguments": {
         "type": "text_input"
       },
@@ -33,7 +33,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:type",
+      "toolName": "charlotte_type",
       "arguments": {
         "element_id": "inp-82f6",
         "text": "benchmark-test"
@@ -44,7 +44,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:observe",
+      "toolName": "charlotte_observe",
       "arguments": {
         "detail": "minimal"
       },

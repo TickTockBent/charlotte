@@ -39,7 +39,7 @@ describe("meta-tool", () => {
     metaTool = registerMetaTool(server, registry);
   });
 
-  it("registers charlotte:tools tool", () => {
+  it("registers charlotte_tools tool", () => {
     expect(metaTool).toBeDefined();
     expect(metaTool.enabled).toBe(true);
   });

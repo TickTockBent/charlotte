@@ -25,15 +25,15 @@ export const interactiveFormTest: BenchmarkTest = {
 
     if (serverName.includes("Charlotte")) {
       // Navigate and observe to find form elements
-      await client.callTool("charlotte:navigate", { url: TARGET_URL });
-      const observeResult = await client.callTool("charlotte:observe", {
+      await client.callTool("charlotte_navigate", { url: TARGET_URL });
+      const observeResult = await client.callTool("charlotte_observe", {
         detail: "summary",
       });
 
       const observeText = responseText(observeResult.response);
 
       // Find interactive elements to fill - use find tool
-      const findInputs = await client.callTool("charlotte:find", {
+      const findInputs = await client.callTool("charlotte_find", {
         type: "text_input",
       });
 
@@ -47,7 +47,7 @@ export const interactiveFormTest: BenchmarkTest = {
 
       // Type into the first text input we find
       if (inputIdMatches.length > 0) {
-        const typeResult = await client.callTool("charlotte:type", {
+        const typeResult = await client.callTool("charlotte_type", {
           element_id: inputIdMatches[0],
           text: "benchmark-test",
         });
@@ -55,12 +55,12 @@ export const interactiveFormTest: BenchmarkTest = {
       }
 
       // Minimal re-observe to check state (cheap compared to Playwright's full snapshot)
-      await client.callTool("charlotte:observe", { detail: "minimal" });
+      await client.callTool("charlotte_observe", { detail: "minimal" });
 
       // Submit if we found a form
       let submitted = false;
       if (formIdMatches.length > 0) {
-        const submitResult = await client.callTool("charlotte:submit", {
+        const submitResult = await client.callTool("charlotte_submit", {
           form_id: formIdMatches[0],
         });
         submitted = !submitResult.isError;

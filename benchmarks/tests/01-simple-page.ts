@@ -25,10 +25,10 @@ export const simplePageTest: BenchmarkTest = {
 
     if (serverName.includes("Charlotte")) {
       // Charlotte: navigate + observe(minimal)
-      const navigateResult = await client.callTool("charlotte:navigate", {
+      const navigateResult = await client.callTool("charlotte_navigate", {
         url: TARGET_URL,
       });
-      const observeResult = await client.callTool("charlotte:observe", {
+      const observeResult = await client.callTool("charlotte_observe", {
         detail: "minimal",
       });
 

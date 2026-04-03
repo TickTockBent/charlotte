@@ -3,7 +3,7 @@
   "serverName": "Charlotte (browse)",
   "calls": [
     {
-      "toolName": "charlotte:tools",
+      "toolName": "charlotte_tools",
       "arguments": {
         "action": "list"
       },
@@ -13,7 +13,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:tools",
+      "toolName": "charlotte_tools",
       "arguments": {
         "action": "enable",
         "group": "monitoring"
@@ -24,7 +24,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:navigate",
+      "toolName": "charlotte_navigate",
       "arguments": {
         "url": "about:blank"
       },
@@ -34,7 +34,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:console",
+      "toolName": "charlotte_console",
       "arguments": {},
       "responseChars": 104,
       "estimatedTokens": 26,
@@ -42,7 +42,7 @@
       "isError": false
     },
     {
-      "toolName": "charlotte:tools",
+      "toolName": "charlotte_tools",
       "arguments": {
         "action": "disable",
         "group": "monitoring"

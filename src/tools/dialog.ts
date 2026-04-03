@@ -12,9 +12,9 @@ export function registerDialogTools(
 ): Record<string, RegisteredTool> {
   const tools: Record<string, RegisteredTool> = {};
 
-  // ─── charlotte:dialog ───
-  tools["charlotte:dialog"] = server.registerTool(
-    "charlotte:dialog",
+  // ─── charlotte_dialog ───
+  tools["charlotte_dialog"] = server.registerTool(
+    "charlotte_dialog",
     {
       description:
         "Handle a pending JavaScript dialog (alert, confirm, prompt, beforeunload). Accept or dismiss the dialog. Returns page representation after the dialog is resolved.",
@@ -39,7 +39,7 @@ export function registerDialogTools(
           throw new CharlotteError(
             CharlotteErrorCode.SESSION_ERROR,
             "No pending dialog to handle.",
-            "Call charlotte:observe to check page state. Dialogs appear as pending_dialog in the response.",
+            "Call charlotte_observe to check page state. Dialogs appear as pending_dialog in the response.",
           );
         }
 

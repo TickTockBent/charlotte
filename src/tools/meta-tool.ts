@@ -1,5 +1,5 @@
 /**
- * The charlotte:tools meta-tool for runtime tool group management.
+ * The charlotte_tools meta-tool for runtime tool group management.
  *
  * Always registered regardless of profile. Allows agents to discover
  * available groups and enable/disable them at runtime.
@@ -47,11 +47,11 @@ function getGroupStatus(registry: ToolRegistry): Record<string, GroupStatus> {
 }
 
 /**
- * Register the charlotte:tools meta-tool.
+ * Register the charlotte_tools meta-tool.
  */
 export function registerMetaTool(server: McpServer, registry: ToolRegistry): RegisteredTool {
   return server.registerTool(
-    "charlotte:tools",
+    "charlotte_tools",
     {
       description:
         "Manage Charlotte tool visibility. Lists available tool groups and their " +

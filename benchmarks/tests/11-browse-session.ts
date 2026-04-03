@@ -35,24 +35,24 @@ export const browseSessionTest: BenchmarkTest = {
 
     for (const site of SITES) {
       // 1. Navigate
-      const navigateResult = await client.callTool("charlotte:navigate", {
+      const navigateResult = await client.callTool("charlotte_navigate", {
         url: site.url,
       });
 
       if (navigateResult.isError) continue;
 
       // 2. Observe (minimal)
-      const minimalResult = await client.callTool("charlotte:observe", {
+      const minimalResult = await client.callTool("charlotte_observe", {
         detail: "minimal",
       });
 
       // 3. Observe (summary)
-      await client.callTool("charlotte:observe", {
+      await client.callTool("charlotte_observe", {
         detail: "summary",
       });
 
       // 4. Find links
-      await client.callTool("charlotte:find", {
+      await client.callTool("charlotte_find", {
         type: "link",
       });
 

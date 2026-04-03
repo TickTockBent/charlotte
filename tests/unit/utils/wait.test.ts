@@ -95,6 +95,29 @@ describe("pollUntilCondition", () => {
     expect(result).toBe(true);
   });
 
+  it("treats JS evaluation exceptions as falsy", async () => {
+    const mockCdpSession = {
+      send: vi.fn().mockResolvedValue({
+        result: {},
+        exceptionDetails: { text: "ReferenceError: foo is not defined" },
+      }),
+      detach: vi.fn().mockResolvedValue(undefined),
+    };
+    const mockPage = {
+      $: vi.fn(),
+      createCDPSession: vi.fn().mockResolvedValue(mockCdpSession),
+      evaluate: vi.fn(),
+    } as any;
+
+    const result = await pollUntilCondition(
+      mockPage,
+      { js: "foo.bar.baz" },
+      { timeout: 200, pollInterval: 50 },
+    );
+
+    expect(result).toBe(false);
+  });
+
   it("requires all conditions to be true (AND logic)", async () => {
     // selector exists but text doesn't
     const mockPage = createMockPage({

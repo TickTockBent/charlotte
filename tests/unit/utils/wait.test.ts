@@ -7,22 +7,27 @@ function createMockPage(behavior: {
   textExists?: boolean;
   jsResult?: boolean;
 }) {
+  const mockCdpSession = {
+    send: vi.fn().mockImplementation((method: string) => {
+      if (method === "Runtime.evaluate") {
+        return Promise.resolve({
+          result: { value: behavior.jsResult ?? false },
+        });
+      }
+      return Promise.resolve({});
+    }),
+    detach: vi.fn().mockResolvedValue(undefined),
+  };
+
   return {
     $: vi.fn().mockResolvedValue(behavior.selectorExists ? {} : null),
+    createCDPSession: vi.fn().mockResolvedValue(mockCdpSession),
     evaluate: vi.fn().mockImplementation((fn: (...fnArgs: any[]) => any, ...args: any[]) => {
-      // The function is called with arguments — detect which condition type
+      // Text condition passes searchText as an argument
       if (args.length > 0 && typeof args[0] === "string") {
-        // Could be text search or JS eval
-        const _arg = args[0];
-        // Check if it looks like a search text (from text condition)
-        // vs a JS expression (from js condition)
-        // We determine by checking the function source for "innerText"
         const fnStr = fn.toString();
         if (fnStr.includes("innerText")) {
           return Promise.resolve(behavior.textExists ?? false);
-        }
-        if (fnStr.includes("new Function")) {
-          return Promise.resolve(behavior.jsResult ?? false);
         }
       }
       return Promise.resolve(false);

@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { McpServer, RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { logger } from "../utils/logger.js";
 import type { ToolDependencies } from "./tool-helpers.js";
-import { handleToolError, coercedBoolean, resolveOutputPath, writeOutputFile } from "./tool-helpers.js";
+import { ensureReady, handleToolError, coercedBoolean, resolveOutputPath, writeOutputFile } from "./tool-helpers.js";
 
 export function registerMonitoringTools(
   server: McpServer,
@@ -34,7 +34,7 @@ export function registerMonitoringTools(
     },
     async ({ level, clear, output_file }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
 
         const filterLevel = level ?? "all";
         const messages = deps.pageManager.getConsoleMessages(filterLevel);
@@ -121,7 +121,7 @@ export function registerMonitoringTools(
     },
     async ({ url_pattern, resource_type, status_min, clear, output_file }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
 
         let requests = deps.pageManager.getNetworkRequests();
 

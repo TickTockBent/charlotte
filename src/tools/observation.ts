@@ -9,6 +9,7 @@ import type { ToolDependencies } from "./tool-helpers.js";
 import type { Bounds } from "../types/page-representation.js";
 import type { RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
+  ensureReady,
   renderActivePage,
   resolveElement,
   formatPageResponse,
@@ -182,7 +183,7 @@ export function registerObservationTools(
     },
     async ({ detail, view, selector, include_styles, output_file }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
 
         // Tree views: lightweight structural outline, skips full render pipeline
         if (view === "tree" || view === "tree-labeled") {
@@ -260,7 +261,7 @@ export function registerObservationTools(
     },
     async ({ text, role, type, near, within, selector }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
         logger.info("Finding elements", { text, role, type, near, within, selector });
 
         // CSS selector mode: query DOM directly, bypass accessibility tree
@@ -407,7 +408,7 @@ export function registerObservationTools(
           );
         }
 
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
         const page = deps.pageManager.getActivePage();
 
         // Ensure the compositor has a fresh frame before capturing.
@@ -669,7 +670,7 @@ export function registerObservationTools(
     },
     async ({ snapshot_id, scope }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
 
         const diffScope = (scope ?? "all") as DiffScope;
         logger.info("Computing diff", { snapshot_id, scope: diffScope });

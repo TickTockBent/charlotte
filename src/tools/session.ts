@@ -7,6 +7,7 @@ import type { AutoSnapshotMode, DeviceType, DialogAutoDismiss } from "../types/c
 import type { RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ToolDependencies } from "./tool-helpers.js";
 import {
+  ensureReady,
   renderActivePage,
   formatPageResponse,
   handleToolError,
@@ -46,7 +47,7 @@ export function registerSessionTools(
     },
     async ({ urls }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
         const page = deps.pageManager.getActivePage();
 
         logger.info("Getting cookies", { urls });
@@ -94,7 +95,7 @@ export function registerSessionTools(
     },
     async ({ names }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
         const page = deps.pageManager.getActivePage();
 
         logger.info("Clearing cookies", { names });
@@ -136,7 +137,7 @@ export function registerSessionTools(
     },
     async ({ cookies }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
         const page = deps.pageManager.getActivePage();
 
         logger.info("Setting cookies", { count: cookies.length });
@@ -189,7 +190,7 @@ export function registerSessionTools(
     },
     async ({ headers }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
         const page = deps.pageManager.getActivePage();
 
         logger.info("Setting extra HTTP headers", {
@@ -330,7 +331,7 @@ export function registerSessionTools(
     },
     async () => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
 
         const tabs = await deps.pageManager.listTabs();
 
@@ -360,7 +361,7 @@ export function registerSessionTools(
     },
     async ({ url }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
 
         const tabId = await deps.pageManager.openTab(deps.browserManager, url);
         logger.info("Opened new tab", { tabId, url });
@@ -402,7 +403,7 @@ export function registerSessionTools(
     },
     async ({ tab_id }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
 
         await deps.pageManager.switchTab(tab_id);
         logger.info("Switched to tab", { tab_id });
@@ -430,7 +431,7 @@ export function registerSessionTools(
     },
     async ({ tab_id }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
 
         await deps.pageManager.closeTab(tab_id);
         logger.info("Closed tab", { tab_id });
@@ -475,7 +476,7 @@ export function registerSessionTools(
     },
     async ({ width, height, device }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
         const page = deps.pageManager.getActivePage();
         const { defaultViewport, deviceViewportPresets } = deps.config;
 
@@ -575,7 +576,7 @@ export function registerSessionTools(
     },
     async ({ throttle, block }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
         const page = deps.pageManager.getActivePage();
         const session = await page.createCDPSession();
 

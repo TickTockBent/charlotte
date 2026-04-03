@@ -39,6 +39,18 @@ export interface ToolDependencies {
   devModeState?: DevModeState;
 }
 
+/**
+ * Ensure the browser is connected and at least one tab is open.
+ * Called at the start of every tool handler to support lazy initialization —
+ * Chromium is not launched until the first tool call.
+ */
+export async function ensureReady(deps: Pick<ToolDependencies, "browserManager" | "pageManager">): Promise<void> {
+  await deps.browserManager.ensureConnected();
+  if (!deps.pageManager.hasPages()) {
+    await deps.pageManager.openTab(deps.browserManager);
+  }
+}
+
 export interface RenderOptions {
   detail?: DetailLevel;
   selector?: string;

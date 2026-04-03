@@ -5,7 +5,7 @@ import { logger } from "../utils/logger.js";
 import type { DetailLevel } from "../renderer/renderer-pipeline.js";
 import type { RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ToolDependencies } from "./tool-helpers.js";
-import { renderActivePage, formatPageResponse, handleToolError } from "./tool-helpers.js";
+import { ensureReady, renderActivePage, formatPageResponse, handleToolError } from "./tool-helpers.js";
 
 const detailSchema = z
   .enum(["minimal", "summary", "full"])
@@ -39,7 +39,7 @@ export function registerNavigationTools(
     },
     async ({ url, wait_for, timeout, detail }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
         const page = deps.pageManager.getActivePage();
 
         const waitUntilValue = wait_for ?? "load";
@@ -104,7 +104,7 @@ export function registerNavigationTools(
     },
     async ({ detail }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
         const page = deps.pageManager.getActivePage();
 
         logger.info("Navigating back");
@@ -144,7 +144,7 @@ export function registerNavigationTools(
     },
     async ({ detail }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
         const page = deps.pageManager.getActivePage();
 
         logger.info("Navigating forward");
@@ -184,7 +184,7 @@ export function registerNavigationTools(
     },
     async ({ hard, detail }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
         const page = deps.pageManager.getActivePage();
 
         const bypassCache = hard ?? false;

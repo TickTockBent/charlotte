@@ -4,10 +4,11 @@ import type { BrowserManager } from "../browser/browser-manager.js";
 import type { PageManager } from "../browser/page-manager.js";
 import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 import { logger } from "../utils/logger.js";
+import { ensureReady } from "./tool-helpers.js";
 
 export interface EvaluateDeps {
   browserManager: BrowserManager;
-  pageManager?: PageManager;
+  pageManager: PageManager;
   getActivePage: () => import("puppeteer").Page;
 }
 
@@ -34,7 +35,7 @@ export function registerEvaluateTools(
       },
     },
     async ({ expression, timeout, await_promise }) => {
-      await deps.browserManager.ensureConnected();
+      await ensureReady(deps);
       const page = deps.getActivePage();
 
       const evaluationTimeout = timeout ?? 5000;

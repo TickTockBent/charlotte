@@ -4,7 +4,7 @@ import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 import { logger } from "../utils/logger.js";
 import type { RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ToolDependencies } from "./tool-helpers.js";
-import { renderAfterAction, stripEmptyFields, handleToolError } from "./tool-helpers.js";
+import { ensureReady, renderAfterAction, stripEmptyFields, handleToolError } from "./tool-helpers.js";
 
 export function registerDialogTools(
   server: McpServer,
@@ -30,7 +30,7 @@ export function registerDialogTools(
     },
     async ({ accept, prompt_text }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
 
         const pendingDialog = deps.pageManager.getPendingDialog();
         const pendingDialogInfo = deps.pageManager.getPendingDialogInfo();

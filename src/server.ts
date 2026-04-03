@@ -86,7 +86,9 @@ export function createServer(deps: ServerDeps, options: ServerOptions = {}): Cre
     },
     {
       capabilities: {
-        tools: {},
+        // listChanged: prep for runtime tool toggling (e.g. profile switching)
+        tools: { listChanged: true },
+        logging: {},
       },
       instructions: instructionLines.join("\n"),
     },
@@ -101,6 +103,7 @@ export function createServer(deps: ServerDeps, options: ServerOptions = {}): Cre
     registry,
     registerEvaluateTools(server, {
       browserManager: deps.browserManager,
+      pageManager: deps.pageManager,
       getActivePage: () => deps.pageManager.getActivePage(),
     }),
   );

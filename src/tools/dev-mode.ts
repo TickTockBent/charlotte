@@ -7,6 +7,7 @@ import { logger } from "../utils/logger.js";
 import { Auditor, type AuditCategory } from "../dev/auditor.js";
 import type { ToolDependencies } from "./tool-helpers.js";
 import {
+  ensureReady,
   renderActivePage,
   renderAfterAction,
   formatPageResponse,
@@ -33,7 +34,7 @@ export function registerDevModeTools(
     },
     async ({ path: directoryPath, port, watch }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
 
         if (!deps.devModeState) {
           throw new CharlotteError(
@@ -126,7 +127,7 @@ export function registerDevModeTools(
     },
     async ({ css, js }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
 
         if (!css && !js) {
           throw new CharlotteError(
@@ -180,7 +181,7 @@ export function registerDevModeTools(
     },
     async ({ checks }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
 
         const page = deps.pageManager.getActivePage();
         const session = await page.createCDPSession();

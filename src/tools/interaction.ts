@@ -7,6 +7,7 @@ import { logger } from "../utils/logger.js";
 import type { RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ToolDependencies } from "./tool-helpers.js";
 import {
+  ensureReady,
   renderActivePage,
   renderAfterAction,
   resolveElement,
@@ -59,7 +60,7 @@ export function registerInteractionTools(
     },
     async ({ element_id, click_type, modifiers }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
         const { page, backendNodeId } = await resolveElement(deps, element_id);
         const clickVariant = click_type ?? "left";
         const activeModifiers = modifiers ?? [];
@@ -105,7 +106,7 @@ export function registerInteractionTools(
     },
     async ({ x, y, click_type, modifiers }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
         const page = deps.pageManager.getActivePage();
         const clickVariant = click_type ?? "left";
         const activeModifiers = modifiers ?? [];
@@ -186,7 +187,7 @@ export function registerInteractionTools(
     },
     async ({ element_id, text, clear_first, press_enter, slowly, character_delay }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
         const { page, backendNodeId } = await resolveElement(deps, element_id);
         const shouldClearFirst = clear_first ?? true;
         const shouldPressEnter = press_enter ?? false;
@@ -230,7 +231,7 @@ export function registerInteractionTools(
     },
     async ({ element_id, value }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
         const { page, backendNodeId } = await resolveElement(deps, element_id);
 
         logger.info("Selecting option", { element_id, value });
@@ -257,7 +258,7 @@ export function registerInteractionTools(
     },
     async ({ element_id }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
         const { page, backendNodeId } = await resolveElement(deps, element_id);
 
         logger.info("Toggling element", { element_id });
@@ -287,7 +288,7 @@ export function registerInteractionTools(
     },
     async ({ form_id }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
 
         // Find the form in the current representation
         const representation = await renderActivePage(deps, { detail: "minimal" });
@@ -353,7 +354,7 @@ export function registerInteractionTools(
     },
     async ({ direction, amount, element_id }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
         const page = deps.pageManager.getActivePage();
 
         const scrollAmount = amount ?? "page";
@@ -453,7 +454,7 @@ export function registerInteractionTools(
     },
     async ({ element_id }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
         const { page, backendNodeId } = await resolveElement(deps, element_id);
 
         logger.info("Hovering element", { element_id });
@@ -481,7 +482,7 @@ export function registerInteractionTools(
     },
     async ({ source_id, target_id }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
         const { page, backendNodeId: sourceNodeId } = await resolveElement(deps, source_id);
         const { backendNodeId: targetNodeId } = await resolveElement(deps, target_id);
 
@@ -542,7 +543,7 @@ export function registerInteractionTools(
     },
     async ({ key, keys, modifiers, element_id, delay }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
         const page = deps.pageManager.getActivePage();
 
         // Validate: exactly one of key or keys must be provided
@@ -617,7 +618,7 @@ export function registerInteractionTools(
     },
     async ({ element_id, paths }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
         const { page, backendNodeId } = await resolveElement(deps, element_id);
 
         // Validate all files exist before sending to CDP
@@ -670,7 +671,7 @@ export function registerInteractionTools(
     },
     async ({ fields }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
 
         // Render to get element types from the interactive array
         const representation = await renderActivePage(deps, { detail: "minimal" });

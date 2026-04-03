@@ -6,6 +6,7 @@ import { logger } from "../utils/logger.js";
 import type { RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ToolDependencies } from "./tool-helpers.js";
 import {
+  ensureReady,
   renderActivePage,
   renderAfterAction,
   formatPageResponse,
@@ -38,7 +39,7 @@ export function registerWaitForTools(
     },
     async ({ element_id, state, text, selector, js, timeout }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
         const page = deps.pageManager.getActivePage();
         const waitTimeout = timeout ?? 10000;
 

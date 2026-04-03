@@ -39,6 +39,35 @@ export interface ToolDependencies {
   devModeState?: DevModeState;
 }
 
+/**
+ * Ensure the browser is connected and at least one tab is open.
+ * Called at the start of every tool handler to support lazy initialization —
+ * Chromium is not launched until the first tool call.
+ *
+ * Uses a module-level mutex to prevent concurrent tool calls from racing
+ * to open duplicate initial tabs (common with Claude Desktop which fires
+ * multiple tool calls simultaneously at startup).
+ */
+let initializing: Promise<void> | null = null;
+
+export async function ensureReady(deps: Pick<ToolDependencies, "browserManager" | "pageManager">): Promise<void> {
+  await deps.browserManager.ensureConnected();
+  if (deps.pageManager.hasPages()) return;
+
+  // Prevent concurrent openTab() calls during first initialization
+  if (initializing) {
+    await initializing;
+    return;
+  }
+
+  initializing = deps.pageManager.openTab(deps.browserManager).then(() => {});
+  try {
+    await initializing;
+  } finally {
+    initializing = null;
+  }
+}
+
 export interface RenderOptions {
   detail?: DetailLevel;
   selector?: string;

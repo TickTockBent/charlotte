@@ -37,9 +37,9 @@ export function registerInteractionTools(
 ): Record<string, RegisteredTool> {
   const tools: Record<string, RegisteredTool> = {};
 
-  // ─── charlotte:click ───
-  tools["charlotte:click"] = server.registerTool(
-    "charlotte:click",
+  // ─── charlotte_click ───
+  tools["charlotte_click"] = server.registerTool(
+    "charlotte_click",
     {
       description:
         "Click an interactive element on the page. Returns full page representation after the click.",
@@ -82,9 +82,9 @@ export function registerInteractionTools(
     },
   );
 
-  // ─── charlotte:click_at ───
-  tools["charlotte:click_at"] = server.registerTool(
-    "charlotte:click_at",
+  // ─── charlotte_click_at ───
+  tools["charlotte_click_at"] = server.registerTool(
+    "charlotte_click_at",
     {
       description:
         "Click at specific page coordinates. Use when target elements are not in the accessibility tree (custom widgets, canvas, non-semantic interactive divs). Dispatches real CDP-level mouse events. Returns full page representation after the click.",
@@ -155,9 +155,9 @@ export function registerInteractionTools(
     },
   );
 
-  // ─── charlotte:type ───
-  tools["charlotte:type"] = server.registerTool(
-    "charlotte:type",
+  // ─── charlotte_type ───
+  tools["charlotte_type"] = server.registerTool(
+    "charlotte_type",
     {
       description:
         "Type text into an input element. Returns full page representation after typing.",
@@ -217,9 +217,9 @@ export function registerInteractionTools(
     },
   );
 
-  // ─── charlotte:select ───
-  tools["charlotte:select"] = server.registerTool(
-    "charlotte:select",
+  // ─── charlotte_select ───
+  tools["charlotte_select"] = server.registerTool(
+    "charlotte_select",
     {
       description:
         "Select an option in a select/dropdown element. Returns full page representation after selection.",
@@ -245,9 +245,9 @@ export function registerInteractionTools(
     },
   );
 
-  // ─── charlotte:toggle ───
-  tools["charlotte:toggle"] = server.registerTool(
-    "charlotte:toggle",
+  // ─── charlotte_toggle ───
+  tools["charlotte_toggle"] = server.registerTool(
+    "charlotte_toggle",
     {
       description:
         "Toggle a checkbox or switch element. Returns full page representation after toggle.",
@@ -275,9 +275,9 @@ export function registerInteractionTools(
     },
   );
 
-  // ─── charlotte:submit ───
-  tools["charlotte:submit"] = server.registerTool(
-    "charlotte:submit",
+  // ─── charlotte_submit ───
+  tools["charlotte_submit"] = server.registerTool(
+    "charlotte_submit",
     {
       description:
         "Submit a form. Can submit by form ID or by clicking its submit button. Returns full page representation after submission.",
@@ -297,7 +297,7 @@ export function registerInteractionTools(
           throw new CharlotteError(
             CharlotteErrorCode.ELEMENT_NOT_FOUND,
             `Form '${form_id}' not found on page.`,
-            "Call charlotte:observe to get current page state and verify form IDs.",
+            "Call charlotte_observe to get current page state and verify form IDs.",
           );
         }
 
@@ -336,9 +336,9 @@ export function registerInteractionTools(
     },
   );
 
-  // ─── charlotte:scroll ───
-  tools["charlotte:scroll"] = server.registerTool(
-    "charlotte:scroll",
+  // ─── charlotte_scroll ───
+  tools["charlotte_scroll"] = server.registerTool(
+    "charlotte_scroll",
     {
       description:
         "Scroll the page or a specific container. Returns full page representation after scrolling.",
@@ -441,9 +441,9 @@ export function registerInteractionTools(
     },
   );
 
-  // ─── charlotte:hover ───
-  tools["charlotte:hover"] = server.registerTool(
-    "charlotte:hover",
+  // ─── charlotte_hover ───
+  tools["charlotte_hover"] = server.registerTool(
+    "charlotte_hover",
     {
       description:
         "Hover over an element to trigger hover states. Returns full page representation after hover.",
@@ -468,9 +468,9 @@ export function registerInteractionTools(
     },
   );
 
-  // ─── charlotte:drag ───
-  tools["charlotte:drag"] = server.registerTool(
-    "charlotte:drag",
+  // ─── charlotte_drag ───
+  tools["charlotte_drag"] = server.registerTool(
+    "charlotte_drag",
     {
       description:
         "Drag an element to another element. Uses mouse primitives to simulate drag-and-drop. Returns full page representation after the drag.",
@@ -500,9 +500,9 @@ export function registerInteractionTools(
     },
   );
 
-  // ─── charlotte:key ───
-  tools["charlotte:key"] = server.registerTool(
-    "charlotte:key",
+  // ─── charlotte_key ───
+  tools["charlotte_key"] = server.registerTool(
+    "charlotte_key",
     {
       description:
         "Send keyboard input to the page or a specific element. Supports single key with modifiers, or a sequence of keys. Use for keyboard-driven UIs (games, terminals, code editors) and non-input elements with keydown listeners.",
@@ -604,9 +604,9 @@ export function registerInteractionTools(
     },
   );
 
-  // ─── charlotte:upload ───
-  tools["charlotte:upload"] = server.registerTool(
-    "charlotte:upload",
+  // ─── charlotte_upload ───
+  tools["charlotte_upload"] = server.registerTool(
+    "charlotte_upload",
     {
       description:
         "Set files on a file input element. Validates that files exist and that the target is a file input. Returns full page representation after upload.",
@@ -645,7 +645,7 @@ export function registerInteractionTools(
     },
   );
 
-  // ─── charlotte:wait_for (delegated to wait-for.ts) ───
+  // ─── charlotte_wait_for (delegated to wait-for.ts) ───
   const waitForTools = registerWaitForTools(server, deps);
   Object.assign(tools, waitForTools);
 

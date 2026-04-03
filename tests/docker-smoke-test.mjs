@@ -152,44 +152,44 @@ async function runTests(container) {
   log("tools/list", toolCount > 15, `${toolCount} tools registered`);
 
   // 3. Navigate to sandbox index
-  let response = await callTool(container, "charlotte:navigate", { url: `${BASE_URL}/index.html` });
+  let response = await callTool(container, "charlotte_navigate", { url: `${BASE_URL}/index.html` });
   let content = assertOk(response, "navigate");
   let json = getContentJson(content);
   log("navigate", json?.title?.includes("Charlotte") || content.includes("Charlotte"), `title: ${json?.title || "?"}`);
 
   // 4. Observe (summary)
-  response = await callTool(container, "charlotte:observe", { detail: "summary" });
+  response = await callTool(container, "charlotte_observe", { detail: "summary" });
   content = assertOk(response, "observe:summary");
   json = getContentJson(content);
   const hasInteractive = json?.interactive?.length > 0 || content.includes("interactive");
   log("observe (summary)", hasInteractive, `interactive elements found`);
 
   // 5. Observe (minimal)
-  response = await callTool(container, "charlotte:observe", { detail: "minimal" });
+  response = await callTool(container, "charlotte_observe", { detail: "minimal" });
   content = assertOk(response, "observe:minimal");
   log("observe (minimal)", content.length < 5000, `${content.length} chars`);
 
   // 6. Find — search for links
-  response = await callTool(container, "charlotte:find", { type: "link" });
+  response = await callTool(container, "charlotte_find", { type: "link" });
   content = assertOk(response, "find:links");
   json = getContentJson(content);
   const linkCount = Array.isArray(json) ? json.length : 0;
   log("find (links)", linkCount > 0, `${linkCount} links found`);
 
   // 7. Navigate to forms page
-  response = await callTool(container, "charlotte:navigate", { url: `${BASE_URL}/forms.html` });
+  response = await callTool(container, "charlotte_navigate", { url: `${BASE_URL}/forms.html` });
   content = assertOk(response, "navigate:forms");
   log("navigate (forms)", content.includes("form") || content.includes("Form"), "forms page loaded");
 
   // 8. Observe forms page
-  response = await callTool(container, "charlotte:observe", { detail: "summary" });
+  response = await callTool(container, "charlotte_observe", { detail: "summary" });
   content = assertOk(response, "observe:forms");
   json = getContentJson(content);
   const hasForms = json?.forms?.length > 0 || content.includes("forms");
   log("observe (forms)", hasForms, "forms detected");
 
   // 9. Find text inputs
-  response = await callTool(container, "charlotte:find", { type: "text_input" });
+  response = await callTool(container, "charlotte_find", { type: "text_input" });
   content = assertOk(response, "find:text_input");
   json = getContentJson(content);
   const inputResults = Array.isArray(json) ? json : [];
@@ -199,7 +199,7 @@ async function runTests(container) {
   // 10. Type into first input (if found)
   if (inputResults.length > 0) {
     const firstInputId = inputResults[0].id;
-    response = await callTool(container, "charlotte:type", {
+    response = await callTool(container, "charlotte_type", {
       element_id: firstInputId,
       text: "Docker smoke test",
     });
@@ -210,12 +210,12 @@ async function runTests(container) {
   }
 
   // 11. Navigate to interactive page
-  response = await callTool(container, "charlotte:navigate", { url: `${BASE_URL}/interactive.html` });
+  response = await callTool(container, "charlotte_navigate", { url: `${BASE_URL}/interactive.html` });
   content = assertOk(response, "navigate:interactive");
   log("navigate (interactive)", true, "interactive page loaded");
 
   // 12. Find buttons
-  response = await callTool(container, "charlotte:find", { type: "button" });
+  response = await callTool(container, "charlotte_find", { type: "button" });
   content = assertOk(response, "find:buttons");
   json = getContentJson(content);
   const buttonResults = Array.isArray(json) ? json : [];
@@ -224,7 +224,7 @@ async function runTests(container) {
   // 13. Click a button (if found)
   if (buttonResults.length > 0) {
     const firstButtonId = buttonResults[0].id;
-    response = await callTool(container, "charlotte:click", { element_id: firstButtonId });
+    response = await callTool(container, "charlotte_click", { element_id: firstButtonId });
     content = assertOk(response, "click");
     log("click", true, `clicked ${firstButtonId}`);
   } else {
@@ -232,37 +232,37 @@ async function runTests(container) {
   }
 
   // 14. Screenshot
-  response = await callTool(container, "charlotte:screenshot", {});
+  response = await callTool(container, "charlotte_screenshot", {});
   const screenshotOk = !response.error && response.result?.content?.[0];
   log("screenshot", screenshotOk, screenshotOk ? "image captured" : "failed");
 
   // 15. Evaluate JS
-  response = await callTool(container, "charlotte:evaluate", { expression: "document.title" });
+  response = await callTool(container, "charlotte_evaluate", { expression: "document.title" });
   content = assertOk(response, "evaluate");
   log("evaluate", content.length > 0, `result: ${content.slice(0, 60)}`);
 
   // 16. Scroll
-  response = await callTool(container, "charlotte:scroll", { direction: "down" });
+  response = await callTool(container, "charlotte_scroll", { direction: "down" });
   content = assertOk(response, "scroll");
   log("scroll", true, "scrolled down");
 
   // 17. Back navigation
-  response = await callTool(container, "charlotte:back", {});
+  response = await callTool(container, "charlotte_back", {});
   content = assertOk(response, "back");
   log("back", true, "navigated back");
 
   // 18. Forward navigation
-  response = await callTool(container, "charlotte:forward", {});
+  response = await callTool(container, "charlotte_forward", {});
   content = assertOk(response, "forward");
   log("forward", true, "navigated forward");
 
   // 19. Diff (snapshot comparison)
-  response = await callTool(container, "charlotte:diff", {});
+  response = await callTool(container, "charlotte_diff", {});
   const diffOk = !response.error;
   log("diff", diffOk, diffOk ? "diff computed" : "diff failed");
 
   // 20. Configure
-  response = await callTool(container, "charlotte:configure", { auto_snapshot: "every_action" });
+  response = await callTool(container, "charlotte_configure", { auto_snapshot: "every_action" });
   content = assertOk(response, "configure");
   log("configure", true, "config updated");
 

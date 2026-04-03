@@ -25,13 +25,13 @@ export const multiPageTest: BenchmarkTest = {
 
     if (serverName.includes("Charlotte")) {
       // Navigate and use summary to get story titles
-      await client.callTool("charlotte:navigate", { url: TARGET_URL });
-      const summaryResult = await client.callTool("charlotte:observe", {
+      await client.callTool("charlotte_navigate", { url: TARGET_URL });
+      const summaryResult = await client.callTool("charlotte_observe", {
         detail: "summary",
       });
 
       // Use find to locate story links specifically
-      const findLinks = await client.callTool("charlotte:find", {
+      const findLinks = await client.callTool("charlotte_find", {
         type: "link",
       });
 

@@ -149,11 +149,11 @@ export function registerObservationTools(
 ): Record<string, RegisteredTool> {
   const tools: Record<string, RegisteredTool> = {};
 
-  tools["charlotte:observe"] = server.registerTool(
-    "charlotte:observe",
+  tools["charlotte_observe"] = server.registerTool(
+    "charlotte_observe",
     {
       description:
-        'Get current page state without performing any action. Use detail levels to control verbosity: "minimal" for landmarks, headings, and interactive element counts by landmark (use charlotte:find to get specific elements with actionable IDs, or observe({ detail: "summary" }) to see all elements), "summary" (default) for content summaries and full element list, "full" for all text content. Use view: "tree" for a compact structural outline (cheapest orientation tool), or view: "tree-labeled" to include labels on interactive elements (still much cheaper than minimal JSON, and shows which button/link/input is which).',
+        'Get current page state without performing any action. Use detail levels to control verbosity: "minimal" for landmarks, headings, and interactive element counts by landmark (use charlotte_find to get specific elements with actionable IDs, or observe({ detail: "summary" }) to see all elements), "summary" (default) for content summaries and full element list, "full" for all text content. Use view: "tree" for a compact structural outline (cheapest orientation tool), or view: "tree-labeled" to include labels on interactive elements (still much cheaper than minimal JSON, and shows which button/link/input is which).',
       inputSchema: {
         detail: z
           .enum(["minimal", "summary", "full"])
@@ -176,7 +176,7 @@ export function registerObservationTools(
           .string()
           .optional()
           .describe(
-            "Write observation data to this file path instead of returning inline. Relative paths resolve against output_dir (see charlotte:configure). Returns only a confirmation with the file path and size.",
+            "Write observation data to this file path instead of returning inline. Relative paths resolve against output_dir (see charlotte_configure). Returns only a confirmation with the file path and size.",
           ),
       },
     },
@@ -225,8 +225,8 @@ export function registerObservationTools(
     },
   );
 
-  tools["charlotte:find"] = server.registerTool(
-    "charlotte:find",
+  tools["charlotte_find"] = server.registerTool(
+    "charlotte_find",
     {
       description:
         "Search for elements matching criteria. Filters interactive elements by text, role, type, or spatial proximity. Use the selector parameter to find DOM elements by CSS selector — this reaches elements not in the accessibility tree (custom widgets, non-semantic divs). Selector results return Charlotte element IDs usable with click, hover, drag, etc.",
@@ -368,8 +368,8 @@ export function registerObservationTools(
     },
   );
 
-  tools["charlotte:screenshot"] = server.registerTool(
-    "charlotte:screenshot",
+  tools["charlotte_screenshot"] = server.registerTool(
+    "charlotte_screenshot",
     {
       description:
         "Capture a visual screenshot. Fallback for when structured representation isn't sufficient (complex visualizations, canvas elements, images). Use save: true to persist as a file artifact that can be referenced later.",
@@ -393,7 +393,7 @@ export function registerObservationTools(
           .string()
           .optional()
           .describe(
-            "Write screenshot to this file path instead of returning base64 inline. Relative paths resolve against output_dir (see charlotte:configure). Returns only a confirmation with the file path and size.",
+            "Write screenshot to this file path instead of returning base64 inline. Relative paths resolve against output_dir (see charlotte_configure). Returns only a confirmation with the file path and size.",
           ),
       },
     },
@@ -433,7 +433,7 @@ export function registerObservationTools(
               new CharlotteError(
                 CharlotteErrorCode.ELEMENT_NOT_FOUND,
                 `No element found matching selector '${selector}'.`,
-                "Check the selector syntax or use charlotte:observe to see available elements.",
+                "Check the selector syntax or use charlotte_observe to see available elements.",
               ),
             );
           }
@@ -504,9 +504,9 @@ export function registerObservationTools(
     },
   );
 
-  // ─── charlotte:screenshots ───
-  tools["charlotte:screenshots"] = server.registerTool(
-    "charlotte:screenshots",
+  // ─── charlotte_screenshots ───
+  tools["charlotte_screenshots"] = server.registerTool(
+    "charlotte_screenshots",
     {
       description:
         "List all saved screenshot artifacts. Returns metadata for each saved screenshot including ID, filename, page URL, and timestamp.",
@@ -543,9 +543,9 @@ export function registerObservationTools(
     },
   );
 
-  // ─── charlotte:screenshot_get ───
-  tools["charlotte:screenshot_get"] = server.registerTool(
-    "charlotte:screenshot_get",
+  // ─── charlotte_screenshot_get ───
+  tools["charlotte_screenshot_get"] = server.registerTool(
+    "charlotte_screenshot_get",
     {
       description:
         "Retrieve a previously saved screenshot artifact by its ID. Returns the image data and metadata.",
@@ -561,7 +561,7 @@ export function registerObservationTools(
             new CharlotteError(
               CharlotteErrorCode.ELEMENT_NOT_FOUND,
               `Screenshot artifact '${id}' not found.`,
-              "Use charlotte:screenshots to list available artifacts.",
+              "Use charlotte_screenshots to list available artifacts.",
             ),
           );
         }
@@ -572,7 +572,7 @@ export function registerObservationTools(
             new CharlotteError(
               CharlotteErrorCode.SESSION_ERROR,
               `Screenshot file for '${id}' is missing from disk.`,
-              "The file may have been deleted externally. Use charlotte:screenshots to see current artifacts.",
+              "The file may have been deleted externally. Use charlotte_screenshots to see current artifacts.",
             ),
           );
         }
@@ -608,9 +608,9 @@ export function registerObservationTools(
     },
   );
 
-  // ─── charlotte:screenshot_delete ───
-  tools["charlotte:screenshot_delete"] = server.registerTool(
-    "charlotte:screenshot_delete",
+  // ─── charlotte_screenshot_delete ───
+  tools["charlotte_screenshot_delete"] = server.registerTool(
+    "charlotte_screenshot_delete",
     {
       description: "Delete a saved screenshot artifact by its ID. Removes the file from disk.",
       inputSchema: {
@@ -625,7 +625,7 @@ export function registerObservationTools(
             new CharlotteError(
               CharlotteErrorCode.ELEMENT_NOT_FOUND,
               `Screenshot artifact '${id}' not found.`,
-              "Use charlotte:screenshots to list available artifacts.",
+              "Use charlotte_screenshots to list available artifacts.",
             ),
           );
         }
@@ -648,9 +648,9 @@ export function registerObservationTools(
     },
   );
 
-  // ─── charlotte:diff ───
-  tools["charlotte:diff"] = server.registerTool(
-    "charlotte:diff",
+  // ─── charlotte_diff ───
+  tools["charlotte_diff"] = server.registerTool(
+    "charlotte_diff",
     {
       description:
         "Compare current page state to a previous snapshot. Returns structural diff showing added, removed, moved, and changed elements.",
@@ -685,7 +685,7 @@ export function registerObservationTools(
               `Snapshot ${snapshot_id} has been evicted from the buffer.`,
               oldestId !== null
                 ? `Oldest available snapshot is ${oldestId}.`
-                : "No snapshots available. Call charlotte:observe first.",
+                : "No snapshots available. Call charlotte_observe first.",
             );
           }
         } else {

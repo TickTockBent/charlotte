@@ -42,7 +42,7 @@ export const treeOrientationTest: BenchmarkTest = {
     let totalSummaryChars = 0;
 
     for (const site of SITES) {
-      const navResult = await client.callTool("charlotte:navigate", {
+      const navResult = await client.callTool("charlotte_navigate", {
         url: site.url,
       });
       if (navResult.isError) {
@@ -51,16 +51,16 @@ export const treeOrientationTest: BenchmarkTest = {
       }
 
       // ── Pass A: tree-labeled workflow ──
-      const treeResult = await client.callTool("charlotte:observe", {
+      const treeResult = await client.callTool("charlotte_observe", {
         view: "tree-labeled",
       });
-      await client.callTool("charlotte:find", { type: "link" });
+      await client.callTool("charlotte_find", { type: "link" });
 
       // ── Pass B: summary workflow (same page) ──
-      const summaryResult = await client.callTool("charlotte:observe", {
+      const summaryResult = await client.callTool("charlotte_observe", {
         detail: "summary",
       });
-      await client.callTool("charlotte:find", { type: "link" });
+      await client.callTool("charlotte_find", { type: "link" });
 
       if (!treeResult.isError && !summaryResult.isError) {
         successfulSites++;

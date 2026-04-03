@@ -170,7 +170,7 @@ export async function resolveElement(
 
   const suggestion = similar
     ? `Element '${elementId}' not found. Did you mean '${similar.id}' (${similar.type}: "${similar.label}")?`
-    : `Element '${elementId}' not found. Call charlotte:observe to get current page state.`;
+    : `Element '${elementId}' not found. Call charlotte_observe to get current page state.`;
 
   throw new CharlotteError(
     CharlotteErrorCode.ELEMENT_NOT_FOUND,

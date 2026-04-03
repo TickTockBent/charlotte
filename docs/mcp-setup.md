@@ -31,7 +31,7 @@ Create a `.mcp.json` file in your project root (or in the Charlotte repo root):
 }
 ```
 
-Claude Code reads `.mcp.json` automatically when you start a session in that directory. Charlotte's tools will appear with the `charlotte:` prefix (e.g., `charlotte:navigate`, `charlotte:observe`).
+Claude Code reads `.mcp.json` automatically when you start a session in that directory. Charlotte's tools will appear with the `charlotte_` prefix (e.g., `charlotte_navigate`, `charlotte_observe`).
 
 **From source (development):**
 

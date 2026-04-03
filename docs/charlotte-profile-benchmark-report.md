@@ -28,7 +28,7 @@ Over a 20-call browsing session, this translates to **38.6% fewer total tokens**
 
 Every MCP tool registered by a server carries a definition — name, description, and input schema — that gets injected into the agent's context on every API round-trip. This is how the agent knows what tools are available.
 
-Charlotte ships 40 tools (39 + the `charlotte:tools` meta-tool). At full load, that's **7,187 tokens of tool definitions** the agent carries on every call, whether it needs those tools or not.
+Charlotte ships 40 tools (39 + the `charlotte_tools` meta-tool). At full load, that's **7,187 tokens of tool definitions** the agent carries on every call, whether it needs those tools or not.
 
 ### The overhead dominates useful content
 
@@ -62,7 +62,7 @@ charlotte --profile develop   # 30 tools — interact + dev_serve, dev_inject, d
 charlotte --profile audit     # 13 tools — navigation + observation + dev_audit + viewport
 ```
 
-All profiles include the `charlotte:tools` meta-tool for runtime toggling.
+All profiles include the `charlotte_tools` meta-tool for runtime toggling.
 
 ---
 
@@ -143,10 +143,10 @@ Starting from the `browse` profile, the meta-tool enables and disables the monit
 |:-----|:-------|:----------:|:----------------:|
 | 1 | Initial state | 22 | 13,042 |
 | 2 | Enable monitoring | 24 | 14,671 |
-| 3 | Use charlotte:console | — | — |
+| 3 | Use charlotte_console | — | — |
 | 4 | Disable monitoring | 22 | 13,042 |
 
-The monitoring group adds 2 tools (charlotte:console, charlotte:requests) and 1,629 chars of definitions. After disabling, the tool list returns to exactly the initial state. The toggle is symmetric and non-destructive.
+The monitoring group adds 2 tools (charlotte_console, charlotte_requests) and 1,629 chars of definitions. After disabling, the tool list returns to exactly the initial state. The toggle is symmetric and non-destructive.
 
 ---
 
@@ -198,12 +198,12 @@ These savings are purely from tool definitions. They compound with Charlotte's e
 | **audit** (13) | all 4 | all 7 | — | viewport | dev_audit | — |
 | **full** (40) | all 4 | all 7 | all 10 | all 11 | all 3 | dialog, evaluate, monitoring (2) |
 
-All tool counts are +1 for the `charlotte:tools` meta-tool, which is always available.
+All tool counts are +1 for the `charlotte_tools` meta-tool, which is always available.
 
 ### Choosing a Profile
 
 - **Most users:** `browse` (default). Covers navigation, page inspection, basic form interaction, screenshots, and tab management.
-- **Minimal overhead:** `core`. Six tools for navigate-observe-interact workflows. Enable groups as needed via `charlotte:tools`.
+- **Minimal overhead:** `core`. Six tools for navigate-observe-interact workflows. Enable groups as needed via `charlotte_tools`.
 - **Form-heavy automation:** `interact`. Adds hover, drag, key, wait_for, dialog handling, and JavaScript evaluation.
 - **Local development:** `develop`. Adds dev_serve for static file serving, dev_inject for CSS/JS injection, dev_audit for accessibility checks.
 - **Site auditing:** `audit`. Navigation + observation + dev_audit + viewport resizing. No interaction tools.

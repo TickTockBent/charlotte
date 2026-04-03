@@ -28,7 +28,7 @@ export interface CharlotteConfig {
   iframeDepth: number;
   /** Default viewport dimensions used at browser launch and as fallback. */
   defaultViewport: { width: number; height: number };
-  /** Named device viewport presets for the charlotte:viewport tool. */
+  /** Named device viewport presets for the charlotte_viewport tool. */
   deviceViewportPresets: Record<DeviceType, { width: number; height: number }>;
 }
 

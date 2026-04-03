@@ -212,7 +212,7 @@ interface PendingDialog {
 }
 ```
 
-Present in every tool response while a JavaScript dialog is blocking the page. Cleared only when the dialog is handled via `charlotte:dialog`.
+Present in every tool response while a JavaScript dialog is blocking the page. Cleared only when the dialog is handled via `charlotte_dialog`.
 
 ### InteractiveSummary
 
@@ -337,11 +337,11 @@ When an element ID is not found in the current generator:
 
 ## Tools
 
-All tools are prefixed with `charlotte:`. Every tool that returns page state calls `renderActivePage()` or `renderAfterAction()` and returns a formatted `PageRepresentation`.
+All tools are prefixed with `charlotte_`. Every tool that returns page state calls `renderActivePage()` or `renderAfterAction()` and returns a formatted `PageRepresentation`.
 
 ### Navigation Tools
 
-#### `charlotte:navigate`
+#### `charlotte_navigate`
 
 Load a URL in the active page.
 
@@ -353,15 +353,15 @@ Load a URL in the active page.
 
 **Returns:** PageRepresentation after navigation.
 
-#### `charlotte:back`
+#### `charlotte_back`
 
 Navigate back in browser history. No parameters.
 
-#### `charlotte:forward`
+#### `charlotte_forward`
 
 Navigate forward in browser history. No parameters.
 
-#### `charlotte:reload`
+#### `charlotte_reload`
 
 Reload the current page.
 
@@ -371,7 +371,7 @@ Reload the current page.
 
 ### Observation Tools
 
-#### `charlotte:observe`
+#### `charlotte_observe`
 
 Get current page state without performing any action.
 
@@ -383,7 +383,7 @@ Get current page state without performing any action.
 | `include_styles` | `boolean` | No | `false` | Include computed styles |
 | `output_file` | `string` | No | — | Write to file instead of returning inline. Relative paths resolve against `output_dir`. |
 
-#### `charlotte:find`
+#### `charlotte_find`
 
 Search for elements matching criteria.
 
@@ -402,7 +402,7 @@ Spatial proximity uses Euclidean distance between element centers, threshold of 
 
 **Returns:** Array of matching `InteractiveElement` or `DOMElementResult` objects.
 
-#### `charlotte:screenshot`
+#### `charlotte_screenshot`
 
 Capture a visual screenshot.
 
@@ -416,13 +416,13 @@ Capture a visual screenshot.
 
 **Returns:** Base64-encoded image. When `save` is true, also persists the screenshot as a file artifact with metadata.
 
-#### `charlotte:screenshots`
+#### `charlotte_screenshots`
 
 List all persistent screenshot artifacts. No parameters.
 
 **Returns:** Array of `{ id, filename, timestamp, format, size }` objects.
 
-#### `charlotte:screenshot_get`
+#### `charlotte_screenshot_get`
 
 Retrieve a persistent screenshot artifact by ID.
 
@@ -432,7 +432,7 @@ Retrieve a persistent screenshot artifact by ID.
 
 **Returns:** Base64-encoded image data.
 
-#### `charlotte:screenshot_delete`
+#### `charlotte_screenshot_delete`
 
 Delete a persistent screenshot artifact.
 
@@ -440,7 +440,7 @@ Delete a persistent screenshot artifact.
 |-----------|------|----------|---------|-------------|
 | `id` | `string` | Yes | — | Screenshot artifact ID |
 
-#### `charlotte:diff`
+#### `charlotte_diff`
 
 Compare current page state to a previous snapshot.
 
@@ -455,7 +455,7 @@ Compare current page state to a previous snapshot.
 
 All interaction tools capture a pre-action snapshot and return a `PageRepresentation` with a `delta` diff attached.
 
-#### `charlotte:click`
+#### `charlotte_click`
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
@@ -465,7 +465,7 @@ All interaction tools capture a pre-action snapshot and return a `PageRepresenta
 
 Detects navigation triggered by the click and waits for page load if so.
 
-#### `charlotte:click_at`
+#### `charlotte_click_at`
 
 Click at specific page coordinates. For non-semantic elements (custom widgets, canvas regions, SVG graphics) that don't appear in the accessibility tree.
 
@@ -478,7 +478,7 @@ Click at specific page coordinates. For non-semantic elements (custom widgets, c
 
 Moves the mouse to target coordinates and pauses 50ms before clicking, matching real user hover behavior.
 
-#### `charlotte:type`
+#### `charlotte_type`
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
@@ -487,20 +487,20 @@ Moves the mouse to target coordinates and pauses 50ms before clicking, matching 
 | `clear_first` | `boolean` | No | `true` | Clear existing value first |
 | `press_enter` | `boolean` | No | `false` | Press Enter after typing |
 
-#### `charlotte:select`
+#### `charlotte_select`
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `element_id` | `string` | Yes | — | Target select element ID |
 | `value` | `string` | Yes | — | Value or visible text of option |
 
-#### `charlotte:toggle`
+#### `charlotte_toggle`
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `element_id` | `string` | Yes | — | Target checkbox or switch element ID |
 
-#### `charlotte:submit`
+#### `charlotte_submit`
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
@@ -508,7 +508,7 @@ Moves the mouse to target coordinates and pauses 50ms before clicking, matching 
 
 Prefers clicking the submit button if one exists; falls back to dispatching a `submit` event on the form element.
 
-#### `charlotte:scroll`
+#### `charlotte_scroll`
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
@@ -516,13 +516,13 @@ Prefers clicking the submit button if one exists; falls back to dispatching a `s
 | `amount` | `string` | No | `"page"` | `"page"`, `"half"`, or pixel value (e.g., `"200"`) |
 | `element_id` | `string` | No | — | Container element to scroll within |
 
-#### `charlotte:hover`
+#### `charlotte_hover`
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `element_id` | `string` | Yes | — | Target element ID |
 
-#### `charlotte:drag`
+#### `charlotte_drag`
 
 Drag one element to another using mouse primitives (mousedown → intermediate moves → mouseup). Both `source_id` and `target_id` can reference interactive elements, landmarks, or headings — any element with an ID in the page representation.
 
@@ -531,9 +531,9 @@ Drag one element to another using mouse primitives (mousedown → intermediate m
 | `source_id` | `string` | Yes | — | Element ID of the drag source |
 | `target_id` | `string` | Yes | — | Element ID of the drop target |
 
-#### `charlotte:key`
+#### `charlotte_key`
 
-Send keyboard input to the page or a specific element. Use for keyboard-driven UIs (games, terminals, code editors) and non-input elements with `keydown` listeners. Distinct from `charlotte:type`, which enters text into form input elements.
+Send keyboard input to the page or a specific element. Use for keyboard-driven UIs (games, terminals, code editors) and non-input elements with `keydown` listeners. Distinct from `charlotte_type`, which enters text into form input elements.
 
 Provide exactly one of `key` (single key) or `keys` (sequence). Use `element_id` to focus a specific element before sending keys — without it, keys go to the currently focused element.
 
@@ -545,7 +545,7 @@ Provide exactly one of `key` (single key) or `keys` (sequence). Use `element_id`
 | `element_id` | `string` | No | — | Element to focus before sending keys. If omitted, keys go to the currently focused element. |
 | `delay` | `number` | No | `0` | Milliseconds between key presses in a sequence. Only valid with `keys`. |
 
-#### `charlotte:wait_for`
+#### `charlotte_wait_for`
 
 Wait for a condition to be met on the page. At least one condition parameter is required.
 
@@ -560,7 +560,7 @@ Wait for a condition to be met on the page. At least one condition parameter is 
 
 Polls every 100ms until the condition is met or timeout is reached.
 
-#### `charlotte:upload`
+#### `charlotte_upload`
 
 Set files on a file input element.
 
@@ -573,7 +573,7 @@ Validates that the element is `<input type="file">` and that all files exist bef
 
 ### Dialog Handling Tools
 
-#### `charlotte:dialog`
+#### `charlotte_dialog`
 
 Handle a pending JavaScript dialog (alert, confirm, prompt, beforeunload).
 
@@ -584,17 +584,17 @@ Handle a pending JavaScript dialog (alert, confirm, prompt, beforeunload).
 
 **Returns:** `{ dialog_handled: { type, message, action }, page: PageRepresentation }`. The `dialog_handled` field confirms what was resolved.
 
-**Error:** If no dialog is pending, returns `SESSION_ERROR` with suggestion to call `charlotte:observe`.
+**Error:** If no dialog is pending, returns `SESSION_ERROR` with suggestion to call `charlotte_observe`.
 
 **Dialog lifecycle:**
 1. A dialog appears (e.g., from a `click` that triggers `alert()`)
 2. The action tool returns immediately with `pending_dialog` in the response
-3. Agent calls `charlotte:dialog` to accept or dismiss
+3. Agent calls `charlotte_dialog` to accept or dismiss
 4. Response includes both `dialog_handled` metadata and the page state after resolution
 
 ### Monitoring Tools
 
-#### `charlotte:console`
+#### `charlotte_console`
 
 Retrieve console messages from the active page.
 
@@ -615,7 +615,7 @@ interface ConsoleMessage {
 
 Messages are captured from all console levels (not just errors). Buffer is capped at 1000 entries with FIFO eviction.
 
-#### `charlotte:requests`
+#### `charlotte_requests`
 
 Retrieve network request history from the active page.
 
@@ -643,13 +643,13 @@ All HTTP responses are captured (not just errors). Buffer is capped at 1000 entr
 
 ### Session Management Tools
 
-#### `charlotte:tabs`
+#### `charlotte_tabs`
 
 List all open browser tabs. No parameters.
 
 **Returns:** Array of `{ id, url, title, active }` objects.
 
-#### `charlotte:tab_open`
+#### `charlotte_tab_open`
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
@@ -657,13 +657,13 @@ List all open browser tabs. No parameters.
 
 The new tab becomes the active tab.
 
-#### `charlotte:tab_switch`
+#### `charlotte_tab_switch`
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `tab_id` | `string` | Yes | — | Tab ID to switch to |
 
-#### `charlotte:tab_close`
+#### `charlotte_tab_close`
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
@@ -671,7 +671,7 @@ The new tab becomes the active tab.
 
 If the closed tab was active, switches to the first remaining tab.
 
-#### `charlotte:viewport`
+#### `charlotte_viewport`
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
@@ -689,7 +689,7 @@ If the closed tab was active, switches to the first remaining tab.
 
 Default viewport is `desktop` (1280x720).
 
-#### `charlotte:network`
+#### `charlotte_network`
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
@@ -705,7 +705,7 @@ Default viewport is `desktop` (1280x720).
 | `offline` | 0 | 0 | 0 |
 | `none` | Unlimited | Unlimited | 0 |
 
-#### `charlotte:set_cookies`
+#### `charlotte_set_cookies`
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
@@ -723,7 +723,7 @@ Each cookie object:
 | `httpOnly` | `boolean` | No | — |
 | `sameSite` | `"Strict" \| "Lax" \| "None"` | No | — |
 
-#### `charlotte:set_headers`
+#### `charlotte_set_headers`
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
@@ -731,7 +731,7 @@ Each cookie object:
 
 Headers persist for all subsequent requests on the active page.
 
-#### `charlotte:configure`
+#### `charlotte_configure`
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
@@ -745,7 +745,7 @@ See [Configuration](#configuration) for details.
 
 ### Development Mode Tools
 
-#### `charlotte:dev_serve`
+#### `charlotte_dev_serve`
 
 Serve a local directory as a static website with optional file watching and auto-reload.
 
@@ -759,7 +759,7 @@ When `watch` is enabled, file changes trigger a page reload. The resulting `Relo
 
 File watching uses chokidar with a `usePolling` option to handle systems with limited inotify watches.
 
-#### `charlotte:dev_inject`
+#### `charlotte_dev_inject`
 
 Inject CSS or JavaScript into the current page. At least one of `css` or `js` is required.
 
@@ -770,7 +770,7 @@ Inject CSS or JavaScript into the current page. At least one of `css` or `js` is
 
 **Returns:** PageRepresentation with delta diff showing what changed.
 
-#### `charlotte:dev_audit`
+#### `charlotte_dev_audit`
 
 Run accessibility and quality audits on the current page.
 
@@ -792,7 +792,7 @@ Run accessibility and quality audits on the current page.
 
 ### Utility Tools
 
-#### `charlotte:evaluate`
+#### `charlotte_evaluate`
 
 Execute JavaScript in page context.
 
@@ -833,7 +833,7 @@ interface Snapshot {
 | Mode | Behavior |
 |------|----------|
 | `every_action` | Snapshot after every tool call (default) |
-| `observe_only` | Snapshot only on `charlotte:observe` |
+| `observe_only` | Snapshot only on `charlotte_observe` |
 | `manual` | No automatic snapshots |
 
 ### SnapshotDiff
@@ -889,7 +889,7 @@ type AutoSnapshotMode = "every_action" | "observe_only" | "manual";
 type DialogAutoDismiss = "none" | "accept_alerts" | "accept_all" | "dismiss_all";
 ```
 
-Runtime configuration is modified via the `charlotte:configure` tool. Changes take effect immediately.
+Runtime configuration is modified via the `charlotte_configure` tool. Changes take effect immediately.
 
 ### Browser Configuration
 
@@ -938,6 +938,6 @@ Charlotte automatically collects errors from the page and includes them in every
 - **Console errors:** `console.error()` and `console.warn()` messages
 - **Network errors:** HTTP responses with status >= 400
 
-These error summaries are a subset of the full monitoring data. Use `charlotte:console` to retrieve all console messages (including log, info, debug) and `charlotte:requests` to retrieve all HTTP responses (including successful ones). Both tools support filtering and buffer clearing.
+These error summaries are a subset of the full monitoring data. Use `charlotte_console` to retrieve all console messages (including log, info, debug) and `charlotte_requests` to retrieve all HTTP responses (including successful ones). Both tools support filtering and buffer clearing.
 
 Errors accumulate across renders and are not automatically cleared.

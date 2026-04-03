@@ -31,15 +31,15 @@ Developer Tools
 - Viewport resizing for responsive testing
 
 ## Getting Started
-- "Navigate to example.com and describe what you see" — uses charlotte:navigate + charlotte:observe
-- "Click the login button and fill in the form" — uses charlotte:click + charlotte:type + charlotte:submit
-- "Take a screenshot of the current page" — uses charlotte:screenshot
-- "Check this page for accessibility issues" — uses charlotte:dev_audit
-- "Serve my local project folder and test it in the browser" — uses charlotte:dev_serve + charlotte:navigate
-- Tool: charlotte:observe — Read the current page structure: landmarks, headings, interactive elements, and content
-- Tool: charlotte:find — Search for elements by text, role, or state
-- Tool: charlotte:evaluate — Run JavaScript in the page and return results
-- Tool: charlotte:diff — Compare snapshots to see what changed after an action
+- "Navigate to example.com and describe what you see" — uses charlotte_navigate + charlotte_observe
+- "Click the login button and fill in the form" — uses charlotte_click + charlotte_type + charlotte_submit
+- "Take a screenshot of the current page" — uses charlotte_screenshot
+- "Check this page for accessibility issues" — uses charlotte_dev_audit
+- "Serve my local project folder and test it in the browser" — uses charlotte_dev_serve + charlotte_navigate
+- Tool: charlotte_observe — Read the current page structure: landmarks, headings, interactive elements, and content
+- Tool: charlotte_find — Search for elements by text, role, or state
+- Tool: charlotte_evaluate — Run JavaScript in the page and return results
+- Tool: charlotte_diff — Compare snapshots to see what changed after an action
 
 ## Tags
 browser, headless, chromium, puppeteer, web, testing, automation, scraping, accessibility, a11y, screenshots, mcp, navigation, forms, interaction, developer-tools, auditing, web-testing, responsive, cookies

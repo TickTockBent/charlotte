@@ -25,15 +25,15 @@ export const contentHeavyTest: BenchmarkTest = {
 
     if (serverName.includes("Charlotte")) {
       // Charlotte: navigate + observe at all 3 detail levels
-      await client.callTool("charlotte:navigate", { url: TARGET_URL });
+      await client.callTool("charlotte_navigate", { url: TARGET_URL });
 
-      const minimalResult = await client.callTool("charlotte:observe", {
+      const minimalResult = await client.callTool("charlotte_observe", {
         detail: "minimal",
       });
-      const summaryResult = await client.callTool("charlotte:observe", {
+      const summaryResult = await client.callTool("charlotte_observe", {
         detail: "summary",
       });
-      const fullResult = await client.callTool("charlotte:observe", {
+      const fullResult = await client.callTool("charlotte_observe", {
         detail: "full",
       });
 

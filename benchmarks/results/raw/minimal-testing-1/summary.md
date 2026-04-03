@@ -25,8 +25,8 @@ Generated: 2026-02-22T14:37:54.305Z
 
 | # | Tool | Chars | Est. Tokens | Time (ms) |
 | ---: | :--- | ---: | ---: | ---: |
-| 1 | charlotte:navigate | 725 | 182 | 1633 |
-| 2 | charlotte:observe | 725 | 182 | 3 |
+| 1 | charlotte_navigate | 725 | 182 | 1633 |
+| 2 | charlotte_observe | 725 | 182 | 3 |
 
 ## Content-Heavy (Wikipedia AI)
 
@@ -41,10 +41,10 @@ Generated: 2026-02-22T14:37:54.305Z
 
 | # | Tool | Chars | Est. Tokens | Time (ms) |
 | ---: | :--- | ---: | ---: | ---: |
-| 1 | charlotte:navigate | 711,011 | 177,753 | 3640 |
-| 2 | charlotte:observe | 711,011 | 177,753 | 982 |
-| 3 | charlotte:observe | 711,686 | 177,922 | 949 |
-| 4 | charlotte:observe | 934,927 | 233,732 | 930 |
+| 1 | charlotte_navigate | 711,011 | 177,753 | 3640 |
+| 2 | charlotte_observe | 711,011 | 177,753 | 982 |
+| 3 | charlotte_observe | 711,686 | 177,922 | 949 |
+| 4 | charlotte_observe | 934,927 | 233,732 | 930 |
 
 ## Interactive Form (httpbin)
 
@@ -59,11 +59,11 @@ Generated: 2026-02-22T14:37:54.305Z
 
 | # | Tool | Chars | Est. Tokens | Time (ms) |
 | ---: | :--- | ---: | ---: | ---: |
-| 1 | charlotte:navigate | 3,470 | 868 | 1673 |
-| 2 | charlotte:observe | 3,535 | 884 | 7 |
-| 3 | charlotte:find | 869 | 218 | 6 |
-| 4 | charlotte:type | 3,867 | 967 | 33 |
-| 5 | charlotte:observe | 3,483 | 871 | 6 |
+| 1 | charlotte_navigate | 3,470 | 868 | 1673 |
+| 2 | charlotte_observe | 3,535 | 884 | 7 |
+| 3 | charlotte_find | 869 | 218 | 6 |
+| 4 | charlotte_type | 3,867 | 967 | 33 |
+| 5 | charlotte_observe | 3,483 | 871 | 6 |
 
 ## Multi-Page Nav (Hacker News)
 
@@ -78,9 +78,9 @@ Generated: 2026-02-22T14:37:54.305Z
 
 | # | Tool | Chars | Est. Tokens | Time (ms) |
 | ---: | :--- | ---: | ---: | ---: |
-| 1 | charlotte:navigate | 42,536 | 10,634 | 1876 |
-| 2 | charlotte:observe | 42,605 | 10,652 | 77 |
-| 3 | charlotte:find | 42,135 | 10,534 | 61 |
+| 1 | charlotte_navigate | 42,536 | 10,634 | 1876 |
+| 2 | charlotte_observe | 42,605 | 10,652 | 77 |
+| 3 | charlotte_find | 42,135 | 10,534 | 61 |
 
 ## Deep Navigation (GitHub Repo)
 
@@ -95,9 +95,9 @@ Generated: 2026-02-22T14:37:54.305Z
 
 | # | Tool | Chars | Est. Tokens | Time (ms) |
 | ---: | :--- | ---: | ---: | ---: |
-| 1 | charlotte:navigate | 49,871 | 12,468 | 7242 |
-| 2 | charlotte:observe | 50,180 | 12,545 | 83 |
-| 3 | charlotte:observe | 49,871 | 12,468 | 74 |
+| 1 | charlotte_navigate | 49,871 | 12,468 | 7242 |
+| 2 | charlotte_observe | 50,180 | 12,545 | 83 |
+| 3 | charlotte_observe | 49,871 | 12,468 | 74 |
 
 ## Headline Numbers
 

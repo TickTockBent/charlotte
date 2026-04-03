@@ -72,11 +72,11 @@ export function createServer(deps: ServerDeps, options: ServerOptions = {}): Cre
     : `Active groups: ${options.toolGroups!.join(", ")}.`;
   const instructionLines = [`Charlotte browser automation server. ${activeLabel}`];
   if (fullyDisabledGroups.length > 0) {
-    instructionLines.push("Additional tool groups available via charlotte:tools:");
+    instructionLines.push("Additional tool groups available via charlotte_tools:");
     for (const group of fullyDisabledGroups) {
       instructionLines.push(`  - ${group}: ${GROUP_DESCRIPTIONS[group]}`);
     }
-    instructionLines.push("Call charlotte:tools to list groups or enable/disable them.");
+    instructionLines.push("Call charlotte_tools to list groups or enable/disable them.");
   }
 
   const server = new McpServer(

@@ -1,6 +1,6 @@
 # Sandbox Test Site
 
-Charlotte ships with a self-contained test website that exercises all 30 MCP tools without touching the public internet. It lives in `tests/sandbox/` and is designed to be served locally via `charlotte:dev_serve`.
+Charlotte ships with a self-contained test website that exercises all 30 MCP tools without touching the public internet. It lives in `tests/sandbox/` and is designed to be served locally via `charlotte_dev_serve`.
 
 ## Pages
 

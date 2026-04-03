@@ -34,7 +34,7 @@ export async function clickElementByBackendNodeId(
       throw new CharlotteError(
         CharlotteErrorCode.ELEMENT_NOT_FOUND,
         "Element has no visible box model — it may be hidden or zero-sized.",
-        "Call charlotte:observe to check the element's state.",
+        "Call charlotte_observe to check the element's state.",
       );
     }
 
@@ -128,7 +128,7 @@ export async function waitForPossibleNavigation(
 
   if (dialogDetected) {
     // Dialog is blocking the action. Don't await actionPromise — it will
-    // resolve later when the dialog is handled via charlotte:dialog.
+    // resolve later when the dialog is handled via charlotte_dialog.
     // Guard against unhandled rejection from the fire-and-forget promise.
     actionPromise.catch(() => {
       logger.debug("Post-dialog action promise rejected (expected)");
@@ -219,7 +219,7 @@ async function getElementCenter(
       throw new CharlotteError(
         CharlotteErrorCode.ELEMENT_NOT_FOUND,
         "Element has no visible box model — it may be hidden or zero-sized.",
-        "Call charlotte:observe to check the element's state.",
+        "Call charlotte_observe to check the element's state.",
       );
     }
 
@@ -394,7 +394,7 @@ export async function setFileInputFiles(
       throw new CharlotteError(
         CharlotteErrorCode.SESSION_ERROR,
         "Element is not a file input.",
-        "Use charlotte:find to locate file_input elements.",
+        "Use charlotte_find to locate file_input elements.",
       );
     }
     await cdpSession.send("DOM.setFileInputFiles", {

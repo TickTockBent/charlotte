@@ -21,14 +21,14 @@ All notable changes to Charlotte will be documented in this file.
 ### Added
 
 - **Iframe content extraction** — Child frames are now discovered and their content (interactive elements, content summaries, full text) is merged into the parent page representation. Configurable depth limit (default 3). Iframe interactive elements are included in the `interactive` array and `interactive_summary`. Closes #23.
-- **Structural tree view** — `charlotte:observe` now accepts a `view` parameter with `"tree"` and `"tree-labeled"` modes that render the page as a hierarchical tree with indentation, replacing the flat JSON representation. Tree-labeled mode annotates interactive elements with their IDs for direct use.
-- **File output for large responses** — `charlotte:observe` and `charlotte:screenshot` accept an `output_file` parameter to write results to disk instead of returning inline, reducing token consumption for large pages. Relative paths resolve against `output_dir` (configurable via `charlotte:configure` or `--output-dir` CLI flag). Closes GAP-13, #16.
-- **Screenshot artifact management** — `charlotte:screenshots` (list), `charlotte:screenshot_get` (retrieve), `charlotte:screenshot_delete` (remove) tools for managing persistent screenshot files. `charlotte:screenshot` gains a `save` parameter for persistence.
+- **Structural tree view** — `charlotte_observe` now accepts a `view` parameter with `"tree"` and `"tree-labeled"` modes that render the page as a hierarchical tree with indentation, replacing the flat JSON representation. Tree-labeled mode annotates interactive elements with their IDs for direct use.
+- **File output for large responses** — `charlotte_observe` and `charlotte_screenshot` accept an `output_file` parameter to write results to disk instead of returning inline, reducing token consumption for large pages. Relative paths resolve against `output_dir` (configurable via `charlotte_configure` or `--output-dir` CLI flag). Closes GAP-13, #16.
+- **Screenshot artifact management** — `charlotte_screenshots` (list), `charlotte_screenshot_get` (retrieve), `charlotte_screenshot_delete` (remove) tools for managing persistent screenshot files. `charlotte_screenshot` gains a `save` parameter for persistence.
 - **Code quality tooling** — ESLint, Prettier, and coverage configuration added to the project.
 
 ### Fixed
 
-- **`wait_for` JS evaluation** — Replaced `new Function("return " + expr)` with CDP `Runtime.evaluate`, fixing multi-statement JS conditions that silently returned `undefined` due to ASI. Now consistent with `charlotte:evaluate`. Fixes #73.
+- **`wait_for` JS evaluation** — Replaced `new Function("return " + expr)` with CDP `Runtime.evaluate`, fixing multi-statement JS conditions that silently returned `undefined` due to ASI. Now consistent with `charlotte_evaluate`. Fixes #73.
 - **Browser reconnection race** — `getBrowser()` now calls `ensureConnected()` to auto-recover instead of throwing immediately. `ensureConnected()` verifies browser health after awaiting concurrent launches. Fixes #83.
 - **Renderer pipeline resilience** — Malformed AX properties no longer crash accessibility extraction (#86). Content extraction skips failed nodes instead of aborting (#79). Recursive frame traversal catches errors per-frame (#74). Batch layout extraction uses `Promise.allSettled()` for partial failure tolerance (#77).
 - **Event listener cleanup** — `closeTab()` now explicitly removes all page event listeners before `page.close()` to prevent memory leaks across tab cycles. Fixes #89.
@@ -51,13 +51,13 @@ All notable changes to Charlotte will be documented in this file.
 
 ### Added
 
-- **`charlotte:upload`** — Set files on `<input type="file">` elements via CDP `DOM.setFileInputFiles`. Validates file existence and element type before upload. Closes GAP-02 from the Playwright MCP gap analysis.
+- **`charlotte_upload`** — Set files on `<input type="file">` elements via CDP `DOM.setFileInputFiles`. Validates file existence and element type before upload. Closes GAP-02 from the Playwright MCP gap analysis.
 - **File input detection** — File inputs (`<input type="file">`) are now correctly identified as `file_input` type in page representations. Previously they appeared as `button` because Chromium's accessibility tree represents them with a button role. A post-extraction reclassification step checks the underlying DOM node.
-- **`charlotte:key` enhancement** — Added `keys` (sequence of key presses), `element_id` (focus a specific element before sending keys), and `delay` (milliseconds between sequence presses) parameters. Enables keyboard-driven interaction with non-input elements like game UIs, terminals, and code editors. Closes #49, #51.
+- **`charlotte_key` enhancement** — Added `keys` (sequence of key presses), `element_id` (focus a specific element before sending keys), and `delay` (milliseconds between sequence presses) parameters. Enables keyboard-driven interaction with non-input elements like game UIs, terminals, and code editors. Closes #49, #51.
 
 ### Fixed
 
-- **Boolean parameter validation error** — `charlotte:console` and `charlotte:requests` `clear` parameter (and `charlotte:type` `clear_first`/`press_enter`) rejected string-coerced booleans (`"true"`/`"false"`) sent by some MCP clients. All boolean parameters now accept both native booleans and their string representations. Fixes #50.
+- **Boolean parameter validation error** — `charlotte_console` and `charlotte_requests` `clear` parameter (and `charlotte_type` `clear_first`/`press_enter`) rejected string-coerced booleans (`"true"`/`"false"`) sent by some MCP clients. All boolean parameters now accept both native booleans and their string representations. Fixes #50.
 - **`click_at` skipped hover on framework-managed links** — `click_at` now moves the mouse to target coordinates and pauses 50ms before clicking, matching real user behavior. Previously, framework links (e.g., Next.js `<Link>`) that depend on hover-triggered prefetch would skip client-side navigation. Fixes #48.
 
 ### Changed
@@ -68,25 +68,25 @@ All notable changes to Charlotte will be documented in this file.
 
 ### Added
 
-- **`charlotte:click_at`** — Click at specific page coordinates (x, y). Enables interaction with non-semantic elements (custom widgets, canvas regions, SVG graphics) that don't appear in the accessibility tree. Supports left/right/double click and modifier keys.
-- **CSS selector mode for `charlotte:find`** — New `selector` parameter queries the DOM directly via `DOM.querySelectorAll`, returning elements with Charlotte IDs usable by all interaction tools. Complements the existing accessibility tree search for elements that lack semantic roles.
+- **`charlotte_click_at`** — Click at specific page coordinates (x, y). Enables interaction with non-semantic elements (custom widgets, canvas regions, SVG graphics) that don't appear in the accessibility tree. Supports left/right/double click and modifier keys.
+- **CSS selector mode for `charlotte_find`** — New `selector` parameter queries the DOM directly via `DOM.querySelectorAll`, returning elements with Charlotte IDs usable by all interaction tools. Complements the existing accessibility tree search for elements that lack semantic roles.
 
 ### Fixed
 
-- **`charlotte:evaluate` silent null on multi-statement code** — Replaced `new Function('return ' + expr)` with CDP `Runtime.evaluate`, which evaluates JavaScript as a program and returns the completion value of the last expression-statement. The previous implementation suffered from ASI (Automatic Semicolon Insertion) silently converting `return\n...` into `return;`, causing multi-line scripts to return null without error.
+- **`charlotte_evaluate` silent null on multi-statement code** — Replaced `new Function('return ' + expr)` with CDP `Runtime.evaluate`, which evaluates JavaScript as a program and returns the completion value of the last expression-statement. The previous implementation suffered from ASI (Automatic Semicolon Insertion) silently converting `return\n...` into `return;`, causing multi-line scripts to return null without error.
 
 ## [0.4.0] - 2026-03-03
 
 ### Added
 
 - **Tiered tool visibility** — Startup profiles control which tools load into the agent's context. `--profile=browse` (default, 22 tools) replaces the previous behavior of loading all 40 tools. Six profiles available: `core` (7), `browse` (22), `interact` (27), `develop` (30), `audit` (13), `full` (40). Granular group selection via `--tools=group1,group2`.
-- **`charlotte:tools` meta-tool** — Runtime tool group management. Agents can list available groups, enable groups to activate tools mid-session, and disable groups to reduce overhead — without restarting the server. Always registered regardless of profile.
+- **`charlotte_tools` meta-tool** — Runtime tool group management. Agents can list available groups, enable groups to activate tools mid-session, and disable groups to reduce overhead — without restarting the server. Always registered regardless of profile.
 - **Profile benchmark suite** — `npx tsx benchmarks/run-benchmarks.ts --suite profiles` runs tool definition overhead benchmarks across full, browse, and core profiles. Four tests: pure overhead measurement, 5-site browsing session, form interaction, and runtime toggle correctness. Results archived under `benchmarks/results/raw/tiered-profiles-v1/`.
-- **`charlotte:drag`** — Drag an element to another element using mouse primitives (mousedown → intermediate moves → mouseup). Accepts `source_id` and `target_id` element IDs. Closes GAP-01 from the Playwright MCP gap analysis.
+- **`charlotte_drag`** — Drag an element to another element using mouse primitives (mousedown → intermediate moves → mouseup). Accepts `source_id` and `target_id` element IDs. Closes GAP-01 from the Playwright MCP gap analysis.
 - **Landmark IDs** — Landmarks now have stable hash-based IDs (`rgn-xxxx`) like headings and interactive elements, making them referenceable by tools (e.g., as drag-and-drop targets).
-- **`charlotte:console`** — Retrieve console messages from the active page at all severity levels (log, info, warn, error, debug) with timestamps. Supports level filtering and buffer clearing. Closes GAP-21 from the Playwright MCP gap analysis.
-- **`charlotte:requests`** — Retrieve network request history from the active page with method, status, resource type, and timestamps. Supports filtering by URL pattern, resource type, and minimum status code. Closes GAP-22 from the Playwright MCP gap analysis.
-- **Modifier key clicks** — `charlotte:click` now accepts an optional `modifiers` parameter (`ctrl`, `shift`, `alt`, `meta`, or combinations) for Ctrl+Click, Shift+Click, etc. Works with all click types (left, right, double).
+- **`charlotte_console`** — Retrieve console messages from the active page at all severity levels (log, info, warn, error, debug) with timestamps. Supports level filtering and buffer clearing. Closes GAP-21 from the Playwright MCP gap analysis.
+- **`charlotte_requests`** — Retrieve network request history from the active page with method, status, resource type, and timestamps. Supports filtering by URL pattern, resource type, and minimum status code. Closes GAP-22 from the Playwright MCP gap analysis.
+- **Modifier key clicks** — `charlotte_click` now accepts an optional `modifiers` parameter (`ctrl`, `shift`, `alt`, `meta`, or combinations) for Ctrl+Click, Shift+Click, etc. Works with all click types (left, right, double).
 
 ### Fixed
 
@@ -102,9 +102,9 @@ All notable changes to Charlotte will be documented in this file.
 
 ### Added
 
-- **`charlotte:dialog`** — Accept or dismiss JavaScript dialogs (`alert`, `confirm`, `prompt`, `beforeunload`). Dialogs are captured by PageManager and surfaced as `pending_dialog` in every tool response while blocking. Response includes `dialog_handled` metadata confirming what was resolved. Closes GAP-03 from the Playwright MCP gap analysis.
+- **`charlotte_dialog`** — Accept or dismiss JavaScript dialogs (`alert`, `confirm`, `prompt`, `beforeunload`). Dialogs are captured by PageManager and surfaced as `pending_dialog` in every tool response while blocking. Response includes `dialog_handled` metadata confirming what was resolved. Closes GAP-03 from the Playwright MCP gap analysis.
 - **Dialog-aware action racing** — Interaction tools (`click`, `submit`) now race the action against dialog detection. Clicks that trigger dialogs return immediately with `pending_dialog` instead of hanging for 30s.
-- **`dialog_auto_dismiss` configuration** — New parameter on `charlotte:configure` to auto-handle dialogs without explicit tool calls. Options: `"none"` (default, queue for manual handling), `"accept_alerts"`, `"accept_all"`, `"dismiss_all"`.
+- **`dialog_auto_dismiss` configuration** — New parameter on `charlotte_configure` to auto-handle dialogs without explicit tool calls. Options: `"none"` (default, queue for manual handling), `"accept_alerts"`, `"accept_all"`, `"dismiss_all"`.
 - **Dialog-blocking stub responses** — When a dialog is open, `renderActivePage` returns a minimal stub representation (since `page.title()` hangs while dialogs are blocking). The stub includes `pending_dialog` so agents always know a dialog needs handling.
 
 ### Changed

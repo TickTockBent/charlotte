@@ -62,7 +62,7 @@ export function parseCliArgs(argv: string[] = process.argv.slice(2)): {
   const profileValue = values.profile as string | undefined;
   const toolsValue = values.tools as string | undefined;
   const outputDir = values["output-dir"] as string | undefined;
-  const headless = values["no-headless"] ? false : undefined;
+  const headless = !values["no-headless"];
 
   if (profileValue && toolsValue) {
     logger.warn("Both --profile and --tools provided; --profile takes precedence");

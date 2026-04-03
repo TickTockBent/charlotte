@@ -50,6 +50,20 @@ export interface RenderOptions {
 }
 
 /**
+ * Ensure the browser is connected and at least one tab is open.
+ * Called at the start of every tool handler instead of ensureConnected()
+ * directly, so Chromium is launched lazily on first use rather than
+ * eagerly at process startup (which wastes instances when the host
+ * spawns multiple Charlotte processes simultaneously).
+ */
+export async function ensureReady(deps: ToolDependencies): Promise<void> {
+  await deps.browserManager.ensureConnected();
+  if (!deps.pageManager.hasPages()) {
+    await deps.pageManager.openTab(deps.browserManager);
+  }
+}
+
+/**
  * Render the active page, attach console/network errors, and optionally
  * push a snapshot to the store.
  *
@@ -170,7 +184,7 @@ export async function resolveElement(
 
   const suggestion = similar
     ? `Element '${elementId}' not found. Did you mean '${similar.id}' (${similar.type}: "${similar.label}")?`
-    : `Element '${elementId}' not found. Call charlotte:observe to get current page state.`;
+    : `Element '${elementId}' not found. Call charlotte_observe to get current page state.`;
 
   throw new CharlotteError(
     CharlotteErrorCode.ELEMENT_NOT_FOUND,

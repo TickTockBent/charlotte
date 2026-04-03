@@ -5,7 +5,7 @@ import { logger } from "../utils/logger.js";
 import type { DetailLevel } from "../renderer/renderer-pipeline.js";
 import type { RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ToolDependencies } from "./tool-helpers.js";
-import { renderActivePage, formatPageResponse, handleToolError } from "./tool-helpers.js";
+import { ensureReady, renderActivePage, formatPageResponse, handleToolError } from "./tool-helpers.js";
 
 const detailSchema = z
   .enum(["minimal", "summary", "full"])
@@ -20,11 +20,11 @@ export function registerNavigationTools(
 ): Record<string, RegisteredTool> {
   const tools: Record<string, RegisteredTool> = {};
 
-  tools["charlotte:navigate"] = server.registerTool(
-    "charlotte:navigate",
+  tools["charlotte_navigate"] = server.registerTool(
+    "charlotte_navigate",
     {
       description:
-        "Load a URL in the active page. Returns page representation after navigation. Default minimal detail includes landmarks, headings, and interactive element counts — use charlotte:find to locate specific elements, or pass detail: 'summary' to get the full element list.",
+        "Load a URL in the active page. Returns page representation after navigation. Default minimal detail includes landmarks, headings, and interactive element counts — use charlotte_find to locate specific elements, or pass detail: 'summary' to get the full element list.",
       inputSchema: {
         url: z.string().describe("URL to navigate to"),
         wait_for: z
@@ -39,7 +39,7 @@ export function registerNavigationTools(
     },
     async ({ url, wait_for, timeout, detail }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
         const page = deps.pageManager.getActivePage();
 
         const waitUntilValue = wait_for ?? "load";
@@ -93,8 +93,8 @@ export function registerNavigationTools(
     },
   );
 
-  tools["charlotte:back"] = server.registerTool(
-    "charlotte:back",
+  tools["charlotte_back"] = server.registerTool(
+    "charlotte_back",
     {
       description:
         "Navigate back in browser history. Returns page representation after navigation.",
@@ -104,7 +104,7 @@ export function registerNavigationTools(
     },
     async ({ detail }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
         const page = deps.pageManager.getActivePage();
 
         logger.info("Navigating back");
@@ -133,8 +133,8 @@ export function registerNavigationTools(
     },
   );
 
-  tools["charlotte:forward"] = server.registerTool(
-    "charlotte:forward",
+  tools["charlotte_forward"] = server.registerTool(
+    "charlotte_forward",
     {
       description:
         "Navigate forward in browser history. Returns page representation after navigation.",
@@ -144,7 +144,7 @@ export function registerNavigationTools(
     },
     async ({ detail }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
         const page = deps.pageManager.getActivePage();
 
         logger.info("Navigating forward");
@@ -173,8 +173,8 @@ export function registerNavigationTools(
     },
   );
 
-  tools["charlotte:reload"] = server.registerTool(
-    "charlotte:reload",
+  tools["charlotte_reload"] = server.registerTool(
+    "charlotte_reload",
     {
       description: "Reload the current page. Returns page representation after reload.",
       inputSchema: {
@@ -184,7 +184,7 @@ export function registerNavigationTools(
     },
     async ({ hard, detail }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
         const page = deps.pageManager.getActivePage();
 
         const bypassCache = hard ?? false;

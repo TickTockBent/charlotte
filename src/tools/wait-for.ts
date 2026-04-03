@@ -6,6 +6,7 @@ import { logger } from "../utils/logger.js";
 import type { RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ToolDependencies } from "./tool-helpers.js";
 import {
+  ensureReady,
   renderActivePage,
   renderAfterAction,
   formatPageResponse,
@@ -18,9 +19,9 @@ export function registerWaitForTools(
 ): Record<string, RegisteredTool> {
   const tools: Record<string, RegisteredTool> = {};
 
-  // ─── charlotte:wait_for ───
-  tools["charlotte:wait_for"] = server.registerTool(
-    "charlotte:wait_for",
+  // ─── charlotte_wait_for ───
+  tools["charlotte_wait_for"] = server.registerTool(
+    "charlotte_wait_for",
     {
       description:
         "Wait for a condition to be met on the page. Returns page representation when the condition is satisfied, or a TIMEOUT error.",
@@ -38,7 +39,7 @@ export function registerWaitForTools(
     },
     async ({ element_id, state, text, selector, js, timeout }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
         const page = deps.pageManager.getActivePage();
         const waitTimeout = timeout ?? 10000;
 

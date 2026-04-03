@@ -10,9 +10,20 @@ export class BrowserManager {
   private launching: Promise<void> | null = null;
   private config: CharlotteConfig;
 
-  constructor(config?: CharlotteConfig) {
+  constructor(config?: CharlotteConfig, launchOptions?: LaunchOptions) {
     // Accept optional config; callers without config get a permissive default
     this.config = config ?? createDefaultConfig();
+    this.launchOptions = {
+      headless: true,
+      defaultViewport: this.config.defaultViewport,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-gpu",
+        "--disable-dev-shm-usage",
+      ],
+      ...launchOptions,
+    };
   }
 
   async launch(options?: LaunchOptions): Promise<void> {

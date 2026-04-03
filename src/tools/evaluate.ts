@@ -17,8 +17,8 @@ export function registerEvaluateTools(
 ): Record<string, RegisteredTool> {
   const tools: Record<string, RegisteredTool> = {};
 
-  tools["charlotte:evaluate"] = server.registerTool(
-    "charlotte:evaluate",
+  tools["charlotte_evaluate"] = server.registerTool(
+    "charlotte_evaluate",
     {
       description:
         "Execute JavaScript in page context. Supports single expressions and multi-statement code. Returns the completion value of the last expression-statement.",
@@ -35,6 +35,9 @@ export function registerEvaluateTools(
     },
     async ({ expression, timeout, await_promise }) => {
       await deps.browserManager.ensureConnected();
+      if (deps.pageManager && !deps.pageManager.hasPages()) {
+        await deps.pageManager.openTab(deps.browserManager);
+      }
       const page = deps.getActivePage();
 
       const evaluationTimeout = timeout ?? 5000;

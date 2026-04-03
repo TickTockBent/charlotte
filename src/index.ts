@@ -36,15 +36,9 @@ async function main(): Promise<void> {
     await fs.mkdir(resolvedOutputDir, { recursive: true });
   }
 
-  // Initialize browser
+  // Initialize browser and page management (Chromium launched lazily on first tool call)
   const browserManager = new BrowserManager(config);
-  await browserManager.launch();
-
-  // Initialize page management
   const pageManager = new PageManager(config);
-
-  // Open a default tab
-  await pageManager.openTab(browserManager);
 
   // Initialize renderer pipeline
   const cdpSessionManager = new CDPSessionManager();

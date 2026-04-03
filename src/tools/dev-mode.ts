@@ -7,6 +7,7 @@ import { logger } from "../utils/logger.js";
 import { Auditor, type AuditCategory } from "../dev/auditor.js";
 import type { ToolDependencies } from "./tool-helpers.js";
 import {
+  ensureReady,
   renderActivePage,
   renderAfterAction,
   formatPageResponse,
@@ -19,9 +20,9 @@ export function registerDevModeTools(
 ): Record<string, RegisteredTool> {
   const tools: Record<string, RegisteredTool> = {};
 
-  // ─── charlotte:dev_serve ───
-  tools["charlotte:dev_serve"] = server.registerTool(
-    "charlotte:dev_serve",
+  // ─── charlotte_dev_serve ───
+  tools["charlotte_dev_serve"] = server.registerTool(
+    "charlotte_dev_serve",
     {
       description:
         "Serve a local directory as a static website and optionally watch for file changes. Navigates to the served URL and returns the page representation. File changes trigger automatic reloads and surface as reload_event on the next tool response.",
@@ -33,7 +34,7 @@ export function registerDevModeTools(
     },
     async ({ path: directoryPath, port, watch }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
 
         if (!deps.devModeState) {
           throw new CharlotteError(
@@ -113,9 +114,9 @@ export function registerDevModeTools(
     },
   );
 
-  // ─── charlotte:dev_inject ───
-  tools["charlotte:dev_inject"] = server.registerTool(
-    "charlotte:dev_inject",
+  // ─── charlotte_dev_inject ───
+  tools["charlotte_dev_inject"] = server.registerTool(
+    "charlotte_dev_inject",
     {
       description:
         "Inject CSS or JavaScript into the current page for testing modifications without editing files. Returns the page representation with a delta showing changes.",
@@ -126,7 +127,7 @@ export function registerDevModeTools(
     },
     async ({ css, js }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
 
         if (!css && !js) {
           throw new CharlotteError(
@@ -163,9 +164,9 @@ export function registerDevModeTools(
     },
   );
 
-  // ─── charlotte:dev_audit ───
-  tools["charlotte:dev_audit"] = server.registerTool(
-    "charlotte:dev_audit",
+  // ─── charlotte_dev_audit ───
+  tools["charlotte_dev_audit"] = server.registerTool(
+    "charlotte_dev_audit",
     {
       description:
         "Run accessibility and quality audits on the current page. Returns findings with severity levels and actionable recommendations.",
@@ -180,7 +181,7 @@ export function registerDevModeTools(
     },
     async ({ checks }) => {
       try {
-        await deps.browserManager.ensureConnected();
+        await ensureReady(deps);
 
         const page = deps.pageManager.getActivePage();
         const session = await page.createCDPSession();

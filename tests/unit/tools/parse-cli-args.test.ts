@@ -38,8 +38,18 @@ describe("parseCliArgs", () => {
       expect(result).toEqual({ profile: "audit" });
     });
 
-    it("throws on invalid profile", () => {
-      expect(() => parseCliArgs(["--profile=invalid"])).toThrow("Invalid profile: invalid");
+    it("parses space-separated --profile full", () => {
+      const result = parseCliArgs(["--profile", "full"]);
+      expect(result).toEqual({ profile: "full" });
+    });
+
+    it("parses space-separated --profile core with --no-headless", () => {
+      const result = parseCliArgs(["--profile", "core", "--no-headless"]);
+      expect(result).toEqual({ profile: "core", headless: false });
+    });
+
+    it("throws on invalid profile (space-separated)", () => {
+      expect(() => parseCliArgs(["--profile", "invalid"])).toThrow("Invalid profile: invalid");
     });
   });
 
@@ -68,6 +78,11 @@ describe("parseCliArgs", () => {
     it("throws on trailing comma (empty group name)", () => {
       expect(() => parseCliArgs(["--tools=navigation,"])).toThrow("Invalid tool group: ");
     });
+
+    it("parses space-separated --tools", () => {
+      const result = parseCliArgs(["--tools", "navigation,observation"]);
+      expect(result).toEqual({ toolGroups: ["navigation", "observation"] });
+    });
   });
 
   describe("precedence", () => {
@@ -75,6 +90,13 @@ describe("parseCliArgs", () => {
       const result = parseCliArgs(["--profile=core", "--tools=navigation,observation"]);
       expect(result).toEqual({ profile: "core" });
       expect(result.toolGroups).toBeUndefined();
+    });
+  });
+
+  describe("--output-dir", () => {
+    it("parses space-separated --output-dir", () => {
+      const result = parseCliArgs(["--output-dir", "/tmp/out"]);
+      expect(result).toEqual({ outputDir: "/tmp/out" });
     });
   });
 

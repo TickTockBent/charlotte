@@ -104,23 +104,23 @@ where Charlotte has capabilities Playwright MCP does not**, for completeness.
 | **Suggested Tool Name** | `charlotte_dialog` |
 | **Implementation Notes** | Puppeteer emits a `'dialog'` event on Page. Charlotte could auto-queue dialogs and expose a tool to accept/dismiss them. Consider also auto-dismissing with a configurable default. |
 
-### GAP-04: Batch Form Fill
+### GAP-04: Batch Form Fill — *remediated in v0.5.1*
 
 | Attribute | Detail |
 |-----------|--------|
 | **Playwright Tool** | `browser_fill_form` |
-| **Charlotte Status** | Not implemented — requires sequential `charlotte_type` calls for each field |
+| **Charlotte Status** | Implemented — `charlotte_fill_form` accepts an array of `{element_id, value}` pairs and fills an entire form in a single tool call. Supports text inputs, textareas, selects, checkboxes, radios, toggles, date inputs, and color inputs. |
 | **Impact** | Medium — multi-field forms require N tool calls instead of 1, increasing token usage and latency |
 | **Parameters (Playwright)** | `fields` (array of `{ref, value}`) |
 | **Suggested Tool Name** | `charlotte_fill_form` |
 | **Implementation Notes** | Straightforward to implement by iterating over fields internally. Should resolve each element_id, clear, and type. Could extend to also handle selects and checkboxes. |
 
-### GAP-05: Slow / Character-by-Character Typing
+### GAP-05: Slow / Character-by-Character Typing — *remediated in v0.5.1*
 
 | Attribute | Detail |
 |-----------|--------|
 | **Playwright Tool** | `browser_type` with `slowly: true` parameter |
-| **Charlotte Status** | Not implemented — `charlotte_type` fills the entire value at once |
+| **Charlotte Status** | Implemented — `charlotte_type` accepts `slowly` (boolean) and `character_delay` (ms) parameters for character-by-character input. |
 | **Impact** | Medium — some sites have key-by-key event handlers (autocomplete, search-as-you-type, input validation) that won't fire with bulk fill |
 | **Parameters (Playwright)** | `slowly` (boolean) on `browser_type` |
 | **Suggested Change** | Add `slowly` or `character_delay` parameter to `charlotte_type` |
@@ -543,8 +543,8 @@ Features Charlotte provides that Playwright MCP **does not** have as dedicated t
 
 | Gap | Tool / Change | Rationale |
 |-----|---------------|-----------|
-| GAP-04 | `charlotte_fill_form` | Reduces N tool calls to 1 for multi-field forms |
-| GAP-05 | `slowly` param on `type` | Fixes autocomplete and search-as-you-type sites |
+| GAP-04 | `charlotte_fill_form` | Reduces N tool calls to 1 for multi-field forms — *remediated in v0.5.1* |
+| GAP-05 | `slowly` param on `type` | Fixes autocomplete and search-as-you-type sites — *remediated in v0.5.1* |
 | GAP-06 | `modifiers` param on `click` | Enables Ctrl+Click, Shift+Click patterns |
 | GAP-13 | `filename` param on tools | Reduces token consumption for large outputs |
 | GAP-33 | `--cdp-endpoint` CLI arg | Enables connecting to existing browser sessions |
@@ -584,8 +584,8 @@ Features Charlotte provides that Playwright MCP **does not** have as dedicated t
 | GAP-01 | Interaction | Drag and drop | `browser_drag` | Remediated in v0.4.0 | High |
 | GAP-02 | Interaction | File upload | `browser_file_upload` | Remediated in v0.4.2 | High |
 | GAP-03 | Interaction | Dialog handling | `browser_handle_dialog` | Remediated in v0.3.0 | High |
-| GAP-04 | Interaction | Batch form fill | `browser_fill_form` | Missing | Medium |
-| GAP-05 | Interaction | Slow typing | `slowly` param | Missing | Medium |
+| GAP-04 | Interaction | Batch form fill | `browser_fill_form` | Remediated in v0.5.1 | Medium |
+| GAP-05 | Interaction | Slow typing | `slowly` param | Remediated in v0.5.1 | Medium |
 | GAP-06 | Interaction | Click modifiers | `modifiers` param | Remediated in v0.4.0 | Medium |
 | GAP-07 | Vision | Coordinate click | `browser_mouse_click_xy` | Remediated in v0.4.1 | Medium |
 | GAP-08 | Vision | Coordinate move | `browser_mouse_move_xy` | Missing | Medium |

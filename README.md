@@ -447,12 +447,6 @@ Five pages cover navigation, forms, interactive elements, popups, delayed conten
 
 ## Roadmap
 
-### Interaction Gaps
-
-**Batch Form Fill** — Add a `charlotte_fill_form` tool that accepts an array of `{element_id, value}` pairs and fills an entire form in a single tool call, reducing N sequential `type`/`select`/`toggle` calls to one.
-
-**Slow Typing** — Add a `slowly` or `character_delay` parameter to `charlotte_type` for character-by-character input. Required for sites with key-by-key event handlers (autocomplete, search-as-you-type, input validation).
-
 ### Session & Configuration
 
 **Connect to Existing Browser** — Add a `--cdp-endpoint` CLI argument so Charlotte can attach to an already-running browser via `puppeteer.connect()` instead of always launching a new instance. Enables working with logged-in sessions and browser extensions.

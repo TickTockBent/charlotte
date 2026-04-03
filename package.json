@@ -75,7 +75,7 @@
     "CHANGELOG.md"
   ],
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=20.0.0"
   },
   "mcpName": "io.github.TickTockBent/charlotte",
   "publishConfig": {

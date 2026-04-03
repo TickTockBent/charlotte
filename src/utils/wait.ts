@@ -61,14 +61,19 @@ async function evaluateCondition(page: Page, condition: WaitCondition): Promise<
   }
 
   if (condition.js) {
-    const jsExpression = condition.js;
+    const cdpSession = await page.createCDPSession();
     try {
-      const result = await page.evaluate((expression) => {
-        return !!new Function("return " + expression)();
-      }, jsExpression);
-      if (!result) return false;
+      const evalResult = await cdpSession.send("Runtime.evaluate", {
+        expression: condition.js,
+        returnByValue: true,
+        awaitPromise: true,
+      });
+      const isTruthy = !evalResult.exceptionDetails && !!evalResult.result.value;
+      if (!isTruthy) return false;
     } catch {
       return false;
+    } finally {
+      await cdpSession.detach().catch(() => {});
     }
   }
 

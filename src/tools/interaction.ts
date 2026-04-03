@@ -646,17 +646,22 @@ export function registerInteractionTools(
   );
 
   // ─── charlotte:fill_form ───
+
+  const FILLABLE_TYPES = new Set([
+    "text_input", "textarea", "select", "checkbox", "radio", "toggle", "date_input", "color_input",
+  ]);
+
   tools["charlotte:fill_form"] = server.registerTool(
     "charlotte:fill_form",
     {
       description:
-        "Fill multiple form fields in a single call. Auto-detects element types (text input, select, checkbox, etc.) and applies the appropriate action. Returns a single page representation with delta covering all changes.",
+        "Fill multiple form fields in a single call. Auto-detects element types (text input, select, checkbox, etc.) and applies the appropriate action. Returns a single page representation with delta covering all changes. Validates all fields before mutating any — if one field is invalid, no fields are changed.",
       inputSchema: {
         fields: z
           .array(
             z.object({
               element_id: z.string().describe("Element ID of the form field"),
-              value: z.string().describe("Value to set (text for inputs, option value/text for selects, ignored for toggles)"),
+              value: z.string().describe("Value to set: text for inputs/textareas, option value or text for selects. For checkbox/radio/toggle the element is clicked (toggling its state) and value is ignored."),
             }),
           )
           .min(1)
@@ -679,9 +684,12 @@ export function registerInteractionTools(
         }> = [];
 
         for (const field of fields) {
-          const resolved = await resolveElement(deps, field.element_id);
+          // Check type before resolving — gives better errors for non-fillable elements
           const element = representation.interactive.find((el) => el.id === field.element_id);
           if (!element) {
+            // Fall through to resolveElement for proper "not found" with suggestions
+            await resolveElement(deps, field.element_id);
+            // If resolveElement didn't throw, the element exists but isn't interactive
             throw new CharlotteError(
               CharlotteErrorCode.ELEMENT_NOT_FOUND,
               `Element '${field.element_id}' is not an interactive form field.`,
@@ -689,15 +697,18 @@ export function registerInteractionTools(
             );
           }
 
-          const supportedTypes = ["text_input", "textarea", "select", "checkbox", "radio", "toggle", "date_input", "color_input"];
-          if (!supportedTypes.includes(element.type)) {
+          if (!FILLABLE_TYPES.has(element.type)) {
+            const hint = element.type === "file_input"
+              ? "Use charlotte:upload for file inputs."
+              : "fill_form supports: text_input, textarea, select, checkbox, radio, toggle, date_input, color_input.";
             throw new CharlotteError(
               CharlotteErrorCode.ELEMENT_NOT_INTERACTIVE,
               `Element '${field.element_id}' is type '${element.type}' which cannot be filled.`,
-              "fill_form supports: text_input, textarea, select, checkbox, radio, toggle, date_input, color_input.",
+              hint,
             );
           }
 
+          const resolved = await resolveElement(deps, field.element_id);
           resolvedFields.push({
             backendNodeId: resolved.backendNodeId,
             type: element.type,

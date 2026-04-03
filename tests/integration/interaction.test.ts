@@ -1030,6 +1030,35 @@ describe("Interaction integration", () => {
       const text = (result.content as Array<{ type: string; text: string }>)[0].text;
       expect(text).toContain("not found");
     });
+
+    it("does not mutate any fields when a later field is invalid (fail-fast)", async () => {
+      const representation = await renderActivePage(deps, { detail: "minimal" });
+      const firstName = findElementByLabel(representation, "First Name");
+      const submitButton = findElementByLabel(representation, "Register");
+      expect(firstName).toBeDefined();
+      expect(submitButton).toBeDefined();
+      expect(submitButton!.type).toBe("button");
+
+      // First field is valid, second is a button (unsupported) — should fail before any mutation
+      const result = await mcpClient.callTool({
+        name: "charlotte:fill_form",
+        arguments: {
+          fields: [
+            { element_id: firstName!.id, value: "ShouldNotAppear" },
+            { element_id: submitButton!.id, value: "invalid" },
+          ],
+        },
+      });
+
+      expect(result.isError).toBe(true);
+
+      // Verify the first field was NOT modified
+      const page = pageManager.getActivePage();
+      const firstNameValue = await page.evaluate(
+        () => (document.getElementById("first-name") as HTMLInputElement).value,
+      );
+      expect(firstNameValue).toBe("");
+    });
   });
 
   describe("wait_for", () => {

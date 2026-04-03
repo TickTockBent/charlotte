@@ -15,7 +15,7 @@ import { renderActivePage, resolveElement } from "../../src/tools/tool-helpers.j
 import { typeIntoElement } from "../../src/tools/interaction-helpers.js";
 
 const INTERACTION_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/interaction.html")}`;
-const _FORM_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/form.html")}`;
+const FORM_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/form.html")}`;
 
 describe("Interaction integration", () => {
   let browserManager: BrowserManager;
@@ -883,6 +883,181 @@ describe("Interaction integration", () => {
         // visible is omitted when true (default stripping)
         expect(fileInput.state.visible).toBeUndefined();
       }
+    });
+  });
+
+  describe("fill_form", () => {
+    let mcpClient: import("@modelcontextprotocol/sdk/client/index.js").Client;
+    let closeTransport: () => Promise<void>;
+
+    beforeAll(async () => {
+      const { createServer } = await import("../../src/server.js");
+      const { Client } = await import("@modelcontextprotocol/sdk/client/index.js");
+      const { InMemoryTransport } = await import("@modelcontextprotocol/sdk/inMemory.js");
+
+      const { server } = createServer(
+        {
+          browserManager: deps.browserManager,
+          pageManager: deps.pageManager,
+          cdpSessionManager,
+          rendererPipeline,
+          elementIdGenerator,
+          snapshotStore: deps.snapshotStore,
+          artifactStore: deps.artifactStore,
+          config: deps.config,
+        },
+        { profile: "full" },
+      );
+
+      const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+      await server.connect(serverTransport);
+
+      mcpClient = new Client({ name: "fill-form-test", version: "1.0.0" });
+      await mcpClient.connect(clientTransport);
+
+      closeTransport = async () => {
+        await mcpClient.close();
+        await server.close();
+      };
+    });
+
+    afterAll(async () => {
+      await closeTransport();
+    });
+
+    beforeEach(async () => {
+      const page = pageManager.getActivePage();
+      await page.goto(FORM_FIXTURE, { waitUntil: "load" });
+    });
+
+    it("fills multiple text inputs via the tool handler", async () => {
+      // Render to discover element IDs
+      const representation = await renderActivePage(deps, { detail: "minimal" });
+      const firstName = findElementByLabel(representation, "First Name");
+      const lastName = findElementByLabel(representation, "Last Name");
+      const email = findElementByLabel(representation, "Email");
+      expect(firstName).toBeDefined();
+      expect(lastName).toBeDefined();
+      expect(email).toBeDefined();
+
+      // Call the actual tool
+      const result = await mcpClient.callTool({
+        name: "charlotte:fill_form",
+        arguments: {
+          fields: [
+            { element_id: firstName!.id, value: "Jane" },
+            { element_id: lastName!.id, value: "Doe" },
+            { element_id: email!.id, value: "jane@example.com" },
+          ],
+        },
+      });
+
+      expect(result.isError).toBeFalsy();
+
+      // Verify values were actually set in the DOM
+      const page = pageManager.getActivePage();
+      const values = await page.evaluate(() => ({
+        firstName: (document.getElementById("first-name") as HTMLInputElement).value,
+        lastName: (document.getElementById("last-name") as HTMLInputElement).value,
+        email: (document.getElementById("email") as HTMLInputElement).value,
+      }));
+      expect(values.firstName).toBe("Jane");
+      expect(values.lastName).toBe("Doe");
+      expect(values.email).toBe("jane@example.com");
+    });
+
+    it("fills a mix of text inputs, selects, and checkboxes via the tool handler", async () => {
+      const representation = await renderActivePage(deps, { detail: "minimal" });
+      const firstName = findElementByLabel(representation, "First Name");
+      const country = findElementByType(representation, "select", "Country");
+      const newsletter = findElementByType(representation, "checkbox", "newsletter");
+      expect(firstName).toBeDefined();
+      expect(country).toBeDefined();
+      expect(newsletter).toBeDefined();
+
+      const result = await mcpClient.callTool({
+        name: "charlotte:fill_form",
+        arguments: {
+          fields: [
+            { element_id: firstName!.id, value: "Alice" },
+            { element_id: country!.id, value: "ca" },
+            { element_id: newsletter!.id, value: "toggle" },
+          ],
+        },
+      });
+
+      expect(result.isError).toBeFalsy();
+
+      const page = pageManager.getActivePage();
+      const values = await page.evaluate(() => ({
+        firstName: (document.getElementById("first-name") as HTMLInputElement).value,
+        country: (document.getElementById("country") as HTMLSelectElement).value,
+        newsletter: (document.getElementById("newsletter") as HTMLInputElement).checked,
+      }));
+      expect(values.firstName).toBe("Alice");
+      expect(values.country).toBe("ca");
+      expect(values.newsletter).toBe(true);
+    });
+
+    it("returns error for unsupported element types", async () => {
+      const representation = await renderActivePage(deps, { detail: "minimal" });
+      const submitButton = findElementByLabel(representation, "Register");
+      expect(submitButton).toBeDefined();
+      expect(submitButton!.type).toBe("button");
+
+      const result = await mcpClient.callTool({
+        name: "charlotte:fill_form",
+        arguments: {
+          fields: [{ element_id: submitButton!.id, value: "anything" }],
+        },
+      });
+
+      expect(result.isError).toBe(true);
+      const text = (result.content as Array<{ type: string; text: string }>)[0].text;
+      expect(text).toContain("cannot be filled");
+      expect(text).toContain("ELEMENT_NOT_INTERACTIVE");
+    });
+
+    it("returns error for unknown element IDs", async () => {
+      const result = await mcpClient.callTool({
+        name: "charlotte:fill_form",
+        arguments: {
+          fields: [{ element_id: "inp-0000", value: "test" }],
+        },
+      });
+
+      expect(result.isError).toBe(true);
+      const text = (result.content as Array<{ type: string; text: string }>)[0].text;
+      expect(text).toContain("not found");
+    });
+
+    it("does not mutate any fields when a later field is invalid (fail-fast)", async () => {
+      const representation = await renderActivePage(deps, { detail: "minimal" });
+      const firstName = findElementByLabel(representation, "First Name");
+      const submitButton = findElementByLabel(representation, "Register");
+      expect(firstName).toBeDefined();
+      expect(submitButton).toBeDefined();
+      expect(submitButton!.type).toBe("button");
+
+      // First field is valid, second is a button (unsupported) — should fail before any mutation
+      const result = await mcpClient.callTool({
+        name: "charlotte:fill_form",
+        arguments: {
+          fields: [
+            { element_id: firstName!.id, value: "ShouldNotAppear" },
+            { element_id: submitButton!.id, value: "invalid" },
+          ],
+        },
+      });
+
+      expect(result.isError).toBe(true);
+
+      // Verify the first field was NOT modified
+      const page = pageManager.getActivePage();
+      const firstNameValue = await page.evaluate(
+        () => (document.getElementById("first-name") as HTMLInputElement).value,
+      );
+      expect(firstNameValue).toBe("");
     });
   });
 

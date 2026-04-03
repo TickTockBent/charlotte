@@ -18,7 +18,7 @@ Charlotte decomposes each page into a typed, structured representation — landm
 
 ### Benchmarks
 
-Charlotte v0.5.1 vs Playwright MCP, measured by characters returned per tool call on real websites:
+Charlotte v0.6.0 vs Playwright MCP, measured by characters returned per tool call on real websites:
 
 **Navigation** (first contact with a page):
 
@@ -35,11 +35,11 @@ Charlotte's `navigate` returns minimal detail by default — landmarks, headings
 
 | Profile | Tools | Def. tokens/call | Savings vs full |
 |:---|---:|---:|---:|
-| full | 42 | ~7,400 | — |
-| browse (default) | 23 | ~3,900 | **~47%** |
-| core | 7 | 1,677 | **~77%** |
+| full | 43 | ~7,600 | — |
+| browse (default) | 23 | ~3,900 | **~49%** |
+| core | 7 | 1,677 | **~78%** |
 
-Tool definitions are sent on every API round-trip. With the default `browse` profile, Charlotte carries ~47% less definition overhead than loading all tools. Over a 20-call browsing session, that's **~38% fewer total tokens**. See the [profile benchmark report](docs/charlotte-profile-benchmark-report.md) for full results.
+Tool definitions are sent on every API round-trip. With the default `browse` profile, Charlotte carries ~49% less definition overhead than loading all tools. Over a 20-call browsing session, that's **~40% fewer total tokens**. See the [profile benchmark report](docs/charlotte-profile-benchmark-report.md) for full results.
 
 **The workflow difference:** Playwright agents receive 61K+ characters every time they look at Hacker News, whether they're reading headlines or looking for a login button. Charlotte agents get 336 characters on arrival, call `find({ type: "link", text: "login" })` to get exactly what they need, and never pay for the rest.
 
@@ -71,7 +71,7 @@ Agents receive landmarks, headings, interactive elements with typed metadata, bo
 
 **Observation** — `observe` (3 detail levels, structural tree view), `find` (spatial + semantic search, CSS selector mode), `screenshot` (with persistent artifact management), `screenshots`, `screenshot_get`, `screenshot_delete`, `diff` (structural comparison against snapshots)
 
-**Interaction** — `click`, `click_at` (coordinate-based), `type`, `select`, `toggle`, `submit`, `scroll`, `hover`, `drag`, `key` (single/sequence with element targeting), `wait_for` (async condition polling), `upload` (file input), `dialog` (accept/dismiss JS dialogs)
+**Interaction** — `click`, `click_at` (coordinate-based), `type` (with slow typing support), `select`, `toggle`, `submit`, `scroll`, `hover`, `drag`, `key` (single/sequence with element targeting), `wait_for` (async condition polling), `upload` (file input), `fill_form` (batch form fill), `dialog` (accept/dismiss JS dialogs)
 
 **Monitoring** — `console` (all severity levels, filtering, timestamps), `requests` (full HTTP history, method/status/resource type filtering)
 
@@ -83,14 +83,14 @@ Agents receive landmarks, headings, interactive elements with typed metadata, bo
 
 ## Tool Profiles
 
-Charlotte ships 42 tools (41 registered + the `charlotte_tools` meta-tool), but most workflows only need a subset. Startup profiles control which tools load into the agent's context, reducing definition overhead by up to 77%.
+Charlotte ships 43 tools (42 registered + the `charlotte_tools` meta-tool), but most workflows only need a subset. Startup profiles control which tools load into the agent's context, reducing definition overhead by up to 78%.
 
 ```bash
 charlotte --profile browse    # 23 tools (default) — navigate, observe, interact, tabs
 charlotte --profile core      # 7 tools — navigate, observe, find, click, type, submit
-charlotte --profile full      # 42 tools — everything
-charlotte --profile interact  # 30 tools — full interaction + dialog + evaluate
-charlotte --profile develop   # 33 tools — interact + dev_serve, dev_inject, dev_audit
+charlotte --profile full      # 43 tools — everything
+charlotte --profile interact  # 31 tools — full interaction + dialog + evaluate
+charlotte --profile develop   # 34 tools — interact + dev_serve, dev_inject, dev_audit
 charlotte --profile audit     # 14 tools — navigation + observation + dev_audit + viewport
 ```
 
@@ -106,7 +106,7 @@ charlotte_tools list               → see what's loaded
 
 ### Prerequisites
 
-- Node.js >= 22
+- Node.js >= 20
 - npm
 
 ### Installation

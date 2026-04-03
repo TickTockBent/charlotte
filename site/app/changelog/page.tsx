@@ -19,6 +19,24 @@ interface Release {
 
 const releases: Release[] = [
   {
+    version: "0.6.0",
+    date: "2026-04-03",
+    entries: [
+      { type: "added", text: "charlotte_fill_form — Batch form fill tool. Fill an entire form in one tool call with an array of {element_id, value} pairs. Closes GAP-04." },
+      { type: "added", text: "Slow typing — charlotte_type now accepts slowly and character_delay parameters for character-by-character input. Closes GAP-05." },
+      { type: "added", text: "Lazy Chromium initialization — Browser launches on first tool call instead of at startup, preventing idle instances." },
+      { type: "added", text: "MCP logging capability — Server declares logging capability for client compatibility." },
+      { type: "added", text: "CLI improvements — parseArgs migration, --help flag, improved --no-headless handling." },
+      { type: "added", text: "Default viewport increased to 1440×900 for more realistic rendering." },
+      { type: "changed", text: "BREAKING: All tool names renamed from charlotte:xxx to charlotte_xxx for MCP spec compliance. Closes #57." },
+      { type: "changed", text: "Node.js requirement relaxed from >=22 to >=20." },
+      { type: "fixed", text: "pollUntilCondition JS evaluation — Replaced new Function with CDP Runtime.evaluate for consistency." },
+      { type: "fixed", text: "Screenshot stale compositor frame — Flush before capture to prevent stale SPA screenshots." },
+      { type: "fixed", text: "CVE-2026-31988 — Override yauzl to 3.2.1." },
+      { type: "fixed", text: "Server version now read from package.json instead of being hardcoded." },
+    ],
+  },
+  {
     version: "0.5.1",
     date: "2026-03-14",
     entries: [

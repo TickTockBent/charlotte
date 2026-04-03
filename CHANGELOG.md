@@ -4,9 +4,39 @@ All notable changes to Charlotte will be documented in this file.
 
 ## [Unreleased]
 
+<!-- Nothing yet -->
+
+## [0.6.0] - 2026-04-03
+
+### Added
+
+- **`charlotte_fill_form`** — Batch form fill tool that accepts an array of `{element_id, value}` pairs and fills an entire form in a single tool call. Supports text inputs, textareas, selects, checkboxes, radios, toggles, date inputs, and color inputs. Closes GAP-04. (#134)
+- **Slow typing** — `charlotte_type` now accepts `slowly` (boolean) and `character_delay` (ms) parameters for character-by-character input. Required for sites with key-by-key event handlers (autocomplete, search-as-you-type). Closes GAP-05. (#126)
+- **Lazy Chromium initialization** — Browser launch is deferred to the first tool call instead of startup, preventing idle Chromium instances when MCP clients spawn multiple server processes simultaneously. (#138)
+- **MCP logging capability** — Server now declares `logging: {}` capability so the MCP SDK handles `logging/setLevel` requests from clients. (#138)
+- **CLI improvements** — Migrated to `node:util` `parseArgs`, added `--help` flag, improved `--no-headless` handling. (#130, #133)
+- **Default viewport 1440×900** — Increased from 800×600 for more realistic rendering. Centralized viewport config with device presets. (#121)
+
 ### Changed
 
-- **BREAKING: Tool name prefix migration** — All 42 MCP tool names renamed from `charlotte:xxx` to `charlotte_xxx` to comply with the MCP spec's `[A-Za-z0-9_.-]` character constraint and silence SDK v1.26.0+ validation warnings. Closes #57.
+- **BREAKING: Tool name prefix migration** — All 43 MCP tool names renamed from `charlotte:xxx` to `charlotte_xxx` to comply with the MCP spec's `[A-Za-z0-9_.-]` character constraint and silence SDK v1.26.0+ validation warnings. Closes #57. (#139)
+- **Node.js requirement relaxed to >=20** — No Node 22-only APIs are used. Opens Charlotte to the broader Node 20 LTS user base. (#136)
+- Select options capped at 50 to prevent oversized responses. (#126)
+
+### Fixed
+
+- **`pollUntilCondition` JS evaluation** — Replaced `new Function("return " + expr)` with CDP `Runtime.evaluate` in the wait utility, fixing multi-statement silent-return bug. Consistent with `evaluate.ts` and `wait-for.ts`. (#135)
+- **Screenshot stale compositor frame** — Flush compositor frame before capture to prevent stale screenshots on SPA page transitions. (#120)
+- **Timer leak in `waitForCompositorFrame`** — `clearTimeout` moved to `finally` block. (#120)
+- **CDP error logging** — Unexpected CDP errors in layout extraction are now logged instead of silently swallowed. (#117)
+- **macOS symlink test paths** — File output integration tests resolve `/var` symlinks on macOS. (#122)
+- **CVE-2026-31988** — Override yauzl to 3.2.1 to address zip extraction vulnerability. (#106)
+- **Server version from package.json** — Version string is now read from `package.json` at module load instead of being hardcoded. (#101)
+
+### Improved
+
+- **Snapshot store O(1) lookup** — Added Map index for constant-time snapshot retrieval by ID. (#116)
+- **Interaction module split** — `interaction.ts` refactored into focused modules for maintainability. (#112, #114)
 
 ## [0.5.1] - 2026-03-14
 

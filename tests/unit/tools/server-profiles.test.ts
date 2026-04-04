@@ -58,9 +58,9 @@ describe("server profile integration", () => {
   });
 
   describe("granular group selection", () => {
-    it("navigation + observation gives 11 tools", () => {
+    it("navigation + observation gives 7 tools", () => {
       const tools = resolveGroups(["navigation", "observation"]);
-      expect(tools.size).toBe(11);
+      expect(tools.size).toBe(7);
     });
 
     it("all groups together equals full profile", () => {

@@ -8,14 +8,12 @@
 // ─── Group definitions ───
 
 export const TOOL_GROUPS = {
-  navigation: ["charlotte_navigate", "charlotte_back", "charlotte_forward", "charlotte_reload"],
+  navigation: ["charlotte_navigate", "charlotte_history"],
   observation: [
     "charlotte_observe",
     "charlotte_find",
     "charlotte_screenshot",
-    "charlotte_screenshots",
-    "charlotte_screenshot_get",
-    "charlotte_screenshot_delete",
+    "charlotte_screenshot_manage",
     "charlotte_diff",
   ],
   interaction: [
@@ -34,15 +32,10 @@ export const TOOL_GROUPS = {
     "charlotte_fill_form",
   ],
   session: [
-    "charlotte_get_cookies",
-    "charlotte_clear_cookies",
-    "charlotte_set_cookies",
+    "charlotte_cookies",
     "charlotte_set_headers",
     "charlotte_configure",
-    "charlotte_tabs",
-    "charlotte_tab_open",
-    "charlotte_tab_switch",
-    "charlotte_tab_close",
+    "charlotte_tab",
     "charlotte_viewport",
     "charlotte_network",
   ],
@@ -81,16 +74,12 @@ export const PROFILE_TOOLS: Record<ToolProfile, string[]> = {
   browse: [
     // navigation (all)
     "charlotte_navigate",
-    "charlotte_back",
-    "charlotte_forward",
-    "charlotte_reload",
+    "charlotte_history",
     // observation (all)
     "charlotte_observe",
     "charlotte_find",
     "charlotte_screenshot",
-    "charlotte_screenshots",
-    "charlotte_screenshot_get",
-    "charlotte_screenshot_delete",
+    "charlotte_screenshot_manage",
     "charlotte_diff",
     // interaction (partial — click, click_at, type, select, toggle, submit, scroll)
     "charlotte_click",
@@ -101,25 +90,18 @@ export const PROFILE_TOOLS: Record<ToolProfile, string[]> = {
     "charlotte_submit",
     "charlotte_scroll",
     // session (tabs only)
-    "charlotte_tabs",
-    "charlotte_tab_open",
-    "charlotte_tab_switch",
-    "charlotte_tab_close",
+    "charlotte_tab",
   ],
 
   interact: [
     // navigation (all)
     "charlotte_navigate",
-    "charlotte_back",
-    "charlotte_forward",
-    "charlotte_reload",
+    "charlotte_history",
     // observation (all)
     "charlotte_observe",
     "charlotte_find",
     "charlotte_screenshot",
-    "charlotte_screenshots",
-    "charlotte_screenshot_get",
-    "charlotte_screenshot_delete",
+    "charlotte_screenshot_manage",
     "charlotte_diff",
     // interaction (all)
     "charlotte_click",
@@ -135,11 +117,8 @@ export const PROFILE_TOOLS: Record<ToolProfile, string[]> = {
     "charlotte_wait_for",
     "charlotte_upload",
     "charlotte_fill_form",
-    // session (tabs — inherited from browse)
-    "charlotte_tabs",
-    "charlotte_tab_open",
-    "charlotte_tab_switch",
-    "charlotte_tab_close",
+    // session (tabs)
+    "charlotte_tab",
     // dialog
     "charlotte_dialog",
     // evaluate
@@ -149,16 +128,12 @@ export const PROFILE_TOOLS: Record<ToolProfile, string[]> = {
   develop: [
     // navigation (all)
     "charlotte_navigate",
-    "charlotte_back",
-    "charlotte_forward",
-    "charlotte_reload",
+    "charlotte_history",
     // observation (all)
     "charlotte_observe",
     "charlotte_find",
     "charlotte_screenshot",
-    "charlotte_screenshots",
-    "charlotte_screenshot_get",
-    "charlotte_screenshot_delete",
+    "charlotte_screenshot_manage",
     "charlotte_diff",
     // interaction (all)
     "charlotte_click",
@@ -174,11 +149,8 @@ export const PROFILE_TOOLS: Record<ToolProfile, string[]> = {
     "charlotte_wait_for",
     "charlotte_upload",
     "charlotte_fill_form",
-    // session (tabs — inherited from browse)
-    "charlotte_tabs",
-    "charlotte_tab_open",
-    "charlotte_tab_switch",
-    "charlotte_tab_close",
+    // session (tabs)
+    "charlotte_tab",
     // dev_mode (all)
     "charlotte_dev_serve",
     "charlotte_dev_inject",
@@ -192,16 +164,12 @@ export const PROFILE_TOOLS: Record<ToolProfile, string[]> = {
   audit: [
     // navigation (all)
     "charlotte_navigate",
-    "charlotte_back",
-    "charlotte_forward",
-    "charlotte_reload",
+    "charlotte_history",
     // observation (observe, find, screenshot, diff)
     "charlotte_observe",
     "charlotte_find",
     "charlotte_screenshot",
-    "charlotte_screenshots",
-    "charlotte_screenshot_get",
-    "charlotte_screenshot_delete",
+    "charlotte_screenshot_manage",
     "charlotte_diff",
     // dev_mode (dev_audit only)
     "charlotte_dev_audit",
@@ -249,11 +217,11 @@ export function getToolGroup(toolName: string): ToolGroupName | undefined {
 
 /** Description hints for each group, used in the meta-tool and server instructions. */
 export const GROUP_DESCRIPTIONS: Record<ToolGroupName, string> = {
-  navigation: "Page navigation (navigate, back, forward, reload)",
+  navigation: "Page navigation (navigate, history back/forward/reload)",
   observation: "Page inspection (observe, find, screenshot, diff)",
   interaction:
     "DOM interaction (click, click_at, type, select, toggle, submit, scroll, hover, drag, key/sequences, wait_for, upload, fill_form)",
-  session: "Session management (cookies, headers, configure, tabs, viewport, network)",
+  session: "Session management (cookies, headers, configure, tab, viewport, network)",
   dev_mode: "Development tools (dev_serve, dev_inject, dev_audit)",
   dialog: "JavaScript dialog handling",
   evaluate: "JavaScript evaluation in page context",

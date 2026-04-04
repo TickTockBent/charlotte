@@ -9,8 +9,8 @@ import { BenchmarkTest } from "../harness/test-runner.js";
 import { BenchmarkMcpClient } from "../harness/mcp-client.js";
 
 const EXPECTED_TOOL_COUNTS: Record<string, number> = {
-  "Charlotte (full)": 40,   // 39 tools + meta-tool
-  "Charlotte (browse)": 22, // 21 tools + meta-tool
+  "Charlotte (full)": 34,   // 33 tools + meta-tool
+  "Charlotte (browse)": 16, // 15 tools + meta-tool
   "Charlotte (core)": 7,    // 6 tools + meta-tool
 };
 

@@ -3,6 +3,7 @@ import * as path from "node:path";
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { logger } from "../utils/logger.js";
+import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 import type { AutoSnapshotMode, DeviceType, DialogAutoDismiss } from "../types/config.js";
 import type { RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ToolDependencies } from "./tool-helpers.js";
@@ -30,83 +31,105 @@ export function registerSessionTools(
 ): Record<string, RegisteredTool> {
   const tools: Record<string, RegisteredTool> = {};
 
-  // ─── charlotte_get_cookies ───
-  tools["charlotte_get_cookies"] = server.registerTool(
-    "charlotte_get_cookies",
+  // ─── charlotte_cookies ───
+  tools["charlotte_cookies"] = server.registerTool(
+    "charlotte_cookies",
     {
       description:
-        "Get cookies for the active page. Optionally filter by URL(s). Returns cookie name, value, domain, path, and flags.",
+        "Manage browser cookies: get cookies for the page, set new cookies, or clear existing ones.",
       inputSchema: {
+        action: z
+          .enum(["get", "set", "clear"])
+          .describe("Cookie action to perform"),
         urls: z
           .array(z.string())
           .optional()
-          .describe(
-            "URLs to filter cookies by. If omitted, returns cookies for the current page URL.",
-          ),
-      },
-    },
-    async ({ urls }) => {
-      try {
-        await ensureReady(deps);
-        const page = deps.pageManager.getActivePage();
-
-        logger.info("Getting cookies", { urls });
-
-        const cookies = urls?.length ? await page.cookies(...urls) : await page.cookies();
-
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: JSON.stringify({
-                cookies: cookies.map((c) => ({
-                  name: c.name,
-                  value: c.value,
-                  domain: c.domain,
-                  path: c.path,
-                  expires: c.expires,
-                  httpOnly: c.httpOnly,
-                  secure: c.secure,
-                  sameSite: c.sameSite,
-                })),
-                count: cookies.length,
-              }),
-            },
-          ],
-        };
-      } catch (error: unknown) {
-        return handleToolError(error);
-      }
-    },
-  );
-
-  // ─── charlotte_clear_cookies ───
-  tools["charlotte_clear_cookies"] = server.registerTool(
-    "charlotte_clear_cookies",
-    {
-      description:
-        "Clear cookies from the browser. Optionally filter by name(s) to remove specific cookies. Without a filter, clears all cookies for the current page.",
-      inputSchema: {
+          .describe("(get) URLs to filter cookies by. If omitted, returns cookies for the current page URL."),
+        cookies: z
+          .array(CookieSchema)
+          .optional()
+          .describe("(set) Array of cookie objects to set"),
         names: z
           .array(z.string())
           .optional()
-          .describe("Cookie names to delete. If omitted, clears all cookies for the current page."),
+          .describe("(clear) Cookie names to delete. If omitted, clears all cookies for the current page."),
       },
     },
-    async ({ names }) => {
+    async ({ action, urls, cookies, names }) => {
       try {
         await ensureReady(deps);
         const page = deps.pageManager.getActivePage();
 
-        logger.info("Clearing cookies", { names });
+        if (action === "get") {
+          logger.info("Getting cookies", { urls });
+          const result = urls?.length ? await page.cookies(...urls) : await page.cookies();
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: JSON.stringify({
+                  cookies: result.map((c) => ({
+                    name: c.name,
+                    value: c.value,
+                    domain: c.domain,
+                    path: c.path,
+                    expires: c.expires,
+                    httpOnly: c.httpOnly,
+                    secure: c.secure,
+                    sameSite: c.sameSite,
+                  })),
+                  count: result.length,
+                }),
+              },
+            ],
+          };
+        }
 
+        if (action === "set") {
+          if (!cookies?.length) {
+            return handleToolError(
+              new CharlotteError(
+                CharlotteErrorCode.SESSION_ERROR,
+                "The 'set' action requires a 'cookies' array.",
+              ),
+            );
+          }
+          logger.info("Setting cookies", { count: cookies.length });
+          const puppeteerCookies = cookies.map((cookie) => ({
+            name: cookie.name,
+            value: cookie.value,
+            domain: cookie.domain,
+            path: cookie.path ?? "/",
+            secure: cookie.secure,
+            httpOnly: cookie.httpOnly,
+            sameSite: cookie.sameSite as "Strict" | "Lax" | "None" | undefined,
+          }));
+          await page.setCookie(...puppeteerCookies);
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: JSON.stringify({
+                  success: true,
+                  cookies_set: cookies.length,
+                  details: cookies.map((c) => ({
+                    name: c.name,
+                    domain: c.domain,
+                    path: c.path ?? "/",
+                  })),
+                }),
+              },
+            ],
+          };
+        }
+
+        // action === "clear"
+        logger.info("Clearing cookies", { names });
         const currentCookies = await page.cookies();
         const cookiesToDelete = names
           ? currentCookies.filter((c) => names.includes(c.name))
           : currentCookies;
-
         await page.deleteCookie(...cookiesToDelete);
-
         return {
           content: [
             {
@@ -115,57 +138,6 @@ export function registerSessionTools(
                 success: true,
                 cleared: cookiesToDelete.length,
                 names: cookiesToDelete.map((c) => c.name),
-              }),
-            },
-          ],
-        };
-      } catch (error: unknown) {
-        return handleToolError(error);
-      }
-    },
-  );
-
-  // ─── charlotte_set_cookies ───
-  tools["charlotte_set_cookies"] = server.registerTool(
-    "charlotte_set_cookies",
-    {
-      description:
-        "Set cookies on the active page. Cookies persist for subsequent navigations within matching domains.",
-      inputSchema: {
-        cookies: z.array(CookieSchema).describe("Array of cookie objects to set"),
-      },
-    },
-    async ({ cookies }) => {
-      try {
-        await ensureReady(deps);
-        const page = deps.pageManager.getActivePage();
-
-        logger.info("Setting cookies", { count: cookies.length });
-
-        const puppeteerCookies = cookies.map((cookie) => ({
-          name: cookie.name,
-          value: cookie.value,
-          domain: cookie.domain,
-          path: cookie.path ?? "/",
-          secure: cookie.secure,
-          httpOnly: cookie.httpOnly,
-          sameSite: cookie.sameSite as "Strict" | "Lax" | "None" | undefined,
-        }));
-
-        await page.setCookie(...puppeteerCookies);
-
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: JSON.stringify({
-                success: true,
-                cookies_set: cookies.length,
-                details: cookies.map((c) => ({
-                  name: c.name,
-                  domain: c.domain,
-                  path: c.path ?? "/",
-                })),
               }),
             },
           ],
@@ -322,122 +294,71 @@ export function registerSessionTools(
     },
   );
 
-  // ─── charlotte_tabs ───
-  tools["charlotte_tabs"] = server.registerTool(
-    "charlotte_tabs",
-    {
-      description: "List all open browser tabs with their URLs, titles, and active status.",
-      inputSchema: {},
-    },
-    async () => {
-      try {
-        await ensureReady(deps);
-
-        const tabs = await deps.pageManager.listTabs();
-
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: JSON.stringify({ tabs }),
-            },
-          ],
-        };
-      } catch (error: unknown) {
-        return handleToolError(error);
-      }
-    },
-  );
-
-  // ─── charlotte_tab_open ───
-  tools["charlotte_tab_open"] = server.registerTool(
-    "charlotte_tab_open",
+  // ─── charlotte_tab ───
+  tools["charlotte_tab"] = server.registerTool(
+    "charlotte_tab",
     {
       description:
-        "Open a new browser tab. Optionally navigate to a URL. The new tab becomes the active tab.",
+        "Manage browser tabs: list all tabs, open a new tab, switch to a tab, or close a tab.",
       inputSchema: {
-        url: z.string().optional().describe("URL to navigate to (default: blank page)"),
+        action: z
+          .enum(["list", "open", "switch", "close"])
+          .describe("Tab action to perform"),
+        url: z.string().optional().describe("(open) URL to navigate to (default: blank page)"),
+        tab_id: z.string().optional().describe("(switch, close) ID of the target tab"),
       },
     },
-    async ({ url }) => {
+    async ({ action, url, tab_id }) => {
       try {
         await ensureReady(deps);
 
-        const tabId = await deps.pageManager.openTab(deps.browserManager, url);
-        logger.info("Opened new tab", { tabId, url });
+        if (action === "list") {
+          const tabs = await deps.pageManager.listTabs();
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: JSON.stringify({ tabs }),
+              },
+            ],
+          };
+        }
 
-        const representation = await renderActivePage(deps, {
-          source: "action",
-        });
+        if (action === "open") {
+          const newTabId = await deps.pageManager.openTab(deps.browserManager, url);
+          logger.info("Opened new tab", { tabId: newTabId, url });
+          const representation = await renderActivePage(deps, { source: "action" });
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: JSON.stringify({ tab_id: newTabId, ...representation }),
+              },
+            ],
+          };
+        }
 
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: JSON.stringify(
-                {
-                  tab_id: tabId,
-                  ...representation,
-                },
-                null,
-                2,
-              ),
-            },
-          ],
-        };
-      } catch (error: unknown) {
-        return handleToolError(error);
-      }
-    },
-  );
+        // switch and close require tab_id
+        if (!tab_id) {
+          return handleToolError(
+            new CharlotteError(
+              CharlotteErrorCode.SESSION_ERROR,
+              `The '${action}' action requires a 'tab_id' parameter.`,
+            ),
+          );
+        }
 
-  // ─── charlotte_tab_switch ───
-  tools["charlotte_tab_switch"] = server.registerTool(
-    "charlotte_tab_switch",
-    {
-      description:
-        "Switch to a different browser tab by its tab ID. Returns the page representation of the activated tab.",
-      inputSchema: {
-        tab_id: z.string().describe("ID of the tab to switch to"),
-      },
-    },
-    async ({ tab_id }) => {
-      try {
-        await ensureReady(deps);
+        if (action === "switch") {
+          await deps.pageManager.switchTab(tab_id);
+          logger.info("Switched to tab", { tab_id });
+          const representation = await renderActivePage(deps, { source: "action" });
+          return formatPageResponse(representation);
+        }
 
-        await deps.pageManager.switchTab(tab_id);
-        logger.info("Switched to tab", { tab_id });
-
-        const representation = await renderActivePage(deps, {
-          source: "action",
-        });
-
-        return formatPageResponse(representation);
-      } catch (error: unknown) {
-        return handleToolError(error);
-      }
-    },
-  );
-
-  // ─── charlotte_tab_close ───
-  tools["charlotte_tab_close"] = server.registerTool(
-    "charlotte_tab_close",
-    {
-      description:
-        "Close a browser tab by its ID. If the closed tab was active, switches to the first remaining tab.",
-      inputSchema: {
-        tab_id: z.string().describe("ID of the tab to close"),
-      },
-    },
-    async ({ tab_id }) => {
-      try {
-        await ensureReady(deps);
-
+        // action === "close"
         await deps.pageManager.closeTab(tab_id);
         logger.info("Closed tab", { tab_id });
-
         const remainingTabs = await deps.pageManager.listTabs();
-
         return {
           content: [
             {

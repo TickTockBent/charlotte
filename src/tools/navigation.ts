@@ -93,114 +93,54 @@ export function registerNavigationTools(
     },
   );
 
-  tools["charlotte_back"] = server.registerTool(
-    "charlotte_back",
+  // ─── charlotte_history ───
+  tools["charlotte_history"] = server.registerTool(
+    "charlotte_history",
     {
       description:
-        "Navigate back in browser history. Returns page representation after navigation.",
+        "Navigate browser history or reload. Returns page representation after the action.",
       inputSchema: {
+        action: z
+          .enum(["back", "forward", "reload"])
+          .describe("History action to perform"),
+        hard: z.boolean().optional().describe("Bypass cache on reload (default: false)"),
         detail: detailSchema,
       },
     },
-    async ({ detail }) => {
+    async ({ action, hard, detail }) => {
       try {
         await ensureReady(deps);
         const page = deps.pageManager.getActivePage();
-
-        logger.info("Navigating back");
         deps.pageManager.clearErrors();
 
-        const urlBeforeNavigation = page.url();
-        await page.goBack({ waitUntil: "load" });
-        const urlAfterNavigation = page.url();
+        if (action === "reload") {
+          const bypassCache = hard ?? false;
+          logger.info("Reloading page", { hard: bypassCache });
 
-        if (urlAfterNavigation === urlBeforeNavigation) {
-          throw new CharlotteError(
-            CharlotteErrorCode.NAVIGATION_FAILED,
-            "No previous page in history.",
-          );
-        }
-
-        const detailLevel: DetailLevel = detail ?? "minimal";
-        const representation = await renderActivePage(deps, {
-          detail: detailLevel,
-          source: "action",
-        });
-        return formatPageResponse(representation);
-      } catch (error: unknown) {
-        return handleToolError(error);
-      }
-    },
-  );
-
-  tools["charlotte_forward"] = server.registerTool(
-    "charlotte_forward",
-    {
-      description:
-        "Navigate forward in browser history. Returns page representation after navigation.",
-      inputSchema: {
-        detail: detailSchema,
-      },
-    },
-    async ({ detail }) => {
-      try {
-        await ensureReady(deps);
-        const page = deps.pageManager.getActivePage();
-
-        logger.info("Navigating forward");
-        deps.pageManager.clearErrors();
-
-        const urlBeforeNavigation = page.url();
-        await page.goForward({ waitUntil: "load" });
-        const urlAfterNavigation = page.url();
-
-        if (urlAfterNavigation === urlBeforeNavigation) {
-          throw new CharlotteError(
-            CharlotteErrorCode.NAVIGATION_FAILED,
-            "No forward page in history.",
-          );
-        }
-
-        const detailLevel: DetailLevel = detail ?? "minimal";
-        const representation = await renderActivePage(deps, {
-          detail: detailLevel,
-          source: "action",
-        });
-        return formatPageResponse(representation);
-      } catch (error: unknown) {
-        return handleToolError(error);
-      }
-    },
-  );
-
-  tools["charlotte_reload"] = server.registerTool(
-    "charlotte_reload",
-    {
-      description: "Reload the current page. Returns page representation after reload.",
-      inputSchema: {
-        hard: z.boolean().optional().describe("Bypass cache (default: false)"),
-        detail: detailSchema,
-      },
-    },
-    async ({ hard, detail }) => {
-      try {
-        await ensureReady(deps);
-        const page = deps.pageManager.getActivePage();
-
-        const bypassCache = hard ?? false;
-        logger.info("Reloading page", { hard: bypassCache });
-        deps.pageManager.clearErrors();
-
-        if (bypassCache) {
-          // Use CDP to reload with cache bypass
-          const client = await page.createCDPSession();
-          await client.send("Page.reload", {
-            ignoreCache: true,
-          });
-          await page.waitForNavigation({ waitUntil: "load" });
-          await client.detach();
+          if (bypassCache) {
+            const client = await page.createCDPSession();
+            await client.send("Page.reload", { ignoreCache: true });
+            await page.waitForNavigation({ waitUntil: "load" });
+            await client.detach();
+          } else {
+            await page.reload({ waitUntil: "load" });
+          }
         } else {
-          await page.reload({ waitUntil: "load" });
+          logger.info(`Navigating ${action}`);
+          const urlBefore = page.url();
+
+          if (action === "back") {
+            await page.goBack({ waitUntil: "load" });
+          } else {
+            await page.goForward({ waitUntil: "load" });
+          }
+
+          if (page.url() === urlBefore) {
+            throw new CharlotteError(
+              CharlotteErrorCode.NAVIGATION_FAILED,
+              action === "back" ? "No previous page in history." : "No forward page in history.",
+            );
+          }
         }
 
         const detailLevel: DetailLevel = detail ?? "minimal";

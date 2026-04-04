@@ -505,128 +505,117 @@ export function registerObservationTools(
     },
   );
 
-  // ─── charlotte_screenshots ───
-  tools["charlotte_screenshots"] = server.registerTool(
-    "charlotte_screenshots",
+  // ─── charlotte_screenshot_manage ───
+  tools["charlotte_screenshot_manage"] = server.registerTool(
+    "charlotte_screenshot_manage",
     {
       description:
-        "List all saved screenshot artifacts. Returns metadata for each saved screenshot including ID, filename, page URL, and timestamp.",
-      inputSchema: {},
-    },
-    async () => {
-      try {
-        const artifacts = deps.artifactStore.list();
-
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: JSON.stringify({
-                screenshots: artifacts.map((a) => ({
-                  id: a.id,
-                  filename: a.filename,
-                  format: a.format,
-                  size: a.size,
-                  url: a.url,
-                  title: a.title,
-                  selector: a.selector,
-                  timestamp: a.timestamp,
-                })),
-                count: artifacts.length,
-                directory: deps.artifactStore.screenshotDir,
-              }),
-            },
-          ],
-        };
-      } catch (error: unknown) {
-        return handleToolError(error);
-      }
-    },
-  );
-
-  // ─── charlotte_screenshot_get ───
-  tools["charlotte_screenshot_get"] = server.registerTool(
-    "charlotte_screenshot_get",
-    {
-      description:
-        "Retrieve a previously saved screenshot artifact by its ID. Returns the image data and metadata.",
+        "Manage saved screenshot artifacts: list all, retrieve by ID (returns image data), or delete by ID.",
       inputSchema: {
-        id: z.string().describe("Screenshot artifact ID (e.g. ss-20260224103000-a1b2c3)"),
+        action: z
+          .enum(["list", "get", "delete"])
+          .describe("Action to perform on screenshot artifacts"),
+        id: z
+          .string()
+          .optional()
+          .describe("Screenshot artifact ID (required for get and delete)"),
       },
     },
-    async ({ id }) => {
+    async ({ action, id }) => {
       try {
-        const artifact = deps.artifactStore.get(id);
-        if (!artifact) {
-          return handleToolError(
-            new CharlotteError(
-              CharlotteErrorCode.ELEMENT_NOT_FOUND,
-              `Screenshot artifact '${id}' not found.`,
-              "Use charlotte_screenshots to list available artifacts.",
-            ),
-          );
+        if (action === "list") {
+          const artifacts = deps.artifactStore.list();
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: JSON.stringify({
+                  screenshots: artifacts.map((a) => ({
+                    id: a.id,
+                    filename: a.filename,
+                    format: a.format,
+                    size: a.size,
+                    url: a.url,
+                    title: a.title,
+                    selector: a.selector,
+                    timestamp: a.timestamp,
+                  })),
+                  count: artifacts.length,
+                  directory: deps.artifactStore.screenshotDir,
+                }),
+              },
+            ],
+          };
         }
 
-        const fileData = await deps.artifactStore.readFile(id);
-        if (!fileData) {
+        // get and delete both require an id
+        if (!id) {
           return handleToolError(
             new CharlotteError(
               CharlotteErrorCode.SESSION_ERROR,
-              `Screenshot file for '${id}' is missing from disk.`,
-              "The file may have been deleted externally. Use charlotte_screenshots to see current artifacts.",
+              `The '${action}' action requires an 'id' parameter.`,
             ),
           );
         }
 
-        return {
-          content: [
-            {
-              type: "image" as const,
-              data: fileData.toString("base64"),
-              mimeType: artifact.mimeType,
-            },
-            {
-              type: "text" as const,
-              text: JSON.stringify({
-                artifact: {
-                  id: artifact.id,
-                  filename: artifact.filename,
-                  path: artifact.path,
-                  format: artifact.format,
-                  size: artifact.size,
-                  url: artifact.url,
-                  title: artifact.title,
-                  selector: artifact.selector,
-                  timestamp: artifact.timestamp,
-                },
-              }),
-            },
-          ],
-        };
-      } catch (error: unknown) {
-        return handleToolError(error);
-      }
-    },
-  );
+        if (action === "get") {
+          const artifact = deps.artifactStore.get(id);
+          if (!artifact) {
+            return handleToolError(
+              new CharlotteError(
+                CharlotteErrorCode.ELEMENT_NOT_FOUND,
+                `Screenshot artifact '${id}' not found.`,
+                "Use charlotte_screenshot_manage({ action: 'list' }) to list available artifacts.",
+              ),
+            );
+          }
 
-  // ─── charlotte_screenshot_delete ───
-  tools["charlotte_screenshot_delete"] = server.registerTool(
-    "charlotte_screenshot_delete",
-    {
-      description: "Delete a saved screenshot artifact by its ID. Removes the file from disk.",
-      inputSchema: {
-        id: z.string().describe("Screenshot artifact ID to delete"),
-      },
-    },
-    async ({ id }) => {
-      try {
+          const fileData = await deps.artifactStore.readFile(id);
+          if (!fileData) {
+            return handleToolError(
+              new CharlotteError(
+                CharlotteErrorCode.SESSION_ERROR,
+                `Screenshot file for '${id}' is missing from disk.`,
+                "The file may have been deleted externally.",
+              ),
+            );
+          }
+
+          return {
+            content: [
+              {
+                type: "image" as const,
+                data: fileData.toString("base64"),
+                mimeType: artifact.mimeType,
+              },
+              {
+                type: "text" as const,
+                text: JSON.stringify({
+                  artifact: {
+                    id: artifact.id,
+                    filename: artifact.filename,
+                    path: artifact.path,
+                    format: artifact.format,
+                    size: artifact.size,
+                    url: artifact.url,
+                    title: artifact.title,
+                    selector: artifact.selector,
+                    timestamp: artifact.timestamp,
+                  },
+                }),
+              },
+            ],
+          };
+        }
+
+        // action === "delete"
         const deleted = await deps.artifactStore.delete(id);
         if (!deleted) {
           return handleToolError(
             new CharlotteError(
               CharlotteErrorCode.ELEMENT_NOT_FOUND,
               `Screenshot artifact '${id}' not found.`,
-              "Use charlotte_screenshots to list available artifacts.",
+              "Use charlotte_screenshot_manage({ action: 'list' }) to list available artifacts.",
             ),
           );
         }

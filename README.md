@@ -18,7 +18,7 @@ Charlotte decomposes each page into a typed, structured representation — landm
 
 ### Benchmarks
 
-Charlotte v0.6.0 vs Playwright MCP, measured by characters returned per tool call on real websites:
+Charlotte v0.6.1 vs Playwright MCP, measured by characters returned per tool call on real websites:
 
 **Navigation** (first contact with a page):
 

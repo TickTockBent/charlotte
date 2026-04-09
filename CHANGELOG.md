@@ -6,6 +6,16 @@ All notable changes to Charlotte will be documented in this file.
 
 <!-- Nothing yet -->
 
+## [0.6.1] - 2026-04-09
+
+### Fixed
+
+- **Runtime tool group activation** — Tools enabled via `charlotte_tools` were not callable by MCP clients. Each `tool.enable()` call triggered a separate `sendToolListChanged()` notification, flooding the client before the tool response was returned. Now batches state changes and sends a single notification per enable/disable action. Fixes #146. (#147)
+
+### Changed
+
+- Dependency updates: vite (#142), npm_and_yarn group (#144), basic-ftp (#145)
+
 ## [0.6.0] - 2026-04-03
 
 ### Added

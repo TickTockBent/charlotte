@@ -19,6 +19,13 @@ interface Release {
 
 const releases: Release[] = [
   {
+    version: "0.6.1",
+    date: "2026-04-09",
+    entries: [
+      { type: "fixed", text: "Runtime tool group activation — Tools enabled via charlotte_tools were not callable by MCP clients due to notification flooding. Now sends a single batched notification per enable/disable action. Fixes #146." },
+    ],
+  },
+  {
     version: "0.6.0",
     date: "2026-04-03",
     entries: [

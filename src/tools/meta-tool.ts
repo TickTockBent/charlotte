@@ -99,9 +99,12 @@ export function registerMetaTool(server: McpServer, registry: ToolRegistry): Reg
         for (const name of toolNames) {
           const tool = registry[name];
           if (tool && !tool.enabled) {
-            tool.enable();
+            tool.enabled = true;
             enabled++;
           }
+        }
+        if (enabled > 0) {
+          server.sendToolListChanged();
         }
         return {
           content: [
@@ -124,9 +127,12 @@ export function registerMetaTool(server: McpServer, registry: ToolRegistry): Reg
         for (const name of toolNames) {
           const tool = registry[name];
           if (tool?.enabled) {
-            tool.disable();
+            tool.enabled = false;
             disabled++;
           }
+        }
+        if (disabled > 0) {
+          server.sendToolListChanged();
         }
         return {
           content: [

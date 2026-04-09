@@ -96,12 +96,18 @@ export function registerMetaTool(server: McpServer, registry: ToolRegistry): Reg
       if (effectiveAction === "enable" && group) {
         const toolNames = TOOL_GROUPS[group as ToolGroupName];
         let enabled = 0;
+        // Set .enabled directly to batch state changes before a single
+        // sendToolListChanged(). Do not call tool.enable() here — each
+        // call fires an independent notification via the SDK's update().
         for (const name of toolNames) {
           const tool = registry[name];
           if (tool && !tool.enabled) {
-            tool.enable();
+            tool.enabled = true;
             enabled++;
           }
+        }
+        if (enabled > 0) {
+          server.sendToolListChanged();
         }
         return {
           content: [
@@ -121,12 +127,16 @@ export function registerMetaTool(server: McpServer, registry: ToolRegistry): Reg
       if (effectiveAction === "disable" && group) {
         const toolNames = TOOL_GROUPS[group as ToolGroupName];
         let disabled = 0;
+        // Set .enabled directly — see comment in enable block above.
         for (const name of toolNames) {
           const tool = registry[name];
           if (tool?.enabled) {
-            tool.disable();
+            tool.enabled = false;
             disabled++;
           }
+        }
+        if (disabled > 0) {
+          server.sendToolListChanged();
         }
         return {
           content: [

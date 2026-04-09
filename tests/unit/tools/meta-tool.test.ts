@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerMetaTool, type ToolRegistry } from "../../../src/tools/meta-tool.js";
@@ -6,6 +6,8 @@ import { TOOL_GROUPS, ALL_GROUP_NAMES } from "../../../src/tools/tool-groups.js"
 
 /**
  * Create a minimal mock registry where each tool has enable/disable/enabled.
+ * The enable/disable methods are spied on so tests can verify they are NOT
+ * called (the meta-tool should set .enabled directly and batch notifications).
  */
 function createMockRegistry(): ToolRegistry {
   const registry: ToolRegistry = {};
@@ -13,12 +15,12 @@ function createMockRegistry(): ToolRegistry {
     for (const toolName of TOOL_GROUPS[group]) {
       registry[toolName] = {
         enabled: true,
-        enable() {
+        enable: vi.fn(function (this: { enabled: boolean }) {
           this.enabled = true;
-        },
-        disable() {
+        }),
+        disable: vi.fn(function (this: { enabled: boolean }) {
           this.enabled = false;
-        },
+        }),
       } as unknown as RegisteredTool;
     }
   }
@@ -29,6 +31,7 @@ describe("meta-tool", () => {
   let server: McpServer;
   let registry: ToolRegistry;
   let metaTool: RegisteredTool;
+  let sendToolListChangedSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     server = new McpServer(
@@ -37,6 +40,7 @@ describe("meta-tool", () => {
     );
     registry = createMockRegistry();
     metaTool = registerMetaTool(server, registry);
+    sendToolListChangedSpy = vi.spyOn(server, "sendToolListChanged");
   });
 
   it("registers charlotte_tools tool", () => {
@@ -126,6 +130,54 @@ describe("meta-tool", () => {
       expect(parsed.groups.dev_mode.enabled).toBe(false);
       // Other groups should still be enabled
       expect(parsed.groups.navigation.enabled).toBe(true);
+    });
+  });
+
+  describe("tool list change notifications (#146)", () => {
+    it("sends exactly one notification when enabling a group", async () => {
+      for (const toolName of TOOL_GROUPS.session) {
+        registry[toolName].enabled = false;
+      }
+
+      await metaTool.handler({ action: "enable", group: "session" }, {} as any);
+
+      expect(sendToolListChangedSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it("sends exactly one notification when disabling a group", async () => {
+      await metaTool.handler({ action: "disable", group: "session" }, {} as any);
+
+      expect(sendToolListChangedSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it("sends no notification when enabling an already-enabled group", async () => {
+      await metaTool.handler({ action: "enable", group: "navigation" }, {} as any);
+
+      expect(sendToolListChangedSpy).not.toHaveBeenCalled();
+    });
+
+    it("sends no notification when disabling an already-disabled group", async () => {
+      for (const toolName of TOOL_GROUPS.monitoring) {
+        registry[toolName].enabled = false;
+      }
+
+      await metaTool.handler({ action: "disable", group: "monitoring" }, {} as any);
+
+      expect(sendToolListChangedSpy).not.toHaveBeenCalled();
+    });
+
+    it("does not call individual tool enable/disable methods", async () => {
+      for (const toolName of TOOL_GROUPS.session) {
+        registry[toolName].enabled = false;
+      }
+
+      await metaTool.handler({ action: "enable", group: "session" }, {} as any);
+
+      for (const toolName of TOOL_GROUPS.session) {
+        const tool = registry[toolName] as unknown as { enable: ReturnType<typeof vi.fn>; disable: ReturnType<typeof vi.fn> };
+        expect(tool.enable).not.toHaveBeenCalled();
+        expect(tool.disable).not.toHaveBeenCalled();
+      }
     });
   });
 });

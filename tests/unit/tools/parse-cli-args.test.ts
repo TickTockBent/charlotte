@@ -104,4 +104,36 @@ describe("parseCliArgs", () => {
     const result = parseCliArgs(["--foo=bar", "--verbose"]);
     expect(result).toEqual({ headless: true });
   });
+
+  describe("--cdp-endpoint", () => {
+    it("parses --cdp-endpoint with HTTP URL", () => {
+      const result = parseCliArgs(["--cdp-endpoint", "http://localhost:9222"]);
+      expect(result).toEqual({ cdpEndpoint: "http://localhost:9222", headless: true });
+    });
+
+    it("parses --cdp-endpoint with WebSocket URL", () => {
+      const result = parseCliArgs(["--cdp-endpoint", "ws://localhost:9222/devtools/browser/abc"]);
+      expect(result).toEqual({
+        cdpEndpoint: "ws://localhost:9222/devtools/browser/abc",
+        headless: true,
+      });
+    });
+
+    it("parses --cdp-endpoint=value syntax", () => {
+      const result = parseCliArgs(["--cdp-endpoint=http://localhost:9222"]);
+      expect(result).toEqual({ cdpEndpoint: "http://localhost:9222", headless: true });
+    });
+
+    it("combines --cdp-endpoint with --profile", () => {
+      const result = parseCliArgs(["--cdp-endpoint", "http://localhost:9222", "--profile=full"]);
+      expect(result.cdpEndpoint).toBe("http://localhost:9222");
+      expect(result.profile).toBe("full");
+    });
+
+    it("combines --cdp-endpoint with --no-headless (headless ignored but parsed)", () => {
+      const result = parseCliArgs(["--cdp-endpoint", "http://localhost:9222", "--no-headless"]);
+      expect(result.cdpEndpoint).toBe("http://localhost:9222");
+      expect(result.headless).toBe(false);
+    });
+  });
 });

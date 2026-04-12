@@ -33,6 +33,8 @@ Options:
                          Groups: ${VALID_GROUPS.join(", ")}
   --output-dir <path>    Directory for output files (screenshots, logs)
   --no-headless          Show the browser window (default: headless)
+  --cdp-endpoint <url>   Connect to an existing Chrome via CDP endpoint
+                         (http://... or ws://... URL)
   --help                 Show this help message
 `;
 
@@ -41,6 +43,7 @@ export function parseCliArgs(argv: string[] = process.argv.slice(2)): {
   toolGroups?: ToolGroupName[];
   outputDir?: string;
   headless: boolean;
+  cdpEndpoint?: string;
 } {
   const { values } = parseArgs({
     args: argv,
@@ -49,6 +52,7 @@ export function parseCliArgs(argv: string[] = process.argv.slice(2)): {
       tools: { type: "string" },
       "output-dir": { type: "string" },
       "no-headless": { type: "boolean", default: false },
+      "cdp-endpoint": { type: "string" },
       help: { type: "boolean", default: false },
     },
     strict: false,
@@ -63,6 +67,7 @@ export function parseCliArgs(argv: string[] = process.argv.slice(2)): {
   const toolsValue = values.tools as string | undefined;
   const outputDir = values["output-dir"] as string | undefined;
   const headless = !values["no-headless"];
+  const cdpEndpoint = values["cdp-endpoint"] as string | undefined;
 
   if (profileValue && toolsValue) {
     logger.warn("Both --profile and --tools provided; --profile takes precedence");
@@ -73,7 +78,7 @@ export function parseCliArgs(argv: string[] = process.argv.slice(2)): {
     if (!VALID_PROFILES.includes(profile)) {
       throw new Error(`Invalid profile: ${profile}. Valid profiles: ${VALID_PROFILES.join(", ")}`);
     }
-    return { profile, outputDir, headless };
+    return { profile, outputDir, headless, cdpEndpoint };
   }
 
   if (toolsValue) {
@@ -83,9 +88,9 @@ export function parseCliArgs(argv: string[] = process.argv.slice(2)): {
         throw new Error(`Invalid tool group: ${group}. Valid groups: ${VALID_GROUPS.join(", ")}`);
       }
     }
-    return { toolGroups: groups, outputDir, headless };
+    return { toolGroups: groups, outputDir, headless, cdpEndpoint };
   }
 
   // Default: no profile or groups specified — createServer defaults to browse
-  return { outputDir, headless };
+  return { outputDir, headless, cdpEndpoint };
 }

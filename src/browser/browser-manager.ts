@@ -61,14 +61,16 @@ export class BrowserManager {
 
     logger.info("Connecting to existing browser via CDP", { endpoint, isWebSocket, isChannel });
 
+    // defaultViewport: null tells Puppeteer not to override the browser's viewport —
+    // the user's existing Chrome already has its own window size.
     let connectOptions;
     if (isChannel) {
       const channel = endpoint.slice("channel:".length) as ChromeReleaseChannel;
-      connectOptions = { channel, defaultViewport: this.config.defaultViewport };
+      connectOptions = { channel, defaultViewport: null };
     } else if (isWebSocket) {
-      connectOptions = { browserWSEndpoint: endpoint, defaultViewport: this.config.defaultViewport };
+      connectOptions = { browserWSEndpoint: endpoint, defaultViewport: null };
     } else {
-      connectOptions = { browserURL: endpoint, defaultViewport: this.config.defaultViewport };
+      connectOptions = { browserURL: endpoint, defaultViewport: null };
     }
 
     this.browser = await puppeteer.connect(connectOptions);

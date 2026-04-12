@@ -172,11 +172,11 @@ describe("PageManager", () => {
 
 describe("PageManager.adoptExistingPages", () => {
   function createMockPage(url: string, title: string): Page {
-    const listeners = new Map<string, Function>();
+    const listeners = new Map<string, (...args: unknown[]) => unknown>();
     return {
       url: () => url,
       title: () => Promise.resolve(title),
-      on: (event: string, handler: Function) => { listeners.set(event, handler); },
+      on: (event: string, handler: (...args: unknown[]) => unknown) => { listeners.set(event, handler); },
       removeAllListeners: () => {},
       mainFrame: () => ({}),
       bringToFront: () => Promise.resolve(),

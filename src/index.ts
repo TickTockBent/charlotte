@@ -37,8 +37,19 @@ async function main(): Promise<void> {
   }
 
   // Initialize browser and page management (Chromium launched lazily on first tool call)
-  const browserManager = new BrowserManager(config, { headless: cliOptions.headless });
+  const browserManager = new BrowserManager(
+    config,
+    { headless: cliOptions.headless },
+    cliOptions.cdpEndpoint,
+  );
   const pageManager = new PageManager(config);
+
+  // In CDP mode, connect eagerly and adopt existing pages
+  if (cliOptions.cdpEndpoint) {
+    await browserManager.launch();
+    const browser = await browserManager.getBrowser();
+    await pageManager.adoptExistingPages(browser);
+  }
 
   // Initialize renderer pipeline
   const cdpSessionManager = new CDPSessionManager();

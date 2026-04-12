@@ -1,4 +1,4 @@
-import type { Page, Dialog } from "puppeteer";
+import type { Page, Dialog, Browser } from "puppeteer";
 import type { BrowserManager } from "./browser-manager.js";
 import type { PendingDialog } from "../types/page-representation.js";
 import { createDefaultConfig } from "../types/config.js";
@@ -211,6 +211,40 @@ export class PageManager {
 
     logger.info(`Opened tab ${tabId}`, { url });
     return tabId;
+  }
+
+  /**
+   * Adopt pages already open in a connected browser.
+   * Called once after puppeteer.connect() in CDP mode.
+   */
+  async adoptExistingPages(browser: Browser): Promise<void> {
+    const existingPages = await browser.pages();
+    if (existingPages.length === 0) {
+      logger.info("No existing pages to adopt");
+      return;
+    }
+
+    for (const page of existingPages) {
+      const tabId = generateTabId();
+      const managedPage: ManagedPage = {
+        id: tabId,
+        page,
+        consoleMessages: [],
+        networkRequests: [],
+        pendingDialog: null,
+        pendingDialogInfo: null,
+      };
+
+      this.wirePageListeners(managedPage);
+      this.pages.set(tabId, managedPage);
+
+      // First adopted page becomes active
+      if (!this.activeTabId) {
+        this.activeTabId = tabId;
+      }
+    }
+
+    logger.info(`Adopted ${existingPages.length} existing page(s)`);
   }
 
   async switchTab(tabId: string): Promise<Page> {

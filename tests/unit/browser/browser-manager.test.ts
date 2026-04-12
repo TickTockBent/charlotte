@@ -91,6 +91,25 @@ describe("BrowserManager", () => {
       expect(mockBrowser.close).not.toHaveBeenCalled();
     });
 
+    it("calls puppeteer.connect with channel for channel: prefix", async () => {
+      const manager = new BrowserManager(undefined, undefined, "channel:chrome");
+      await manager.launch();
+
+      expect(puppeteer.connect).toHaveBeenCalledWith(
+        expect.objectContaining({ channel: "chrome" }),
+      );
+      expect(puppeteer.launch).not.toHaveBeenCalled();
+    });
+
+    it("calls puppeteer.connect with channel for channel:chrome-canary", async () => {
+      const manager = new BrowserManager(undefined, undefined, "channel:chrome-canary");
+      await manager.launch();
+
+      expect(puppeteer.connect).toHaveBeenCalledWith(
+        expect.objectContaining({ channel: "chrome-canary" }),
+      );
+    });
+
     it("ensureConnected() throws when remote browser disconnects", async () => {
       const mockBrowser = {
         connected: true,

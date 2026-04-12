@@ -34,7 +34,7 @@ Options:
   --output-dir <path>    Directory for output files (screenshots, logs)
   --no-headless          Show the browser window (default: headless)
   --cdp-endpoint <url>   Connect to an existing Chrome via CDP endpoint
-                         (http://... or ws://... URL)
+                         (http://..., ws://..., or channel:chrome)
   --help                 Show this help message
 `;
 

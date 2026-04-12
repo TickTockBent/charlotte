@@ -135,5 +135,10 @@ describe("parseCliArgs", () => {
       expect(result.cdpEndpoint).toBe("http://localhost:9222");
       expect(result.headless).toBe(false);
     });
+
+    it("parses --cdp-endpoint with channel:chrome", () => {
+      const result = parseCliArgs(["--cdp-endpoint", "channel:chrome"]);
+      expect(result).toEqual({ cdpEndpoint: "channel:chrome", headless: true });
+    });
   });
 });

@@ -1,4 +1,4 @@
-import puppeteer, { type Browser, type Page, type LaunchOptions } from "puppeteer";
+import puppeteer, { type Browser, type Page, type LaunchOptions, type ChromeReleaseChannel } from "puppeteer";
 import { logger } from "../utils/logger.js";
 import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 import { createDefaultConfig } from "../types/config.js";
@@ -57,12 +57,19 @@ export class BrowserManager {
   private async doConnect(): Promise<void> {
     const endpoint = this.cdpEndpoint!;
     const isWebSocket = endpoint.startsWith("ws://") || endpoint.startsWith("wss://");
+    const isChannel = endpoint.startsWith("channel:");
 
-    logger.info("Connecting to existing browser via CDP", { endpoint, isWebSocket });
+    logger.info("Connecting to existing browser via CDP", { endpoint, isWebSocket, isChannel });
 
-    const connectOptions = isWebSocket
-      ? { browserWSEndpoint: endpoint, defaultViewport: this.config.defaultViewport }
-      : { browserURL: endpoint, defaultViewport: this.config.defaultViewport };
+    let connectOptions;
+    if (isChannel) {
+      const channel = endpoint.slice("channel:".length) as ChromeReleaseChannel;
+      connectOptions = { channel, defaultViewport: this.config.defaultViewport };
+    } else if (isWebSocket) {
+      connectOptions = { browserWSEndpoint: endpoint, defaultViewport: this.config.defaultViewport };
+    } else {
+      connectOptions = { browserURL: endpoint, defaultViewport: this.config.defaultViewport };
+    }
 
     this.browser = await puppeteer.connect(connectOptions);
 

@@ -38,10 +38,10 @@ async function main(): Promise<void> {
 
   // Initialize browser and page management (Chromium launched lazily on first tool call)
   const browserManager = new BrowserManager(config, { headless: cliOptions.headless });
-  const pageManager = new PageManager(config);
+  const cdpSessionManager = new CDPSessionManager();
+  const pageManager = new PageManager(config, cdpSessionManager);
 
   // Initialize renderer pipeline
-  const cdpSessionManager = new CDPSessionManager();
   const elementIdGenerator = new ElementIdGenerator();
   const rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator, config);
   const snapshotStore = new SnapshotStore(config.snapshotDepth);

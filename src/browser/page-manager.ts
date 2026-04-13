@@ -1,5 +1,6 @@
 import type { Page, Dialog } from "puppeteer";
 import type { BrowserManager } from "./browser-manager.js";
+import type { CDPSessionManager } from "./cdp-session.js";
 import type { PendingDialog } from "../types/page-representation.js";
 import { createDefaultConfig } from "../types/config.js";
 import type { CharlotteConfig } from "../types/config.js";
@@ -53,9 +54,12 @@ export class PageManager {
   /** Tab IDs of pages opened by popups since the last drain. */
   private newTabQueue: string[] = [];
 
-  constructor(config?: CharlotteConfig) {
+  private cdpSessionManager?: CDPSessionManager;
+
+  constructor(config?: CharlotteConfig, cdpSessionManager?: CDPSessionManager) {
     // Accept optional config; callers without config get a permissive default
     this.config = config ?? createDefaultConfig();
+    this.cdpSessionManager = cdpSessionManager;
   }
 
   /**
@@ -135,6 +139,19 @@ export class PageManager {
       }
     });
 
+    // Clean up stale frame session cache entries when a frame detaches.
+    // Fires for individual iframe removal AND for all child frames on full-page navigation.
+    if (this.cdpSessionManager) {
+      page.on("framedetached", (frame) => {
+        try {
+          const frameId = this.cdpSessionManager!.getFrameId(frame);
+          this.cdpSessionManager!.removeFrameSession(frameId);
+        } catch {
+          // Frame may already be destroyed — ignore errors in cleanup
+        }
+      });
+    }
+
     // Capture popups (target="_blank" links, window.open()) as managed tabs
     page.on("popup", (popupPage) => {
       if (popupPage) {
@@ -144,6 +161,9 @@ export class PageManager {
 
     // Auto-clean when a page closes itself (window.close(), site-initiated)
     page.on("close", () => {
+      if (this.cdpSessionManager) {
+        this.cdpSessionManager.clearPageFrameSessions(page);
+      }
       if (this.pages.has(tabId)) {
         this.pages.delete(tabId);
         logger.info(`Tab ${tabId} closed by page`);
@@ -230,10 +250,14 @@ export class PageManager {
       throw new CharlotteError(CharlotteErrorCode.SESSION_ERROR, `Tab '${tabId}' not found`);
     }
 
+    if (this.cdpSessionManager) {
+      this.cdpSessionManager.clearPageFrameSessions(managedPage.page);
+    }
     managedPage.page.removeAllListeners("console");
     managedPage.page.removeAllListeners("response");
     managedPage.page.removeAllListeners("dialog");
     managedPage.page.removeAllListeners("framenavigated");
+    managedPage.page.removeAllListeners("framedetached");
     managedPage.page.removeAllListeners("popup");
     managedPage.page.removeAllListeners("close");
     await managedPage.page.close();

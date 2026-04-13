@@ -89,9 +89,7 @@ describe("CDPSessionManager", () => {
       const frame = mockFrame("frame-bad", page, undefined);
       frame.client = undefined;
 
-      await expect(manager.getFrameSession(frame)).rejects.toThrow(
-        /Frame\.client is unavailable/,
-      );
+      await expect(manager.getFrameSession(frame)).rejects.toThrow(/Frame\.client is unavailable/);
     });
 
     it("throws when frame.client has no send method", async () => {
@@ -99,9 +97,7 @@ describe("CDPSessionManager", () => {
       const frame = mockFrame("frame-bad", page, undefined);
       frame.client = { notSend: true };
 
-      await expect(manager.getFrameSession(frame)).rejects.toThrow(
-        /Frame\.client is unavailable/,
-      );
+      await expect(manager.getFrameSession(frame)).rejects.toThrow(/Frame\.client is unavailable/);
     });
   });
 

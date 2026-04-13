@@ -32,9 +32,9 @@ describe("Iframe content extraction", () => {
 
     browserManager = new BrowserManager();
     await browserManager.launch();
-    pageManager = new PageManager();
-    await pageManager.openTab(browserManager);
     cdpSessionManager = new CDPSessionManager();
+    pageManager = new PageManager(undefined, cdpSessionManager);
+    await pageManager.openTab(browserManager);
     elementIdGenerator = new ElementIdGenerator();
 
     const config = createDefaultConfig();
@@ -219,5 +219,56 @@ describe("Iframe content extraction", () => {
 
     // Restore depth for subsequent tests
     deps.config.iframeDepth = 3;
+  });
+
+  describe("frame session cleanup", () => {
+    it("cleans up frame sessions when navigating away from an iframe page", async () => {
+      const page = pageManager.getActivePage();
+      await page.goto(`${baseUrl}/iframe-parent.html`, { waitUntil: "networkidle0" });
+
+      // Render to trigger frame session creation
+      await renderActivePage(deps, { detail: "summary" });
+      expect(cdpSessionManager.frameSessionCount).toBeGreaterThan(0);
+
+      // Navigate to a non-iframe page — child frames detach
+      await page.goto(`${baseUrl}/simple.html`, { waitUntil: "load" });
+
+      // Frame sessions should be cleaned up via framedetached events
+      expect(cdpSessionManager.frameSessionCount).toBe(0);
+    });
+
+    it("cleans up frame sessions on tab close", async () => {
+      // Open a fresh tab for this test
+      const tabId = await pageManager.openTab(browserManager);
+      const page = pageManager.getActivePage();
+      await page.goto(`${baseUrl}/iframe-parent.html`, { waitUntil: "networkidle0" });
+
+      await renderActivePage(deps, { detail: "summary" });
+      expect(cdpSessionManager.frameSessionCount).toBeGreaterThan(0);
+
+      await pageManager.closeTab(tabId);
+
+      expect(cdpSessionManager.frameSessionCount).toBe(0);
+    });
+  });
+
+  describe("Puppeteer internals smoke test", () => {
+    it("Frame._id is a non-empty string", () => {
+      const page = pageManager.getActivePage();
+      const mainFrame = page.mainFrame();
+      const frameId = (mainFrame as any)._id;
+
+      expect(typeof frameId).toBe("string");
+      expect(frameId.length).toBeGreaterThan(0);
+    });
+
+    it("Frame.client is a CDPSession-like object with a send method", () => {
+      const page = pageManager.getActivePage();
+      const mainFrame = page.mainFrame();
+      const client = (mainFrame as any).client;
+
+      expect(client).toBeDefined();
+      expect(typeof client.send).toBe("function");
+    });
   });
 });

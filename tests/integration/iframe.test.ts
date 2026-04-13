@@ -41,11 +41,7 @@ describe("Iframe content extraction", () => {
     config.includeIframes = true;
     config.iframeDepth = 3;
 
-    const rendererPipeline = new RendererPipeline(
-      cdpSessionManager,
-      elementIdGenerator,
-      config,
-    );
+    const rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator, config);
     const artifactStore = new ArtifactStore(
       path.join(os.tmpdir(), "charlotte-iframe-test-artifacts"),
     );
@@ -207,9 +203,7 @@ describe("Iframe content extraction", () => {
     const representation = await renderActivePage(deps, { detail: "summary" });
 
     // Child iframe content should be present
-    const childHeading = representation.structure.headings.find(
-      (h) => h.text === "Iframe Content",
-    );
+    const childHeading = representation.structure.headings.find((h) => h.text === "Iframe Content");
     expect(childHeading).toBeDefined();
 
     // Grandchild iframe content should NOT be present

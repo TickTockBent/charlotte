@@ -32,21 +32,9 @@ const INTERACTIVE_TAG: Record<string, string> = {
   treeitem: "treeitem",
 };
 
-const CONTENT_MARKER_ROLES = new Set([
-  "paragraph",
-  "blockquote",
-  "image",
-  "img",
-  "figure",
-]);
+const CONTENT_MARKER_ROLES = new Set(["paragraph", "blockquote", "image", "img", "figure"]);
 
-const LEAF_ROLES = new Set([
-  "StaticText",
-  "text",
-  "InlineTextBox",
-  "LineBreak",
-  "separator",
-]);
+const LEAF_ROLES = new Set(["StaticText", "text", "InlineTextBox", "LineBreak", "separator"]);
 
 const LANDMARK_TAGS = new Set([
   "banner",
@@ -70,9 +58,7 @@ function countListItems(node: ParsedAXNode): number {
   return node.children.filter((c) => c.role === "listitem").length;
 }
 
-function getTableDimensions(
-  node: ParsedAXNode,
-): { rows: number; cols: number } | null {
+function getTableDimensions(node: ParsedAXNode): { rows: number; cols: number } | null {
   let rows = 0;
   let maxCols = 0;
   const countRows = (n: ParsedAXNode) => {
@@ -118,8 +104,7 @@ function buildDisplayTree(
     if (LEAF_ROLES.has(node.role)) continue;
 
     if (isLandmarkRole(node.role)) {
-      const label =
-        node.name && node.name !== node.role ? node.name : undefined;
+      const label = node.name && node.name !== node.role ? node.name : undefined;
       result.push({
         tag: node.role,
         label,
@@ -143,7 +128,7 @@ function buildDisplayTree(
 
     if (isInteractiveRole(node.role)) {
       const tag = INTERACTIVE_TAG[node.role] ?? node.role;
-      const label = options.labelInteractive ? (node.name || undefined) : undefined;
+      const label = options.labelInteractive ? node.name || undefined : undefined;
       result.push({
         tag,
         label,
@@ -210,12 +195,7 @@ function collapseConsecutive(items: DisplayNode[]): DisplayNode[] {
   while (i < items.length) {
     const current = items[i];
 
-    if (
-      !current.collapsible ||
-      current.children.length > 0 ||
-      current.label ||
-      current.metadata
-    ) {
+    if (!current.collapsible || current.children.length > 0 || current.label || current.metadata) {
       collapsed.push(current);
       i++;
       continue;
@@ -255,10 +235,7 @@ function collapseConsecutive(items: DisplayNode[]): DisplayNode[] {
 
 // ─── Rendering ───
 
-function renderLines(
-  items: DisplayNode[],
-  isLastStack: boolean[] = [],
-): string[] {
+function renderLines(items: DisplayNode[], isLastStack: boolean[] = []): string[] {
   const lines: string[] = [];
 
   for (let i = 0; i < items.length; i++) {
@@ -273,9 +250,7 @@ function renderLines(
 
     let display: string;
     if (LANDMARK_TAGS.has(item.tag)) {
-      display = item.label
-        ? `[${item.tag} "${item.label}"]`
-        : `[${item.tag}]`;
+      display = item.label ? `[${item.tag} "${item.label}"]` : `[${item.tag}]`;
     } else {
       display = item.tag;
       if (item.label) display += ` "${item.label}"`;

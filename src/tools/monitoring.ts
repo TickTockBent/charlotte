@@ -2,7 +2,13 @@ import { z } from "zod";
 import type { McpServer, RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { logger } from "../utils/logger.js";
 import type { ToolDependencies } from "./tool-helpers.js";
-import { ensureReady, handleToolError, coercedBoolean, resolveOutputPath, writeOutputFile } from "./tool-helpers.js";
+import {
+  ensureReady,
+  handleToolError,
+  coercedBoolean,
+  resolveOutputPath,
+  writeOutputFile,
+} from "./tool-helpers.js";
 
 export function registerMonitoringTools(
   server: McpServer,

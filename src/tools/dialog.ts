@@ -4,7 +4,12 @@ import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 import { logger } from "../utils/logger.js";
 import type { RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ToolDependencies } from "./tool-helpers.js";
-import { ensureReady, renderAfterAction, stripEmptyFields, handleToolError } from "./tool-helpers.js";
+import {
+  ensureReady,
+  renderAfterAction,
+  stripEmptyFields,
+  handleToolError,
+} from "./tool-helpers.js";
 
 export function registerDialogTools(
   server: McpServer,

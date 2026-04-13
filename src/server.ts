@@ -1,8 +1,6 @@
 import { readFileSync } from "node:fs";
 
-const { version } = JSON.parse(
-  readFileSync(new URL("../package.json", import.meta.url), "utf-8"),
-);
+const { version } = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf-8"));
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { BrowserManager } from "./browser/browser-manager.js";
 import type { PageManager } from "./browser/page-manager.js";

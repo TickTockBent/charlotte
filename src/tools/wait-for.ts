@@ -152,8 +152,7 @@ async function pollWaitForCondition(
           awaitPromise: true,
           timeout: Math.max(0, deadline - Date.now()),
         });
-        const isTruthy =
-          !evalResult.exceptionDetails && !!evalResult.result.value;
+        const isTruthy = !evalResult.exceptionDetails && !!evalResult.result.value;
         if (!isTruthy) allSatisfied = false;
       } catch {
         allSatisfied = false;

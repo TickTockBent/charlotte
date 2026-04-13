@@ -51,10 +51,7 @@ export class CDPSessionManager {
     return (frame as any)._id as string;
   }
 
-  private async enableDomains(
-    session: CDPSession,
-    domains: readonly string[],
-  ): Promise<void> {
+  private async enableDomains(session: CDPSession, domains: readonly string[]): Promise<void> {
     for (const domain of domains) {
       try {
         await session.send(`${domain}.enable` as any);

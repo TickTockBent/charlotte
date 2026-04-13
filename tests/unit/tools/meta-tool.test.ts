@@ -174,7 +174,10 @@ describe("meta-tool", () => {
       await metaTool.handler({ action: "enable", group: "session" }, {} as any);
 
       for (const toolName of TOOL_GROUPS.session) {
-        const tool = registry[toolName] as unknown as { enable: ReturnType<typeof vi.fn>; disable: ReturnType<typeof vi.fn> };
+        const tool = registry[toolName] as unknown as {
+          enable: ReturnType<typeof vi.fn>;
+          disable: ReturnType<typeof vi.fn>;
+        };
         expect(tool.enable).not.toHaveBeenCalled();
         expect(tool.disable).not.toHaveBeenCalled();
       }

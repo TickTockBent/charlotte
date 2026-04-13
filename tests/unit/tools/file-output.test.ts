@@ -115,7 +115,6 @@ describe("file output helpers", () => {
 });
 
 describe("parseCliArgs --output-dir", () => {
-
   it("parses --output-dir with no other args", () => {
     const result = parseCliArgs(["--output-dir=/tmp/output"]);
     expect(result.outputDir).toBe("/tmp/output");

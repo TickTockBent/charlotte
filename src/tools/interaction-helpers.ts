@@ -345,10 +345,7 @@ export async function selectOptionByBackendNodeId(
 /**
  * Submit a form by backend node ID — calls form.submit() via CDP.
  */
-export async function submitFormByBackendNodeId(
-  page: Page,
-  backendNodeId: number,
-): Promise<void> {
+export async function submitFormByBackendNodeId(page: Page, backendNodeId: number): Promise<void> {
   const cdpSession = await page.createCDPSession();
   try {
     const { object } = await cdpSession.send("DOM.resolveNode", {

@@ -172,7 +172,13 @@ export class InteractiveExtractor {
     }
 
     // Build form representations
-    const forms = this.buildFormRepresentations(formNodes, elements, idGenerator, boundsMap, frameId);
+    const forms = this.buildFormRepresentations(
+      formNodes,
+      elements,
+      idGenerator,
+      boundsMap,
+      frameId,
+    );
 
     return { elements, forms };
   }

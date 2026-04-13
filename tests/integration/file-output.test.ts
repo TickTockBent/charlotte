@@ -188,15 +188,15 @@ describe("File output integration", () => {
 
   describe("path boundary enforcement", () => {
     it("rejects output_file that escapes outputDir", async () => {
-      await expect(
-        resolveOutputPath("/etc/evil-output.json", deps.config),
-      ).rejects.toThrow(/resolves outside the allowed directory/);
+      await expect(resolveOutputPath("/etc/evil-output.json", deps.config)).rejects.toThrow(
+        /resolves outside the allowed directory/,
+      );
     });
 
     it("rejects relative traversal above outputDir", async () => {
-      await expect(
-        resolveOutputPath("../../../etc/passwd", deps.config),
-      ).rejects.toThrow(/resolves outside the allowed directory/);
+      await expect(resolveOutputPath("../../../etc/passwd", deps.config)).rejects.toThrow(
+        /resolves outside the allowed directory/,
+      );
     });
 
     it("allows nested subdirectories within outputDir", async () => {

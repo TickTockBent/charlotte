@@ -261,7 +261,15 @@ export function registerSessionTools(
           .describe("Maximum iframe nesting depth to traverse (default: 3, min: 1, max: 10)"),
       },
     },
-    async ({ snapshot_depth, auto_snapshot, screenshot_dir, dialog_auto_dismiss, output_dir, include_iframes, iframe_depth }) => {
+    async ({
+      snapshot_depth,
+      auto_snapshot,
+      screenshot_dir,
+      dialog_auto_dismiss,
+      output_dir,
+      include_iframes,
+      iframe_depth,
+    }) => {
       try {
         logger.info("Configuring Charlotte", { snapshot_depth, auto_snapshot, screenshot_dir });
 

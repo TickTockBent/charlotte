@@ -50,7 +50,9 @@ export interface ToolDependencies {
  */
 let initializing: Promise<void> | null = null;
 
-export async function ensureReady(deps: Pick<ToolDependencies, "browserManager" | "pageManager">): Promise<void> {
+export async function ensureReady(
+  deps: Pick<ToolDependencies, "browserManager" | "pageManager">,
+): Promise<void> {
   await deps.browserManager.ensureConnected();
   if (deps.pageManager.hasPages()) return;
 
@@ -407,9 +409,7 @@ export async function resolveOutputPath(
   config: CharlotteConfig,
 ): Promise<string> {
   const baseDir = config.outputDir ?? config.allowedWorkspaceRoot ?? process.cwd();
-  const resolved = path.isAbsolute(outputFile)
-    ? outputFile
-    : path.resolve(baseDir, outputFile);
+  const resolved = path.isAbsolute(outputFile) ? outputFile : path.resolve(baseDir, outputFile);
 
   // Normalize the path (resolve . and .. segments) without touching the filesystem.
   // This catches obvious traversal attempts before any side effects (mkdir).

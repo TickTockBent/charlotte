@@ -145,6 +145,20 @@ describe("CDPSessionManager", () => {
       expect(manager.frameSessionCount).toBe(0);
     });
 
+    it("cleans up empty reverse-index entries after all frames removed", async () => {
+      const page = mockPage();
+      await manager.getFrameSession(mockFrame("frame-1", page));
+      await manager.getFrameSession(mockFrame("frame-2", page));
+
+      manager.removeFrameSession("frame-1");
+      manager.removeFrameSession("frame-2");
+
+      // After removing all frames individually, clearPageFrameSessions
+      // should be a no-op (the page entry was already pruned)
+      manager.clearPageFrameSessions(page);
+      expect(manager.frameSessionCount).toBe(0);
+    });
+
     it("allows re-caching after removal", async () => {
       const page = mockPage();
       const clientA = mockCDPSession();

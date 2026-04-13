@@ -90,9 +90,12 @@ export class CDPSessionManager {
   removeFrameSession(frameId: string): void {
     const removed = this.frameSessions.delete(frameId);
     if (removed) {
-      // Also remove from reverse index
-      for (const ids of this.pageFrameIds.values()) {
+      // Also remove from reverse index; drop empty Sets to avoid dangling Page refs
+      for (const [page, ids] of this.pageFrameIds.entries()) {
         ids.delete(frameId);
+        if (ids.size === 0) {
+          this.pageFrameIds.delete(page);
+        }
       }
       logger.debug("Removed stale frame session", { frameId });
     }

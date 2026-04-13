@@ -117,7 +117,9 @@ describe("MCP protocol end-to-end", () => {
     });
 
     it("full profile exposes all tools", async () => {
-      // Ephemeral server/client pair — no browser operations, just listTools
+      // Ephemeral server/client pair — no browser operations, just listTools.
+      // Pipeline instances are unshared (not wired like src/index.ts) since
+      // only listTools is called and no rendering occurs.
       const mockDeps = {
         browserManager,
         pageManager: new PageManager(createDefaultConfig()),

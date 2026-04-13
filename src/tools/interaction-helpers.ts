@@ -1,6 +1,33 @@
-import type { Page, KeyInput } from "puppeteer";
+import type { Page, KeyInput, CDPSession } from "puppeteer";
 import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 import { logger } from "../utils/logger.js";
+
+/**
+ * Scroll an element into view, get its box model, and return the center coordinates.
+ * Shared helper that deduplicates the scroll + getBoxModel + compute-center pattern.
+ */
+export async function scrollAndGetCenter(
+  session: CDPSession,
+  backendNodeId: number,
+): Promise<{ x: number; y: number }> {
+  await session.send("DOM.scrollIntoViewIfNeeded", { backendNodeId });
+
+  const { model } = await session.send("DOM.getBoxModel", { backendNodeId });
+
+  if (!model) {
+    throw new CharlotteError(
+      CharlotteErrorCode.ELEMENT_NOT_FOUND,
+      "Element has no visible box model — it may be hidden or zero-sized.",
+      "Call charlotte_observe to check the element's state.",
+    );
+  }
+
+  const contentQuad = model.content;
+  return {
+    x: (contentQuad[0] + contentQuad[2] + contentQuad[4] + contentQuad[6]) / 4,
+    y: (contentQuad[1] + contentQuad[3] + contentQuad[5] + contentQuad[7]) / 4,
+  };
+}
 
 /** Maps short modifier names to Puppeteer KeyInput values. */
 export const MODIFIER_KEY_MAP: Record<string, KeyInput> = {
@@ -12,36 +39,19 @@ export const MODIFIER_KEY_MAP: Record<string, KeyInput> = {
 
 /**
  * Click an element by backend node ID using CDP to get coordinates, then click at those coords.
+ * Accepts an optional CDPSession — if not provided, creates and detaches one internally.
  */
 export async function clickElementByBackendNodeId(
   page: Page,
   backendNodeId: number,
   clickType: "left" | "right" | "double" = "left",
   modifiers: Array<"ctrl" | "shift" | "alt" | "meta"> = [],
+  session?: CDPSession,
 ): Promise<void> {
-  // Get the element's box model to find clickable coordinates
-  const cdpSession = await page.createCDPSession();
+  const ownSession = !session;
+  const cdpSession = session ?? (await page.createCDPSession());
   try {
-    // First, scroll the element into view
-    await cdpSession.send("DOM.scrollIntoViewIfNeeded", { backendNodeId });
-
-    // Get box model for coordinates
-    const { model } = await cdpSession.send("DOM.getBoxModel", {
-      backendNodeId,
-    });
-
-    if (!model) {
-      throw new CharlotteError(
-        CharlotteErrorCode.ELEMENT_NOT_FOUND,
-        "Element has no visible box model — it may be hidden or zero-sized.",
-        "Call charlotte_observe to check the element's state.",
-      );
-    }
-
-    // content quad: [x1,y1, x2,y2, x3,y3, x4,y4]
-    const contentQuad = model.content;
-    const centerX = (contentQuad[0] + contentQuad[2] + contentQuad[4] + contentQuad[6]) / 4;
-    const centerY = (contentQuad[1] + contentQuad[3] + contentQuad[5] + contentQuad[7]) / 4;
+    const { x: centerX, y: centerY } = await scrollAndGetCenter(cdpSession, backendNodeId);
 
     // Hold down modifier keys before the click
     for (const modifier of modifiers) {
@@ -65,7 +75,7 @@ export async function clickElementByBackendNodeId(
       }
     }
   } finally {
-    await cdpSession.detach();
+    if (ownSession) await cdpSession.detach();
   }
 }
 
@@ -156,80 +166,38 @@ export async function waitForPossibleNavigation(
 
 /**
  * Focus an element by backend node ID using CDP.
+ * Accepts an optional CDPSession — if not provided, creates and detaches one internally.
  */
 export async function focusElementByBackendNodeId(
   page: Page,
   backendNodeId: number,
+  session?: CDPSession,
 ): Promise<void> {
-  const cdpSession = await page.createCDPSession();
+  const ownSession = !session;
+  const cdpSession = session ?? (await page.createCDPSession());
   try {
     await cdpSession.send("DOM.focus", { backendNodeId });
   } finally {
-    await cdpSession.detach();
+    if (ownSession) await cdpSession.detach();
   }
 }
 
 /**
  * Hover over an element by backend node ID.
+ * Accepts an optional CDPSession — if not provided, creates and detaches one internally.
  */
 export async function hoverElementByBackendNodeId(
   page: Page,
   backendNodeId: number,
+  session?: CDPSession,
 ): Promise<void> {
-  const cdpSession = await page.createCDPSession();
+  const ownSession = !session;
+  const cdpSession = session ?? (await page.createCDPSession());
   try {
-    await cdpSession.send("DOM.scrollIntoViewIfNeeded", { backendNodeId });
-    const { model } = await cdpSession.send("DOM.getBoxModel", {
-      backendNodeId,
-    });
-
-    if (!model) {
-      throw new CharlotteError(
-        CharlotteErrorCode.ELEMENT_NOT_FOUND,
-        "Element has no visible box model for hover.",
-      );
-    }
-
-    const contentQuad = model.content;
-    const centerX = (contentQuad[0] + contentQuad[2] + contentQuad[4] + contentQuad[6]) / 4;
-    const centerY = (contentQuad[1] + contentQuad[3] + contentQuad[5] + contentQuad[7]) / 4;
-
-    await page.mouse.move(centerX, centerY);
+    const { x, y } = await scrollAndGetCenter(cdpSession, backendNodeId);
+    await page.mouse.move(x, y);
   } finally {
-    await cdpSession.detach();
-  }
-}
-
-/**
- * Get the center coordinates of an element by backend node ID.
- * Scrolls the element into view first.
- */
-async function getElementCenter(
-  page: Page,
-  backendNodeId: number,
-): Promise<{ x: number; y: number }> {
-  const cdpSession = await page.createCDPSession();
-  try {
-    await cdpSession.send("DOM.scrollIntoViewIfNeeded", { backendNodeId });
-    const { model } = await cdpSession.send("DOM.getBoxModel", {
-      backendNodeId,
-    });
-
-    if (!model) {
-      throw new CharlotteError(
-        CharlotteErrorCode.ELEMENT_NOT_FOUND,
-        "Element has no visible box model — it may be hidden or zero-sized.",
-        "Call charlotte_observe to check the element's state.",
-      );
-    }
-
-    const contentQuad = model.content;
-    return {
-      x: (contentQuad[0] + contentQuad[2] + contentQuad[4] + contentQuad[6]) / 4,
-      y: (contentQuad[1] + contentQuad[3] + contentQuad[5] + contentQuad[7]) / 4,
-    };
-  } finally {
-    await cdpSession.detach();
+    if (ownSession) await cdpSession.detach();
   }
 }
 
@@ -237,37 +205,47 @@ async function getElementCenter(
  * Drag one element to another using mouse primitives.
  * Sequence: move to source → mousedown → move to target → mouseup
  * Includes intermediate move steps and delays to ensure drag events fire reliably.
+ * Uses a single CDP session for both source and target coordinate lookups.
+ * Accepts an optional CDPSession — if not provided, creates and detaches one internally.
  */
 export async function dragElementToElement(
   page: Page,
   sourceBackendNodeId: number,
   targetBackendNodeId: number,
+  session?: CDPSession,
 ): Promise<void> {
-  const sourceCenter = await getElementCenter(page, sourceBackendNodeId);
-  const targetCenter = await getElementCenter(page, targetBackendNodeId);
+  const ownSession = !session;
+  const cdpSession = session ?? (await page.createCDPSession());
+  try {
+    const sourceCenter = await scrollAndGetCenter(cdpSession, sourceBackendNodeId);
+    const targetCenter = await scrollAndGetCenter(cdpSession, targetBackendNodeId);
 
-  // Move to source and press down
-  await page.mouse.move(sourceCenter.x, sourceCenter.y);
-  await page.mouse.down();
+    // Move to source and press down
+    await page.mouse.move(sourceCenter.x, sourceCenter.y);
+    await page.mouse.down();
 
-  // Intermediate move to trigger dragstart (some browsers need movement to begin a drag)
-  await page.mouse.move(
-    sourceCenter.x + (targetCenter.x - sourceCenter.x) * 0.25,
-    sourceCenter.y + (targetCenter.y - sourceCenter.y) * 0.25,
-    { steps: 5 },
-  );
-  await new Promise((resolve) => setTimeout(resolve, 50));
+    // Intermediate move to trigger dragstart (some browsers need movement to begin a drag)
+    await page.mouse.move(
+      sourceCenter.x + (targetCenter.x - sourceCenter.x) * 0.25,
+      sourceCenter.y + (targetCenter.y - sourceCenter.y) * 0.25,
+      { steps: 5 },
+    );
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
-  // Move to target
-  await page.mouse.move(targetCenter.x, targetCenter.y, { steps: 10 });
-  await new Promise((resolve) => setTimeout(resolve, 50));
+    // Move to target
+    await page.mouse.move(targetCenter.x, targetCenter.y, { steps: 10 });
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
-  // Release
-  await page.mouse.up();
+    // Release
+    await page.mouse.up();
+  } finally {
+    if (ownSession) await cdpSession.detach();
+  }
 }
 
 /**
  * Type text into an input element. Uses CDP to focus, optionally clears, then types via keyboard.
+ * Accepts an optional CDPSession — if not provided, creates one internally for the focus step.
  */
 export async function typeIntoElement(
   page: Page,
@@ -276,9 +254,10 @@ export async function typeIntoElement(
   clearFirst: boolean,
   pressEnter: boolean,
   characterDelay?: number,
+  session?: CDPSession,
 ): Promise<void> {
   // Focus the element
-  await focusElementByBackendNodeId(page, backendNodeId);
+  await focusElementByBackendNodeId(page, backendNodeId, session);
 
   if (clearFirst) {
     // Select all text then delete — works cross-platform
@@ -299,13 +278,16 @@ export async function typeIntoElement(
 
 /**
  * Select a value in a <select> element using CDP to set the value and dispatch change events.
+ * Accepts an optional CDPSession — if not provided, creates and detaches one internally.
  */
 export async function selectOptionByBackendNodeId(
   page: Page,
   backendNodeId: number,
   value: string,
+  session?: CDPSession,
 ): Promise<void> {
-  const cdpSession = await page.createCDPSession();
+  const ownSession = !session;
+  const cdpSession = session ?? (await page.createCDPSession());
   try {
     // Resolve the node to get a remote object reference
     const { object } = await cdpSession.send("DOM.resolveNode", {
@@ -338,15 +320,20 @@ export async function selectOptionByBackendNodeId(
       arguments: [{ value }],
     });
   } finally {
-    await cdpSession.detach();
+    if (ownSession) await cdpSession.detach();
   }
 }
 
 /**
  * Submit a form by backend node ID — calls form.submit() via CDP.
  */
-export async function submitFormByBackendNodeId(page: Page, backendNodeId: number): Promise<void> {
-  const cdpSession = await page.createCDPSession();
+export async function submitFormByBackendNodeId(
+  page: Page,
+  backendNodeId: number,
+  session?: CDPSession,
+): Promise<void> {
+  const ownSession = !session;
+  const cdpSession = session ?? (await page.createCDPSession());
   try {
     const { object } = await cdpSession.send("DOM.resolveNode", {
       backendNodeId,
@@ -366,7 +353,7 @@ export async function submitFormByBackendNodeId(page: Page, backendNodeId: numbe
       }`,
     });
   } finally {
-    await cdpSession.detach();
+    if (ownSession) await cdpSession.detach();
   }
 }
 
@@ -378,8 +365,10 @@ export async function setFileInputFiles(
   page: Page,
   backendNodeId: number,
   filePaths: string[],
+  session?: CDPSession,
 ): Promise<void> {
-  const cdpSession = await page.createCDPSession();
+  const ownSession = !session;
+  const cdpSession = session ?? (await page.createCDPSession());
   try {
     const { node } = await cdpSession.send("DOM.describeNode", { backendNodeId });
     const isFileInput =
@@ -399,6 +388,6 @@ export async function setFileInputFiles(
       backendNodeId,
     });
   } finally {
-    await cdpSession.detach();
+    if (ownSession) await cdpSession.detach();
   }
 }

@@ -182,9 +182,7 @@ describe("MCP protocol end-to-end", () => {
 
       expect(result.isError).toBeFalsy();
 
-      const page = JSON.parse(
-        (result.content as Array<{ type: string; text: string }>)[0].text,
-      );
+      const page = JSON.parse((result.content as Array<{ type: string; text: string }>)[0].text);
       expect(page.url).toContain("simple.html");
       expect(page.title).toBe("Simple Test Page");
       expect(page.interactive_summary).toBeDefined();

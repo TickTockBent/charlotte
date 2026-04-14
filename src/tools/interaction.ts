@@ -502,7 +502,15 @@ export function registerInteractionTools(
         await ensureReady(deps);
         const sourceResolved = await resolveElement(deps, source_id);
         const targetResolved = await resolveElement(deps, target_id);
-        // Use source element's session — both elements must be in the same frame for drag
+
+        if (sourceResolved.frameId !== targetResolved.frameId) {
+          throw new CharlotteError(
+            CharlotteErrorCode.SESSION_ERROR,
+            "Cannot drag between different frames — source and target must be in the same frame.",
+            "Use charlotte_find to locate elements within the same frame.",
+          );
+        }
+
         const session = await getSessionForElement(deps, sourceResolved);
 
         logger.info("Dragging element", { source_id, target_id });

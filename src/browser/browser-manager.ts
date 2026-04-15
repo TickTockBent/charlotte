@@ -1,4 +1,9 @@
-import puppeteer, { type Browser, type Page, type LaunchOptions, type ChromeReleaseChannel } from "puppeteer";
+import puppeteer, {
+  type Browser,
+  type Page,
+  type LaunchOptions,
+  type ChromeReleaseChannel,
+} from "puppeteer";
 import { logger } from "../utils/logger.js";
 import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 import { createDefaultConfig } from "../types/config.js";

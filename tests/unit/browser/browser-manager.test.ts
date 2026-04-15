@@ -39,7 +39,8 @@ describe("BrowserManager", () => {
       const manager = new BrowserManager();
       await manager.launch();
 
-      const mockBrowser = await (puppeteer.launch as ReturnType<typeof vi.fn>).mock.results[0].value;
+      const mockBrowser = await (puppeteer.launch as ReturnType<typeof vi.fn>).mock.results[0]
+        .value;
       await manager.close();
 
       expect(mockBrowser.close).toHaveBeenCalledTimes(1);
@@ -59,7 +60,11 @@ describe("BrowserManager", () => {
     });
 
     it("calls puppeteer.connect with browserWSEndpoint for ws:// endpoint", async () => {
-      const manager = new BrowserManager(undefined, undefined, "ws://localhost:9222/devtools/browser/abc");
+      const manager = new BrowserManager(
+        undefined,
+        undefined,
+        "ws://localhost:9222/devtools/browser/abc",
+      );
       await manager.launch();
 
       expect(puppeteer.connect).toHaveBeenCalledWith(
@@ -70,7 +75,11 @@ describe("BrowserManager", () => {
     });
 
     it("calls puppeteer.connect with browserWSEndpoint for wss:// endpoint", async () => {
-      const manager = new BrowserManager(undefined, undefined, "wss://remote:9222/devtools/browser/abc");
+      const manager = new BrowserManager(
+        undefined,
+        undefined,
+        "wss://remote:9222/devtools/browser/abc",
+      );
       await manager.launch();
 
       expect(puppeteer.connect).toHaveBeenCalledWith(
@@ -84,7 +93,8 @@ describe("BrowserManager", () => {
       const manager = new BrowserManager(undefined, undefined, "http://localhost:9222");
       await manager.launch();
 
-      const mockBrowser = await (puppeteer.connect as ReturnType<typeof vi.fn>).mock.results[0].value;
+      const mockBrowser = await (puppeteer.connect as ReturnType<typeof vi.fn>).mock.results[0]
+        .value;
       await manager.close();
 
       expect(mockBrowser.disconnect).toHaveBeenCalledTimes(1);
@@ -153,9 +163,7 @@ describe("BrowserManager", () => {
       // Simulate disconnection
       mockBrowser.connected = false;
 
-      await expect(manager.ensureConnected()).rejects.toThrow(
-        "Remote browser disconnected",
-      );
+      await expect(manager.ensureConnected()).rejects.toThrow("Remote browser disconnected");
     });
   });
 });

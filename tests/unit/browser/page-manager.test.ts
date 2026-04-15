@@ -176,7 +176,9 @@ describe("PageManager.adoptExistingPages", () => {
     return {
       url: () => url,
       title: () => Promise.resolve(title),
-      on: (event: string, handler: (...args: unknown[]) => unknown) => { listeners.set(event, handler); },
+      on: (event: string, handler: (...args: unknown[]) => unknown) => {
+        listeners.set(event, handler);
+      },
       removeAllListeners: () => {},
       mainFrame: () => ({}),
       bringToFront: () => Promise.resolve(),

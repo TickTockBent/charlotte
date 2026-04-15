@@ -110,6 +110,32 @@ describe("BrowserManager", () => {
       );
     });
 
+    it("does not connect until getBrowser() is called (lazy)", async () => {
+      const manager = new BrowserManager(undefined, undefined, "http://localhost:9222");
+      expect(puppeteer.connect).not.toHaveBeenCalled();
+
+      await manager.getBrowser();
+      expect(puppeteer.connect).toHaveBeenCalledTimes(1);
+    });
+
+    it("invokes onFirstConnect callback once on first connect", async () => {
+      const onFirstConnect = vi.fn().mockResolvedValue(undefined);
+      const manager = new BrowserManager(
+        undefined,
+        undefined,
+        "http://localhost:9222",
+        onFirstConnect,
+      );
+
+      expect(onFirstConnect).not.toHaveBeenCalled();
+
+      await manager.getBrowser();
+      expect(onFirstConnect).toHaveBeenCalledTimes(1);
+
+      await manager.getBrowser();
+      expect(onFirstConnect).toHaveBeenCalledTimes(1);
+    });
+
     it("ensureConnected() throws when remote browser disconnects", async () => {
       const mockBrowser = {
         connected: true,

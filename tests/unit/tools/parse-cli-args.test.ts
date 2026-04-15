@@ -140,5 +140,25 @@ describe("parseCliArgs", () => {
       const result = parseCliArgs(["--cdp-endpoint", "channel:chrome"]);
       expect(result).toEqual({ cdpEndpoint: "channel:chrome", headless: true });
     });
+
+    it("parses --cdp-endpoint with https:// URL", () => {
+      const result = parseCliArgs(["--cdp-endpoint", "https://example.com:9222"]);
+      expect(result.cdpEndpoint).toBe("https://example.com:9222");
+    });
+
+    it("parses --cdp-endpoint with wss:// URL", () => {
+      const result = parseCliArgs(["--cdp-endpoint", "wss://example.com/devtools/browser/abc"]);
+      expect(result.cdpEndpoint).toBe("wss://example.com/devtools/browser/abc");
+    });
+
+    it("throws on malformed --cdp-endpoint", () => {
+      expect(() => parseCliArgs(["--cdp-endpoint", "banana"])).toThrow(
+        "Invalid --cdp-endpoint: banana",
+      );
+    });
+
+    it("throws on empty --cdp-endpoint", () => {
+      expect(() => parseCliArgs(["--cdp-endpoint="])).toThrow("Invalid --cdp-endpoint:");
+    });
   });
 });

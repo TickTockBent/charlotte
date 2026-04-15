@@ -4,17 +4,27 @@ import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 import { createDefaultConfig } from "../types/config.js";
 import type { CharlotteConfig } from "../types/config.js";
 
+export type OnFirstConnect = (browser: Browser) => Promise<void> | void;
+
 export class BrowserManager {
   private browser: Browser | null = null;
   private launchOptions: LaunchOptions = {};
   private launching: Promise<void> | null = null;
   private config: CharlotteConfig;
   private cdpEndpoint: string | undefined;
+  private onFirstConnect: OnFirstConnect | undefined;
+  private firstConnectDone = false;
 
-  constructor(config?: CharlotteConfig, launchOptions?: LaunchOptions, cdpEndpoint?: string) {
+  constructor(
+    config?: CharlotteConfig,
+    launchOptions?: LaunchOptions,
+    cdpEndpoint?: string,
+    onFirstConnect?: OnFirstConnect,
+  ) {
     // Accept optional config; callers without config get a permissive default
     this.config = config ?? createDefaultConfig();
     this.cdpEndpoint = cdpEndpoint;
+    this.onFirstConnect = onFirstConnect;
     // Set launch defaults once — ensureConnected() and launch() both use these.
     this.launchOptions = {
       headless: true,
@@ -65,6 +75,8 @@ export class BrowserManager {
     // the user's existing Chrome already has its own window size.
     let connectOptions;
     if (isChannel) {
+      // Note: the `channel` connect option is marked @experimental in Puppeteer's types.
+      // It may change or be removed in future Puppeteer releases.
       const channel = endpoint.slice("channel:".length) as ChromeReleaseChannel;
       connectOptions = { channel, defaultViewport: null };
     } else if (isWebSocket) {
@@ -74,6 +86,7 @@ export class BrowserManager {
     }
 
     this.browser = await puppeteer.connect(connectOptions);
+    this.firstConnectDone = true;
 
     this.browser.on("disconnected", () => {
       logger.warn("Remote browser disconnected");
@@ -89,10 +102,30 @@ export class BrowserManager {
     }
 
     if (this.cdpEndpoint) {
-      throw new CharlotteError(
-        CharlotteErrorCode.SESSION_ERROR,
-        "Remote browser disconnected. Cannot reconnect in CDP mode — restart the remote browser and Charlotte.",
-      );
+      // First connect is lazy; subsequent disconnects cannot be recovered in CDP mode.
+      if (this.firstConnectDone) {
+        throw new CharlotteError(
+          CharlotteErrorCode.SESSION_ERROR,
+          "Remote browser disconnected. Cannot reconnect in CDP mode — restart the remote browser and Charlotte.",
+        );
+      }
+
+      if (this.launching) {
+        await this.launching;
+        return;
+      }
+
+      this.launching = this.doConnect();
+      try {
+        await this.launching;
+      } finally {
+        this.launching = null;
+      }
+
+      if (this.onFirstConnect && this.browser) {
+        await this.onFirstConnect(this.browser);
+      }
+      return;
     }
 
     // Prevent concurrent relaunch attempts

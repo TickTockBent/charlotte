@@ -69,6 +69,21 @@ export function parseCliArgs(argv: string[] = process.argv.slice(2)): {
   const headless = !values["no-headless"];
   const cdpEndpoint = values["cdp-endpoint"] as string | undefined;
 
+  if (cdpEndpoint !== undefined) {
+    const validPrefixes = ["http://", "https://", "ws://", "wss://", "channel:"];
+    if (!validPrefixes.some((p) => cdpEndpoint.startsWith(p))) {
+      throw new Error(
+        `Invalid --cdp-endpoint: ${cdpEndpoint}. Must start with one of: ${validPrefixes.join(", ")}`,
+      );
+    }
+  }
+
+  if (cdpEndpoint && values["no-headless"]) {
+    logger.warn(
+      "--no-headless has no effect in CDP mode; the remote browser controls its own display",
+    );
+  }
+
   if (profileValue && toolsValue) {
     logger.warn("Both --profile and --tools provided; --profile takes precedence");
   }

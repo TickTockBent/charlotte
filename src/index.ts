@@ -36,20 +36,20 @@ async function main(): Promise<void> {
     await fs.mkdir(resolvedOutputDir, { recursive: true });
   }
 
-  // Initialize browser and page management (Chromium launched lazily on first tool call)
+  // Initialize browser and page management.
+  // In CDP mode, connection + page adoption happen lazily on first tool call,
+  // so the remote browser isn't contacted until actually needed.
+  const pageManager = new PageManager(config);
   const browserManager = new BrowserManager(
     config,
     { headless: cliOptions.headless },
     cliOptions.cdpEndpoint,
+    cliOptions.cdpEndpoint
+      ? async (browser) => {
+          await pageManager.adoptExistingPages(browser);
+        }
+      : undefined,
   );
-  const pageManager = new PageManager(config);
-
-  // In CDP mode, connect eagerly and adopt existing pages
-  if (cliOptions.cdpEndpoint) {
-    await browserManager.launch();
-    const browser = await browserManager.getBrowser();
-    await pageManager.adoptExistingPages(browser);
-  }
 
   // Initialize renderer pipeline
   const cdpSessionManager = new CDPSessionManager();

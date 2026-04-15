@@ -1,8 +1,6 @@
 import { readFileSync } from "node:fs";
 
-const { version } = JSON.parse(
-  readFileSync(new URL("../package.json", import.meta.url), "utf-8"),
-);
+const { version } = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf-8"));
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { BrowserManager } from "./browser/browser-manager.js";
 import type { PageManager } from "./browser/page-manager.js";
@@ -130,11 +128,19 @@ export function createServer(deps: ServerDeps, options: ServerOptions = {}): Cre
   Object.assign(registry, registerDevModeTools(server, toolDeps));
 
   // ─── Apply profile: disable tools not in the enabled set ───
+  // Set .enabled directly to batch state changes before a single
+  // sendToolListChanged(). Do not call tool.disable() here — each
+  // call fires an independent notification via the SDK's update().
 
+  let disabledCount = 0;
   for (const [toolName, tool] of Object.entries(registry)) {
     if (!enabledTools.has(toolName)) {
-      tool.disable();
+      tool.enabled = false;
+      disabledCount++;
     }
+  }
+  if (disabledCount > 0) {
+    server.sendToolListChanged();
   }
 
   // ─── Register meta-tool (always enabled) ───

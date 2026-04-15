@@ -11,6 +11,7 @@ import {
   renderActivePage,
   renderAfterAction,
   resolveElement,
+  getSessionForElement,
   formatPageResponse,
   handleToolError,
   coercedBoolean,
@@ -61,7 +62,8 @@ export function registerInteractionTools(
     async ({ element_id, click_type, modifiers }) => {
       try {
         await ensureReady(deps);
-        const { page, backendNodeId } = await resolveElement(deps, element_id);
+        const resolved = await resolveElement(deps, element_id);
+        const session = await getSessionForElement(deps, resolved);
         const clickVariant = click_type ?? "left";
         const activeModifiers = modifiers ?? [];
 
@@ -71,8 +73,14 @@ export function registerInteractionTools(
           modifiers: activeModifiers,
         });
 
-        await waitForPossibleNavigation(page, () =>
-          clickElementByBackendNodeId(page, backendNodeId, clickVariant, activeModifiers),
+        await waitForPossibleNavigation(resolved.page, () =>
+          clickElementByBackendNodeId(
+            resolved.page,
+            resolved.backendNodeId,
+            clickVariant,
+            activeModifiers,
+            session,
+          ),
         );
 
         const representation = await renderAfterAction(deps);
@@ -188,7 +196,8 @@ export function registerInteractionTools(
     async ({ element_id, text, clear_first, press_enter, slowly, character_delay }) => {
       try {
         await ensureReady(deps);
-        const { page, backendNodeId } = await resolveElement(deps, element_id);
+        const resolved = await resolveElement(deps, element_id);
+        const session = await getSessionForElement(deps, resolved);
         const shouldClearFirst = clear_first ?? true;
         const shouldPressEnter = press_enter ?? false;
         const delayMs = character_delay ?? (slowly ? 50 : undefined);
@@ -202,12 +211,13 @@ export function registerInteractionTools(
         });
 
         await typeIntoElement(
-          page,
-          backendNodeId,
+          resolved.page,
+          resolved.backendNodeId,
           text,
           shouldClearFirst,
           shouldPressEnter,
           delayMs,
+          session,
         );
 
         const representation = await renderAfterAction(deps);
@@ -232,11 +242,12 @@ export function registerInteractionTools(
     async ({ element_id, value }) => {
       try {
         await ensureReady(deps);
-        const { page, backendNodeId } = await resolveElement(deps, element_id);
+        const resolved = await resolveElement(deps, element_id);
+        const session = await getSessionForElement(deps, resolved);
 
         logger.info("Selecting option", { element_id, value });
 
-        await selectOptionByBackendNodeId(page, backendNodeId, value);
+        await selectOptionByBackendNodeId(resolved.page, resolved.backendNodeId, value, session);
 
         const representation = await renderAfterAction(deps);
         return formatPageResponse(representation);
@@ -259,12 +270,19 @@ export function registerInteractionTools(
     async ({ element_id }) => {
       try {
         await ensureReady(deps);
-        const { page, backendNodeId } = await resolveElement(deps, element_id);
+        const resolved = await resolveElement(deps, element_id);
+        const session = await getSessionForElement(deps, resolved);
 
         logger.info("Toggling element", { element_id });
 
         // Toggle by clicking the element
-        await clickElementByBackendNodeId(page, backendNodeId, "left");
+        await clickElementByBackendNodeId(
+          resolved.page,
+          resolved.backendNodeId,
+          "left",
+          [],
+          session,
+        );
 
         await new Promise((resolve) => setTimeout(resolve, 50));
 
@@ -307,25 +325,27 @@ export function registerInteractionTools(
         // If the form has a submit button, click it
         if (form.submit) {
           const submitResolved = await resolveElement(deps, form.submit);
+          const submitSession = await getSessionForElement(deps, submitResolved);
           logger.info("Submitting form via submit button", {
             form_id,
             submitButton: form.submit,
           });
           await waitForPossibleNavigation(page, () =>
-            clickElementByBackendNodeId(page, submitResolved.backendNodeId, "left"),
+            clickElementByBackendNodeId(
+              submitResolved.page,
+              submitResolved.backendNodeId,
+              "left",
+              [],
+              submitSession,
+            ),
           );
         } else {
           // Fall back to dispatching submit event on the form itself
-          const formBackendNodeId = deps.elementIdGenerator.resolveId(form_id);
-          if (formBackendNodeId === null) {
-            throw new CharlotteError(
-              CharlotteErrorCode.ELEMENT_NOT_FOUND,
-              `Could not resolve form '${form_id}' to a DOM element.`,
-            );
-          }
+          const formResolved = await resolveElement(deps, form_id);
+          const formSession = await getSessionForElement(deps, formResolved);
           logger.info("Submitting form via submit event", { form_id });
           await waitForPossibleNavigation(page, () =>
-            submitFormByBackendNodeId(page, formBackendNodeId),
+            submitFormByBackendNodeId(formResolved.page, formResolved.backendNodeId, formSession),
           );
         }
 
@@ -403,23 +423,19 @@ export function registerInteractionTools(
 
         if (element_id) {
           // Scroll within a specific container
-          const { backendNodeId } = await resolveElement(deps, element_id);
-          const cdpSession = await page.createCDPSession();
-          try {
-            const { object } = await cdpSession.send("DOM.resolveNode", {
-              backendNodeId,
+          const resolved = await resolveElement(deps, element_id);
+          const cdpSession = await getSessionForElement(deps, resolved);
+          const { object } = await cdpSession.send("DOM.resolveNode", {
+            backendNodeId: resolved.backendNodeId,
+          });
+          if (object?.objectId) {
+            await cdpSession.send("Runtime.callFunctionOn", {
+              objectId: object.objectId,
+              functionDeclaration: `function(dx, dy) {
+                this.scrollBy(dx, dy);
+              }`,
+              arguments: [{ value: deltaX }, { value: deltaY }],
             });
-            if (object?.objectId) {
-              await cdpSession.send("Runtime.callFunctionOn", {
-                objectId: object.objectId,
-                functionDeclaration: `function(dx, dy) {
-                  this.scrollBy(dx, dy);
-                }`,
-                arguments: [{ value: deltaX }, { value: deltaY }],
-              });
-            }
-          } finally {
-            await cdpSession.detach();
           }
         } else {
           // Scroll the page
@@ -455,11 +471,12 @@ export function registerInteractionTools(
     async ({ element_id }) => {
       try {
         await ensureReady(deps);
-        const { page, backendNodeId } = await resolveElement(deps, element_id);
+        const resolved = await resolveElement(deps, element_id);
+        const session = await getSessionForElement(deps, resolved);
 
         logger.info("Hovering element", { element_id });
 
-        await hoverElementByBackendNodeId(page, backendNodeId);
+        await hoverElementByBackendNodeId(resolved.page, resolved.backendNodeId, session);
 
         const representation = await renderAfterAction(deps);
         return formatPageResponse(representation);
@@ -483,12 +500,27 @@ export function registerInteractionTools(
     async ({ source_id, target_id }) => {
       try {
         await ensureReady(deps);
-        const { page, backendNodeId: sourceNodeId } = await resolveElement(deps, source_id);
-        const { backendNodeId: targetNodeId } = await resolveElement(deps, target_id);
+        const sourceResolved = await resolveElement(deps, source_id);
+        const targetResolved = await resolveElement(deps, target_id);
+
+        if (sourceResolved.frameId !== targetResolved.frameId) {
+          throw new CharlotteError(
+            CharlotteErrorCode.SESSION_ERROR,
+            "Cannot drag between different frames — source and target must be in the same frame.",
+            "Use charlotte_find to locate elements within the same frame.",
+          );
+        }
+
+        const session = await getSessionForElement(deps, sourceResolved);
 
         logger.info("Dragging element", { source_id, target_id });
 
-        await dragElementToElement(page, sourceNodeId, targetNodeId);
+        await dragElementToElement(
+          sourceResolved.page,
+          sourceResolved.backendNodeId,
+          targetResolved.backendNodeId,
+          session,
+        );
 
         // Brief settle for DOM updates after drop
         await new Promise((resolve) => setTimeout(resolve, 100));
@@ -562,8 +594,9 @@ export function registerInteractionTools(
 
         // Focus target element if specified
         if (element_id) {
-          const { page: resolvedPage, backendNodeId } = await resolveElement(deps, element_id);
-          await focusElementByBackendNodeId(resolvedPage, backendNodeId);
+          const resolved = await resolveElement(deps, element_id);
+          const session = await getSessionForElement(deps, resolved);
+          await focusElementByBackendNodeId(resolved.page, resolved.backendNodeId, session);
         }
 
         if (key) {
@@ -619,7 +652,8 @@ export function registerInteractionTools(
     async ({ element_id, paths }) => {
       try {
         await ensureReady(deps);
-        const { page, backendNodeId } = await resolveElement(deps, element_id);
+        const resolved = await resolveElement(deps, element_id);
+        const session = await getSessionForElement(deps, resolved);
 
         // Validate all files exist before sending to CDP
         for (const filePath of paths) {
@@ -636,7 +670,7 @@ export function registerInteractionTools(
 
         logger.info("Uploading files", { element_id, fileCount: paths.length });
 
-        await setFileInputFiles(page, backendNodeId, paths);
+        await setFileInputFiles(resolved.page, resolved.backendNodeId, paths, session);
 
         const representation = await renderAfterAction(deps);
         return formatPageResponse(representation);
@@ -649,7 +683,14 @@ export function registerInteractionTools(
   // ─── charlotte_fill_form ───
 
   const FILLABLE_TYPES = new Set([
-    "text_input", "textarea", "select", "checkbox", "radio", "toggle", "date_input", "color_input",
+    "text_input",
+    "textarea",
+    "select",
+    "checkbox",
+    "radio",
+    "toggle",
+    "date_input",
+    "color_input",
   ]);
 
   tools["charlotte_fill_form"] = server.registerTool(
@@ -662,7 +703,11 @@ export function registerInteractionTools(
           .array(
             z.object({
               element_id: z.string().describe("Element ID of the form field"),
-              value: z.string().describe("Value to set: text for inputs/textareas, option value or text for selects. For checkbox/radio/toggle the element is clicked (toggling its state) and value is ignored."),
+              value: z
+                .string()
+                .describe(
+                  "Value to set: text for inputs/textareas, option value or text for selects. For checkbox/radio/toggle the element is clicked (toggling its state) and value is ignored.",
+                ),
             }),
           )
           .min(1)
@@ -679,6 +724,7 @@ export function registerInteractionTools(
         // Validate all fields up front before performing any actions
         const resolvedFields: Array<{
           backendNodeId: number;
+          frameId: string | null;
           type: string;
           value: string;
           page: import("puppeteer").Page;
@@ -699,9 +745,10 @@ export function registerInteractionTools(
           }
 
           if (!FILLABLE_TYPES.has(element.type)) {
-            const hint = element.type === "file_input"
-              ? "Use charlotte_upload for file inputs."
-              : "fill_form supports: text_input, textarea, select, checkbox, radio, toggle, date_input, color_input.";
+            const hint =
+              element.type === "file_input"
+                ? "Use charlotte_upload for file inputs."
+                : "fill_form supports: text_input, textarea, select, checkbox, radio, toggle, date_input, color_input.";
             throw new CharlotteError(
               CharlotteErrorCode.ELEMENT_NOT_INTERACTIVE,
               `Element '${field.element_id}' is type '${element.type}' which cannot be filled.`,
@@ -712,6 +759,7 @@ export function registerInteractionTools(
           const resolved = await resolveElement(deps, field.element_id);
           resolvedFields.push({
             backendNodeId: resolved.backendNodeId,
+            frameId: resolved.frameId,
             type: element.type,
             value: field.value,
             page: resolved.page,
@@ -722,20 +770,44 @@ export function registerInteractionTools(
 
         // Fill each field using the appropriate action
         for (const field of resolvedFields) {
+          const fieldSession = await getSessionForElement(deps, {
+            page: field.page,
+            backendNodeId: field.backendNodeId,
+            frameId: field.frameId,
+          });
           switch (field.type) {
             case "text_input":
             case "textarea":
             case "date_input":
             case "color_input":
-              await typeIntoElement(field.page, field.backendNodeId, field.value, true, false);
+              await typeIntoElement(
+                field.page,
+                field.backendNodeId,
+                field.value,
+                true,
+                false,
+                undefined,
+                fieldSession,
+              );
               break;
             case "select":
-              await selectOptionByBackendNodeId(field.page, field.backendNodeId, field.value);
+              await selectOptionByBackendNodeId(
+                field.page,
+                field.backendNodeId,
+                field.value,
+                fieldSession,
+              );
               break;
             case "checkbox":
             case "radio":
             case "toggle":
-              await clickElementByBackendNodeId(field.page, field.backendNodeId, "left");
+              await clickElementByBackendNodeId(
+                field.page,
+                field.backendNodeId,
+                "left",
+                [],
+                fieldSession,
+              );
               break;
           }
         }

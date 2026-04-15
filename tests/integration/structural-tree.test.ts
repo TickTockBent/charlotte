@@ -109,7 +109,9 @@ describe("Structural tree view integration", () => {
 
     console.log("\n=== Token Comparison ===");
     console.log(`Tree view: ${tree.length} chars (~${Math.round(treeTokenEstimate)} tokens)`);
-    console.log(`Minimal JSON: ${minimalJson.length} chars (~${Math.round(jsonTokenEstimate)} tokens)`);
+    console.log(
+      `Minimal JSON: ${minimalJson.length} chars (~${Math.round(jsonTokenEstimate)} tokens)`,
+    );
     console.log(`Savings: ${Math.round((1 - treeTokenEstimate / jsonTokenEstimate) * 100)}%\n`);
 
     // Tree should be at least 50% smaller than minimal JSON
@@ -142,10 +144,16 @@ describe("Structural tree view integration", () => {
     const jsonTokens = minimalJson.length / 3.5;
 
     console.log("\n=== Token Comparison (3-way) ===");
-    console.log(`Tree (unlabeled): ${unlabeled.length} chars (~${Math.round(unlabeledTokens)} tokens)`);
+    console.log(
+      `Tree (unlabeled): ${unlabeled.length} chars (~${Math.round(unlabeledTokens)} tokens)`,
+    );
     console.log(`Tree (labeled):   ${labeled.length} chars (~${Math.round(labeledTokens)} tokens)`);
-    console.log(`Minimal JSON:     ${minimalJson.length} chars (~${Math.round(jsonTokens)} tokens)`);
-    console.log(`Labeled vs JSON savings: ${Math.round((1 - labeledTokens / jsonTokens) * 100)}%\n`);
+    console.log(
+      `Minimal JSON:     ${minimalJson.length} chars (~${Math.round(jsonTokens)} tokens)`,
+    );
+    console.log(
+      `Labeled vs JSON savings: ${Math.round((1 - labeledTokens / jsonTokens) * 100)}%\n`,
+    );
 
     // Labeled tree should still be at least 30% smaller than minimal JSON
     expect(labeledTokens).toBeLessThan(jsonTokens * 0.7);

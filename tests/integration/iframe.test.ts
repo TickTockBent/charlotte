@@ -11,7 +11,18 @@ import { ArtifactStore } from "../../src/state/artifact-store.js";
 import { createDefaultConfig } from "../../src/types/config.js";
 import { StaticServer } from "../../src/dev/static-server.js";
 import type { ToolDependencies } from "../../src/tools/tool-helpers.js";
-import { renderActivePage, resolveElement } from "../../src/tools/tool-helpers.js";
+import {
+  renderActivePage,
+  resolveElement,
+  getSessionForElement,
+} from "../../src/tools/tool-helpers.js";
+import {
+  clickElementByBackendNodeId,
+  hoverElementByBackendNodeId,
+  typeIntoElement,
+  selectOptionByBackendNodeId,
+  focusElementByBackendNodeId,
+} from "../../src/tools/interaction-helpers.js";
 
 const FIXTURES_DIR = path.resolve(import.meta.dirname, "../fixtures/pages");
 
@@ -32,20 +43,16 @@ describe("Iframe content extraction", () => {
 
     browserManager = new BrowserManager();
     await browserManager.launch();
-    pageManager = new PageManager();
-    await pageManager.openTab(browserManager);
     cdpSessionManager = new CDPSessionManager();
+    pageManager = new PageManager(undefined, cdpSessionManager);
+    await pageManager.openTab(browserManager);
     elementIdGenerator = new ElementIdGenerator();
 
     const config = createDefaultConfig();
     config.includeIframes = true;
     config.iframeDepth = 3;
 
-    const rendererPipeline = new RendererPipeline(
-      cdpSessionManager,
-      elementIdGenerator,
-      config,
-    );
+    const rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator, config);
     const artifactStore = new ArtifactStore(
       path.join(os.tmpdir(), "charlotte-iframe-test-artifacts"),
     );
@@ -207,9 +214,7 @@ describe("Iframe content extraction", () => {
     const representation = await renderActivePage(deps, { detail: "summary" });
 
     // Child iframe content should be present
-    const childHeading = representation.structure.headings.find(
-      (h) => h.text === "Iframe Content",
-    );
+    const childHeading = representation.structure.headings.find((h) => h.text === "Iframe Content");
     expect(childHeading).toBeDefined();
 
     // Grandchild iframe content should NOT be present
@@ -225,5 +230,183 @@ describe("Iframe content extraction", () => {
 
     // Restore depth for subsequent tests
     deps.config.iframeDepth = 3;
+  });
+
+  describe("frame session cleanup", () => {
+    it("cleans up frame sessions when navigating away from an iframe page", async () => {
+      const page = pageManager.getActivePage();
+      await page.goto(`${baseUrl}/iframe-parent.html`, { waitUntil: "networkidle0" });
+
+      // Render to trigger frame session creation
+      await renderActivePage(deps, { detail: "summary" });
+      expect(cdpSessionManager.frameSessionCount).toBeGreaterThan(0);
+
+      // Navigate to a non-iframe page — child frames detach
+      await page.goto(`${baseUrl}/simple.html`, { waitUntil: "load" });
+
+      // Frame sessions should be cleaned up via framedetached events
+      expect(cdpSessionManager.frameSessionCount).toBe(0);
+    });
+
+    it("cleans up frame sessions on tab close", async () => {
+      // Open a fresh tab for this test
+      const tabId = await pageManager.openTab(browserManager);
+      const page = pageManager.getActivePage();
+      await page.goto(`${baseUrl}/iframe-parent.html`, { waitUntil: "networkidle0" });
+
+      await renderActivePage(deps, { detail: "summary" });
+      expect(cdpSessionManager.frameSessionCount).toBeGreaterThan(0);
+
+      await pageManager.closeTab(tabId);
+
+      expect(cdpSessionManager.frameSessionCount).toBe(0);
+    });
+  });
+
+  describe("Iframe element interaction", () => {
+    it("clicks a button inside an iframe", async () => {
+      const page = pageManager.getActivePage();
+      await page.goto(`${baseUrl}/iframe-parent.html`, { waitUntil: "networkidle0" });
+
+      const representation = await renderActivePage(deps, { detail: "summary" });
+      const iframeButton = representation.interactive.find((el) => el.label === "Iframe Button");
+      expect(iframeButton).toBeDefined();
+
+      const resolved = await resolveElement(deps, iframeButton!.id);
+      expect(resolved.frameId).toBeTruthy();
+
+      const session = await getSessionForElement(deps, resolved);
+      // Should not throw — clicking an iframe element via frame-specific session
+      await clickElementByBackendNodeId(resolved.page, resolved.backendNodeId, "left", [], session);
+    });
+
+    it("types into an input inside an iframe", async () => {
+      const page = pageManager.getActivePage();
+      await page.goto(`${baseUrl}/iframe-parent.html`, { waitUntil: "networkidle0" });
+
+      const representation = await renderActivePage(deps, { detail: "summary" });
+      const iframeInput = representation.interactive.find((el) => el.label === "Iframe Input");
+      expect(iframeInput).toBeDefined();
+
+      const resolved = await resolveElement(deps, iframeInput!.id);
+      const session = await getSessionForElement(deps, resolved);
+
+      await typeIntoElement(
+        resolved.page,
+        resolved.backendNodeId,
+        "hello from iframe",
+        true,
+        false,
+        undefined,
+        session,
+      );
+
+      // Verify the value was typed into the iframe input
+      const childFrame = page.frames().find((f) => f.url().includes("iframe-child.html"));
+      expect(childFrame).toBeDefined();
+      const inputValue = await childFrame!.evaluate(() => {
+        const input = document.getElementById("iframe-input") as HTMLInputElement;
+        return input?.value ?? "";
+      });
+      expect(inputValue).toBe("hello from iframe");
+    });
+
+    it("selects an option in a select inside an iframe", async () => {
+      const page = pageManager.getActivePage();
+      await page.goto(`${baseUrl}/iframe-parent.html`, { waitUntil: "networkidle0" });
+
+      const representation = await renderActivePage(deps, { detail: "summary" });
+      const iframeSelect = representation.interactive.find((el) => el.label === "Iframe Select");
+      expect(iframeSelect).toBeDefined();
+
+      const resolved = await resolveElement(deps, iframeSelect!.id);
+      const session = await getSessionForElement(deps, resolved);
+
+      await selectOptionByBackendNodeId(resolved.page, resolved.backendNodeId, "beta", session);
+
+      // Verify the value was selected
+      const childFrame = page.frames().find((f) => f.url().includes("iframe-child.html"));
+      expect(childFrame).toBeDefined();
+      const selectedValue = await childFrame!.evaluate(() => {
+        const select = document.getElementById("iframe-select") as HTMLSelectElement;
+        return select?.value ?? "";
+      });
+      expect(selectedValue).toBe("beta");
+    });
+
+    it("toggles a checkbox inside an iframe", async () => {
+      const page = pageManager.getActivePage();
+      await page.goto(`${baseUrl}/iframe-parent.html`, { waitUntil: "networkidle0" });
+
+      const representation = await renderActivePage(deps, { detail: "summary" });
+      const iframeCheckbox = representation.interactive.find(
+        (el) => el.label === "Iframe Checkbox",
+      );
+      expect(iframeCheckbox).toBeDefined();
+
+      const resolved = await resolveElement(deps, iframeCheckbox!.id);
+      const session = await getSessionForElement(deps, resolved);
+
+      // Click to check
+      await clickElementByBackendNodeId(resolved.page, resolved.backendNodeId, "left", [], session);
+
+      const childFrame = page.frames().find((f) => f.url().includes("iframe-child.html"));
+      expect(childFrame).toBeDefined();
+      const isChecked = await childFrame!.evaluate(() => {
+        const checkbox = document.getElementById("iframe-checkbox") as HTMLInputElement;
+        return checkbox?.checked ?? false;
+      });
+      expect(isChecked).toBe(true);
+    });
+
+    it("hovers over an element inside an iframe", async () => {
+      const page = pageManager.getActivePage();
+      await page.goto(`${baseUrl}/iframe-parent.html`, { waitUntil: "networkidle0" });
+
+      const representation = await renderActivePage(deps, { detail: "summary" });
+      const iframeButton = representation.interactive.find((el) => el.label === "Iframe Button");
+      expect(iframeButton).toBeDefined();
+
+      const resolved = await resolveElement(deps, iframeButton!.id);
+      const session = await getSessionForElement(deps, resolved);
+
+      // Should not throw
+      await hoverElementByBackendNodeId(resolved.page, resolved.backendNodeId, session);
+    });
+
+    it("focuses an element inside an iframe", async () => {
+      const page = pageManager.getActivePage();
+      await page.goto(`${baseUrl}/iframe-parent.html`, { waitUntil: "networkidle0" });
+
+      const representation = await renderActivePage(deps, { detail: "summary" });
+      const iframeInput = representation.interactive.find((el) => el.label === "Iframe Input");
+      expect(iframeInput).toBeDefined();
+
+      const resolved = await resolveElement(deps, iframeInput!.id);
+      const session = await getSessionForElement(deps, resolved);
+
+      // Should not throw
+      await focusElementByBackendNodeId(resolved.page, resolved.backendNodeId, session);
+    });
+  });
+
+  describe("Puppeteer internals smoke test", () => {
+    it("Frame._id is a non-empty string", () => {
+      const page = pageManager.getActivePage();
+      const mainFrame = page.mainFrame();
+      const frameId = (mainFrame as any)._id;
+
+      expect(typeof frameId).toBe("string");
+      expect(frameId.length).toBeGreaterThan(0);
+    });
+
+    it("Frame.client is a CDPSession-like object with a send method", () => {
+      const page = pageManager.getActivePage();
+      const mainFrame = page.mainFrame();
+      const client = (mainFrame as any).client;
+
+      expect(client).toBeDefined();
+      expect(typeof client.send).toBe("function");
+    });
   });
 });

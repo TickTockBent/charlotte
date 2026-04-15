@@ -166,6 +166,49 @@ describe("meta-tool", () => {
       expect(sendToolListChangedSpy).not.toHaveBeenCalled();
     });
 
+    it("sends one notification when enabling a partially-disabled group", async () => {
+      const sessionTools = TOOL_GROUPS.session;
+      // Disable only the first half of the group
+      const disabledTools = sessionTools.slice(0, Math.floor(sessionTools.length / 2));
+      for (const toolName of disabledTools) {
+        registry[toolName].enabled = false;
+      }
+
+      const result = await metaTool.handler({ action: "enable", group: "session" }, {} as any);
+      const parsed = JSON.parse((result as any).content[0].text);
+
+      // Only the previously-disabled tools should count as enabled
+      expect(parsed.tools_enabled).toBe(disabledTools.length);
+      // Exactly one notification for the batch
+      expect(sendToolListChangedSpy).toHaveBeenCalledTimes(1);
+      // All tools in the group should now be enabled
+      for (const toolName of sessionTools) {
+        expect(registry[toolName].enabled).toBe(true);
+      }
+    });
+
+    it("sends one notification when disabling a partially-enabled group", async () => {
+      const sessionTools = TOOL_GROUPS.session;
+      // Disable the second half so only the first half is still enabled
+      const alreadyDisabled = sessionTools.slice(Math.floor(sessionTools.length / 2));
+      for (const toolName of alreadyDisabled) {
+        registry[toolName].enabled = false;
+      }
+      const stillEnabledCount = sessionTools.length - alreadyDisabled.length;
+
+      const result = await metaTool.handler({ action: "disable", group: "session" }, {} as any);
+      const parsed = JSON.parse((result as any).content[0].text);
+
+      // Only the previously-enabled tools should count as disabled
+      expect(parsed.tools_disabled).toBe(stillEnabledCount);
+      // Exactly one notification for the batch
+      expect(sendToolListChangedSpy).toHaveBeenCalledTimes(1);
+      // All tools in the group should now be disabled
+      for (const toolName of sessionTools) {
+        expect(registry[toolName].enabled).toBe(false);
+      }
+    });
+
     it("does not call individual tool enable/disable methods", async () => {
       for (const toolName of TOOL_GROUPS.session) {
         registry[toolName].enabled = false;
@@ -174,7 +217,10 @@ describe("meta-tool", () => {
       await metaTool.handler({ action: "enable", group: "session" }, {} as any);
 
       for (const toolName of TOOL_GROUPS.session) {
-        const tool = registry[toolName] as unknown as { enable: ReturnType<typeof vi.fn>; disable: ReturnType<typeof vi.fn> };
+        const tool = registry[toolName] as unknown as {
+          enable: ReturnType<typeof vi.fn>;
+          disable: ReturnType<typeof vi.fn>;
+        };
         expect(tool.enable).not.toHaveBeenCalled();
         expect(tool.disable).not.toHaveBeenCalled();
       }

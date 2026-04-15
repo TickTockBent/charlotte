@@ -5,7 +5,12 @@ import { logger } from "../utils/logger.js";
 import type { DetailLevel } from "../renderer/renderer-pipeline.js";
 import type { RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ToolDependencies } from "./tool-helpers.js";
-import { ensureReady, renderActivePage, formatPageResponse, handleToolError } from "./tool-helpers.js";
+import {
+  ensureReady,
+  renderActivePage,
+  formatPageResponse,
+  handleToolError,
+} from "./tool-helpers.js";
 
 const detailSchema = z
   .enum(["minimal", "summary", "full"])

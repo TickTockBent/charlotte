@@ -224,9 +224,7 @@ describe("extractStructuralTree", () => {
   it("skips leaf text nodes", () => {
     const main = createNode({
       role: "main",
-      children: [
-        createNode({ role: "StaticText", name: "Hello world" }),
-      ],
+      children: [createNode({ role: "StaticText", name: "Hello world" })],
     });
 
     const result = extractStructuralTree([main]);
@@ -344,10 +342,7 @@ describe("extractStructuralTree", () => {
       ],
     });
 
-    const result = extractStructuralTree(
-      [banner, nav, main, footer],
-      "My Site",
-    );
+    const result = extractStructuralTree([banner, nav, main, footer], "My Site");
 
     // Verify key structural features
     expect(result).toContain("[banner]");

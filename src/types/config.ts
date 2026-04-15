@@ -7,9 +7,9 @@ export const DEVICE_VIEWPORT_PRESETS: Record<DeviceType, { width: number; height
   /** Common Modern Laptop Effective Resolution */
   desktop: { width: 1440, height: 900 },
   /** iPhone 14 Pro Effective Resolution */
-  mobile: { width: 393, height: 852 }, 
+  mobile: { width: 393, height: 852 },
   /** Standard Tablet Resolution */
-  tablet: { width: 768, height: 1024 }, 
+  tablet: { width: 768, height: 1024 },
 };
 
 export interface CharlotteConfig {

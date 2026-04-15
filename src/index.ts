@@ -39,7 +39,8 @@ async function main(): Promise<void> {
   // Initialize browser and page management.
   // In CDP mode, connection + page adoption happen lazily on first tool call,
   // so the remote browser isn't contacted until actually needed.
-  const pageManager = new PageManager(config);
+  const cdpSessionManager = new CDPSessionManager();
+  const pageManager = new PageManager(config, cdpSessionManager);
   const browserManager = new BrowserManager(
     config,
     { headless: cliOptions.headless },
@@ -52,7 +53,6 @@ async function main(): Promise<void> {
   );
 
   // Initialize renderer pipeline
-  const cdpSessionManager = new CDPSessionManager();
   const elementIdGenerator = new ElementIdGenerator();
   const rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator, config);
   const snapshotStore = new SnapshotStore(config.snapshotDepth);

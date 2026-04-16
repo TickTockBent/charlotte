@@ -402,14 +402,14 @@ Playwright MCP's entire `testing` capability group (5 tools) has no Charlotte eq
 | **Impact** | Medium — useful for injecting polyfills, analytics blockers, or auth tokens on every page load |
 | **Suggested Change** | Add `--init-script` CLI argument that injects via `page.evaluateOnNewDocument()` |
 
-### GAP-33: Connect to Existing Browser
+### GAP-33: Connect to Existing Browser — *remediated in v0.6.2*
 
 | Attribute | Detail |
 |-----------|--------|
 | **Playwright Feature** | `--extension` mode to connect to existing Chrome/Edge, `--cdp-endpoint` to connect via DevTools Protocol |
-| **Charlotte Status** | Not implemented — always launches a new browser instance |
+| **Charlotte Status** | Implemented. `--cdp-endpoint <url>` connects via `puppeteer.connect()`; shorthand `channel:chrome` auto-discovers a local Chrome DevTools endpoint. `BrowserManager` gains a connected mode and `PageManager.adoptExistingPages()` picks up pre-existing tabs. Viewport of pre-existing pages is preserved. |
 | **Impact** | Medium — connecting to a user's existing browser enables working with logged-in sessions, extensions, etc. |
-| **Suggested Change** | Add `--cdp-endpoint` CLI argument to BrowserManager to connect via `puppeteer.connect()` |
+| **Suggested Change** | *Implemented in v0.6.2.* |
 
 ### GAP-34: Forward Navigation
 
@@ -547,7 +547,7 @@ Features Charlotte provides that Playwright MCP **does not** have as dedicated t
 | GAP-05 | `slowly` param on `type` | Fixes autocomplete and search-as-you-type sites — *remediated in v0.6.0* |
 | GAP-06 | `modifiers` param on `click` | Enables Ctrl+Click, Shift+Click patterns |
 | GAP-13 | `filename` param on tools | Reduces token consumption for large outputs |
-| GAP-33 | `--cdp-endpoint` CLI arg | Enables connecting to existing browser sessions |
+| GAP-33 | `--cdp-endpoint` CLI arg | Enables connecting to existing browser sessions — *remediated in v0.6.2* |
 | GAP-32 | `--init-script` CLI arg | Persistent script injection across navigations |
 | GAP-38 | `--config` CLI arg | Simplifies repeatable setups |
 
@@ -613,7 +613,7 @@ Features Charlotte provides that Playwright MCP **does not** have as dedicated t
 | GAP-30 | Session | Custom user agent | `--user-agent` | Missing | Low-Med |
 | GAP-31 | Session | Permission granting | `--grant-permissions` | Missing | Low |
 | GAP-32 | Session | Persistent init scripts | `--init-script` | Partial | Medium |
-| GAP-33 | Session | Connect to existing browser | `--cdp-endpoint` / `--extension` | Missing | Medium |
+| GAP-33 | Session | Connect to existing browser | `--cdp-endpoint` / `--extension` | Remediated in v0.6.2 | Medium |
 | GAP-34 | Session | Forward navigation | N/A | Charlotte has it | N/A |
 | GAP-35 | Transport | SSE transport | `--port` flag | Missing | Medium |
 | GAP-36 | Transport | Streamable HTTP | MCP spec endpoint | Missing | Medium |

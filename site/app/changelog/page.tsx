@@ -19,6 +19,19 @@ interface Release {
 
 const releases: Release[] = [
   {
+    version: "0.6.2",
+    date: "2026-04-16",
+    entries: [
+      { type: "added", text: "--cdp-endpoint CLI option — Connect to a running Chrome/Chromium instance via its DevTools Protocol endpoint instead of launching a new browser. Supports ws:// URLs and channel:chrome shorthand. Closes GAP-33." },
+      { type: "added", text: "Iframe interaction — Interaction tools (click, type, select, toggle, submit, scroll, hover, key, wait_for, upload, fill_form) now work against elements inside child frames. Closes #66." },
+      { type: "changed", text: "Reduced CDP session churn — Interaction helpers reuse CDP sessions instead of repeatedly attaching and detaching. Closes #113." },
+      { type: "fixed", text: "Cross-frame drag validation — charlotte_drag now rejects drags between elements in different frames with a CharlotteError instead of silently producing undefined behavior." },
+      { type: "fixed", text: "Stale frame sessions in CDPSessionManager — Frame sessions are cleaned up on frame detach and empty reverse-index entries are pruned. Closes #67." },
+      { type: "fixed", text: "Batched startup tool.disable() into a single sendToolListChanged() notification, mirroring the v0.6.1 runtime fix." },
+      { type: "fixed", text: "Viewport of pre-existing pages is preserved when connecting via --cdp-endpoint." },
+    ],
+  },
+  {
     version: "0.6.1",
     date: "2026-04-09",
     entries: [

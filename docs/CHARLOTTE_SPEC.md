@@ -1,6 +1,6 @@
 # Charlotte Technical Specification
 
-**Version:** 0.6.1
+**Version:** 0.6.2
 
 Charlotte is an MCP server that renders web pages into structured, agent-readable `PageRepresentation` objects using headless Chromium and Puppeteer. It communicates over stdio using the Model Context Protocol.
 
@@ -237,6 +237,8 @@ interface IframeInfo {
 Present when child frames are discovered during rendering. Interactive elements from iframes are merged into the parent `interactive` array and `interactive_summary`. Content summaries and full text are appended with iframe URL prefixes.
 
 Iframe discovery depth is configurable (default: 3 levels).
+
+Interaction tools (click, type, select, toggle, submit, scroll, hover, key, wait_for, upload, fill_form) resolve element IDs to their owning frame and dispatch actions against that frame's CDP session. Cross-frame operations — such as dragging between elements in different frames — are rejected with a `CharlotteError`.
 
 ---
 

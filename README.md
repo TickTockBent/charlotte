@@ -18,7 +18,7 @@ Charlotte decomposes each page into a typed, structured representation — landm
 
 ### Benchmarks
 
-Charlotte v0.6.1 vs Playwright MCP, measured by characters returned per tool call on real websites:
+Charlotte v0.6.2 vs Playwright MCP, measured by characters returned per tool call on real websites:
 
 **Navigation** (first contact with a page):
 
@@ -71,7 +71,7 @@ Agents receive landmarks, headings, interactive elements with typed metadata, bo
 
 **Observation** — `observe` (3 detail levels, structural tree view), `find` (spatial + semantic search, CSS selector mode), `screenshot` (with persistent artifact management), `screenshots`, `screenshot_get`, `screenshot_delete`, `diff` (structural comparison against snapshots)
 
-**Interaction** — `click`, `click_at` (coordinate-based), `type` (with slow typing support), `select`, `toggle`, `submit`, `scroll`, `hover`, `drag`, `key` (single/sequence with element targeting), `wait_for` (async condition polling), `upload` (file input), `fill_form` (batch form fill), `dialog` (accept/dismiss JS dialogs)
+**Interaction** (iframe-aware) — `click`, `click_at` (coordinate-based), `type` (with slow typing support), `select`, `toggle`, `submit`, `scroll`, `hover`, `drag`, `key` (single/sequence with element targeting), `wait_for` (async condition polling), `upload` (file input), `fill_form` (batch form fill), `dialog` (accept/dismiss JS dialogs)
 
 **Monitoring** — `console` (all severity levels, filtering, timestamps), `requests` (full HTTP history, method/status/resource type filtering)
 
@@ -448,8 +448,6 @@ Five pages cover navigation, forms, interactive elements, popups, delayed conten
 ## Roadmap
 
 ### Session & Configuration
-
-**Connect to Existing Browser** — Add a `--cdp-endpoint` CLI argument so Charlotte can attach to an already-running browser via `puppeteer.connect()` instead of always launching a new instance. Enables working with logged-in sessions and browser extensions.
 
 **Persistent Init Scripts** — Add a `--init-script` CLI argument to inject JavaScript on every page load via `page.evaluateOnNewDocument()`. Charlotte's `dev_inject` currently applies CSS/JS once and does not persist across navigations.
 

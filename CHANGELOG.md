@@ -6,6 +6,32 @@ All notable changes to Charlotte will be documented in this file.
 
 <!-- Nothing yet -->
 
+## [0.6.2] - 2026-04-16
+
+### Added
+
+- **`--cdp-endpoint` CLI option** — Connect to a running Chrome/Chromium instance via its DevTools Protocol endpoint instead of launching a new browser. Supports raw `ws://` URLs and a `channel:chrome` shorthand that auto-discovers the endpoint. `BrowserManager` gains a connected mode that uses `puppeteer.connect()`, and `PageManager.adoptExistingPages()` picks up pre-existing tabs. Closes GAP-33. (#153)
+- **Iframe interaction** — Interaction tools (click, type, select, toggle, submit, scroll, hover, key, wait_for, upload, fill_form) now work against elements inside child frames. Complements the iframe content extraction added in v0.5.0, so agents can both see and act on iframe contents. Closes #66. (#160)
+- **CI workflow** — GitHub Actions workflow runs lint, typecheck, and full test suite on push and PR. Closes #56, #58. (#154)
+- **End-to-end MCP protocol tests** — New test suite exercises the server over an in-memory MCP transport to catch protocol-level regressions. Closes #60. (#156)
+
+### Changed
+
+- **Reduced CDP session churn** — Interaction helpers no longer repeatedly attach/detach CDP sessions. Sessions are reused across calls, cutting per-action overhead. Closes #113. (#159)
+- Applied Prettier formatting across all source and test files.
+- Dependency updates: hono (#161), next (#152), basic-ftp (#151).
+
+### Fixed
+
+- **Cross-frame drag validation** — `charlotte_drag` now validates that source and target elements belong to the same frame and surfaces a `CharlotteError` instead of producing undefined mouse behavior. (#160)
+- **Stale frame sessions in `CDPSessionManager`** — Frame sessions are now cleaned up when frames detach, and empty reverse-index entries are pruned. Prevents leaks when navigating pages with many iframes. Closes #67. (#155)
+- **Batched startup `tool.disable()`** — Disabling tools at startup based on profile no longer floods the client with a `sendToolListChanged()` notification per tool. Mirrors the batching fix for runtime enable/disable in v0.6.1. (#158)
+- **Viewport preserved on CDP connect** — When connecting via `--cdp-endpoint`, Charlotte no longer overrides the viewport of pages already open in the target browser.
+
+### Internal
+
+- Mixed-state group enable/disable tests added to cover partial-enable scenarios in the meta-tool. Closes #149. (#157)
+
 ## [0.6.1] - 2026-04-09
 
 ### Fixed

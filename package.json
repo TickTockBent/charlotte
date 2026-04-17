@@ -1,6 +1,6 @@
 {
   "name": "@ticktockbent/charlotte",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "Token-efficient browser MCP server — structured web pages for AI agents, not raw accessibility dumps",
   "type": "module",
   "main": "dist/index.js",
@@ -37,6 +37,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.build.json",
+    "prepublishOnly": "npm run build && npm test",
     "start": "node dist/index.js",
     "test": "vitest run",
     "test:watch": "vitest",

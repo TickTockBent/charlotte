@@ -6,6 +6,16 @@ All notable changes to Charlotte will be documented in this file.
 
 <!-- Nothing yet -->
 
+## [0.6.3] - 2026-04-17
+
+### Fixed
+
+- **Republished with correct `dist/` artifacts** — The v0.6.2 tarball on npm was packaged from a stale `dist/` directory and did not actually include the `--cdp-endpoint` CLI option, iframe interaction, or other v0.6.2 source changes, despite those features being present at the v0.6.2 git tag. v0.6.3 ships the same intended feature set with the correct compiled output. No source-level changes versus v0.6.2. Fixes #164.
+
+### Internal
+
+- Added `prepublishOnly` script (`npm run build && npm test`) so `npm publish` rebuilds and re-tests before packaging, preventing stale-dist publishes.
+
 ## [0.6.2] - 2026-04-16
 
 ### Added

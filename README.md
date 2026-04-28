@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/ticktockbent-charlotte-badge.png)](https://mseep.ai/app/ticktockbent-charlotte)
+
 # Charlotte
 
 **The Web, Readable.**

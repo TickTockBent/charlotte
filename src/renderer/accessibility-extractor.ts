@@ -90,9 +90,8 @@ export class AccessibilityExtractor {
   async extract(session: CDPSession, frameId?: string): Promise<ParsedAXNode[]> {
     logger.debug("Extracting accessibility tree", { frameId: frameId ?? "main" });
 
-    const params = frameId ? { frameId } : {};
-    const result = await session.send("Accessibility.getFullAXTree" as any, params);
-    const rawNodes: RawAXNode[] = (result as any).nodes;
+    const { nodes } = await session.send("Accessibility.getFullAXTree", frameId ? { frameId } : {});
+    const rawNodes = nodes as unknown as RawAXNode[];
 
     if (!rawNodes || rawNodes.length === 0) {
       logger.warn("Empty accessibility tree returned");

@@ -7,11 +7,10 @@ export const ZERO_BOUNDS: Bounds = { x: 0, y: 0, w: 0, h: 0 };
 export class LayoutExtractor {
   async getBounds(session: CDPSession, backendNodeId: number): Promise<Bounds | null> {
     try {
-      const result = await session.send("DOM.getBoxModel" as any, {
+      const { model } = await session.send("DOM.getBoxModel", {
         backendNodeId,
       });
 
-      const model = (result as any).model;
       if (!model || !model.content) return null;
 
       // content quad is [x1,y1, x2,y2, x3,y3, x4,y4]

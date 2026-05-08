@@ -132,13 +132,13 @@ async function getIframeBounds(
 ): Promise<Bounds | null> {
   try {
     // Get the frame owner (the <iframe> element in the parent DOM)
-    const { backendNodeId } = await parentSession.send("DOM.getFrameOwner" as any, {
+    const { backendNodeId } = await parentSession.send("DOM.getFrameOwner", {
       frameId: childFrameId,
     });
 
     if (!backendNodeId) return null;
 
-    const { model } = await parentSession.send("DOM.getBoxModel" as any, {
+    const { model } = await parentSession.send("DOM.getBoxModel", {
       backendNodeId,
     });
 

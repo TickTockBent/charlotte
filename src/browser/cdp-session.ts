@@ -6,6 +6,8 @@ const REQUIRED_DOMAINS = ["Accessibility", "DOM", "CSS", "Page", "Network"] as c
 /** Domains needed for iframe frame sessions (subset — no Page/Network). */
 const FRAME_DOMAINS = ["Accessibility", "DOM", "CSS"] as const;
 
+type EnableableDomain = (typeof REQUIRED_DOMAINS)[number];
+
 export class CDPSessionManager {
   private sessions: WeakMap<Page, CDPSession> = new WeakMap();
   private frameSessions = new Map<string, CDPSession>();
@@ -118,10 +120,13 @@ export class CDPSessionManager {
     this.pageFrameIds.delete(page);
   }
 
-  private async enableDomains(session: CDPSession, domains: readonly string[]): Promise<void> {
+  private async enableDomains(
+    session: CDPSession,
+    domains: readonly EnableableDomain[],
+  ): Promise<void> {
     for (const domain of domains) {
       try {
-        await session.send(`${domain}.enable` as any);
+        await session.send(`${domain}.enable`);
         logger.debug(`Enabled CDP domain: ${domain}`);
       } catch (error) {
         // Some domains may not need explicit enabling

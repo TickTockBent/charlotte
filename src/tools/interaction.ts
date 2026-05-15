@@ -202,6 +202,20 @@ export function registerInteractionTools(
         const shouldPressEnter = press_enter ?? false;
         const delayMs = character_delay ?? (slowly ? 50 : undefined);
 
+        // Guard against excessively long typing duration
+        const MAX_TYPING_DURATION_MS = 30000; // 30 seconds
+        if (delayMs !== undefined) {
+          const estimatedDuration = text.length * delayMs;
+          if (estimatedDuration > MAX_TYPING_DURATION_MS) {
+            throw new CharlotteError(
+              CharlotteErrorCode.INVALID_ARGUMENT,
+              `Typing would take too long (${Math.round(estimatedDuration / 1000)}s). ` +
+                `Reduce text length (${text.length} chars) or character_delay (${delayMs}ms). ` +
+                `Maximum allowed duration: ${MAX_TYPING_DURATION_MS / 1000}s.`,
+            );
+          }
+        }
+
         logger.info("Typing into element", {
           element_id,
           textLength: text.length,

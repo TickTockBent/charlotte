@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from "vitest";
 import * as path from "node:path";
 import * as os from "node:os";
 import { BrowserManager } from "../../src/browser/browser-manager.js";
@@ -62,6 +62,25 @@ describe("Dialog integration", () => {
   });
 
   /**
+   * Defense-in-depth: never let a blocked page or a still-registered dialog leak
+   * into the next test. If an assertion fails mid-flow before a test reaches its
+   * own cleanup, the page can stay blocked on a dialog whose handler would then
+   * fire against the next test's page (and any in-flight click promise stays
+   * pending, surfacing later as an unhandled rejection). (#166)
+   */
+  afterEach(async () => {
+    const leakedDialog = pageManager.getPendingDialog();
+    if (leakedDialog) {
+      try {
+        await leakedDialog.accept();
+      } catch {
+        // Dialog already handled or detached — nothing to clean up.
+      }
+      pageManager.clearPendingDialog();
+    }
+  });
+
+  /**
    * Helper: dismiss any pending dialog and clear state, then navigate fresh.
    * Handles the case where a previous test left a beforeunload handler registered.
    */
@@ -87,6 +106,13 @@ describe("Dialog integration", () => {
 
     config.dialogAutoDismiss = "none";
     await page.goto(DIALOG_FIXTURE, { waitUntil: "load" });
+    // Wait for the main-world execution context to settle after navigation before
+    // any test issues a dialog-triggering click. A click that lands during the
+    // post-navigation context rebuild can resolve a stale backendDOMNodeId
+    // (DOM.resolveNode → "Node ... does not belong to the document"), silently fail
+    // to fire its dialog, and leave the next assertion seeing null. Successfully
+    // querying the context here forces it to be ready. (#166)
+    await page.waitForSelector("#alert-btn");
     pageManager.clearPendingDialog();
   }
 

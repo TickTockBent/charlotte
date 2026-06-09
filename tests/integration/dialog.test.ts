@@ -493,9 +493,9 @@ describe("Dialog integration", () => {
       expect(responsePayload.dialog_handled.message).toBe("Do you agree?");
       expect(responsePayload.dialog_handled.action).toBe("accepted");
 
-      // Validate page representation is included
-      expect(responsePayload.page).toBeDefined();
-      expect(responsePayload.page.url).toBeTruthy();
+      // Validate page representation is merged in at the top level (the page
+      // payload is no longer nested under a `page` key — #204).
+      expect(responsePayload.url).toBeTruthy();
     });
 
     it("charlotte_dialog dismiss returns action 'dismissed'", async () => {

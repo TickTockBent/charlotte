@@ -98,6 +98,27 @@ const OutputConfigSchema = z
   .strict();
 
 /**
+ * `limits` section — upper bounds on rendered output (issue #188).
+ *
+ * These cap the size of tool responses so a pathological page (100k links,
+ * infinite-scroll feed, a giant document body) cannot blow the MCP client's
+ * context window. All are optional; omitted values fall through to the
+ * built-in defaults in `createDefaultConfig`.
+ */
+const LimitsConfigSchema = z
+  .object({
+    /** Max interactive elements serialized before the list is truncated. */
+    maxInteractiveElements: z.number().int().positive().optional(),
+    /** Max characters of `full_content` text before truncation. */
+    maxFullContentChars: z.number().int().positive().optional(),
+    /** Total byte ceiling for a formatted page response before degrading. */
+    maxResponseBytes: z.number().int().positive().optional(),
+    /** Byte ceiling for a charlotte_evaluate result before truncation. */
+    maxEvaluateBytes: z.number().int().positive().optional(),
+  })
+  .strict();
+
+/**
  * Full Charlotte config-file schema. Every section is optional; an empty
  * `{}` is valid and simply falls through to defaults.
  */
@@ -109,6 +130,7 @@ export const CharlotteFileConfigSchema = z
     rendering: RenderingConfigSchema.optional(),
     dialog: DialogConfigSchema.optional(),
     output: OutputConfigSchema.optional(),
+    limits: LimitsConfigSchema.optional(),
   })
   .strict();
 

@@ -57,6 +57,29 @@ describe("parseConfigContent (issue #19)", () => {
       parseConfigContent(JSON.stringify({ snapshot: { depth: 0 } }), "test.json"),
     ).toThrow(/Invalid config file/);
   });
+
+  it("parses a valid limits section (issue #188)", () => {
+    const result = parseConfigContent(
+      JSON.stringify({
+        limits: { maxInteractiveElements: 500, maxResponseBytes: 50000 },
+      }),
+      "test.json",
+    );
+    expect(result.limits?.maxInteractiveElements).toBe(500);
+    expect(result.limits?.maxResponseBytes).toBe(50000);
+  });
+
+  it("rejects non-positive limits values (issue #188)", () => {
+    expect(() =>
+      parseConfigContent(JSON.stringify({ limits: { maxResponseBytes: 0 } }), "test.json"),
+    ).toThrow(/Invalid config file/);
+  });
+
+  it("rejects unknown keys in the limits section (strict)", () => {
+    expect(() =>
+      parseConfigContent(JSON.stringify({ limits: { maxBytes: 1000 } }), "test.json"),
+    ).toThrow(/Invalid config file/);
+  });
 });
 
 describe("loadConfigFile (issue #19)", () => {

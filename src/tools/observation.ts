@@ -231,7 +231,9 @@ export function registerObservationTools(
           return await writeOutputFile(resolvedPath, JSON.stringify(cleaned, null, 2));
         }
 
-        return formatPageResponse(representation);
+        return formatPageResponse(representation, {
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }
@@ -269,9 +271,15 @@ export function registerObservationTools(
           .describe(
             "CSS selector to query the DOM directly. Returns elements that may not be in the accessibility tree. Results include durable Charlotte element IDs (dom-…) that remain valid across subsequent renders and interactions, and work with fill_form; they are re-resolved against the live DOM by re-running the selector.",
           ),
+        output_file: z
+          .string()
+          .optional()
+          .describe(
+            "Write the full match results to this file path instead of returning them inline. Relative paths resolve against output_dir (see charlotte_configure). Returns only a confirmation with the file path and size. Use for broad selectors (e.g. 'div', '*') that match many elements.",
+          ),
       },
     },
-    async ({ text, role, type, near, within, selector }) => {
+    async ({ text, role, type, near, within, selector, output_file }) => {
       try {
         await ensureReady(deps);
         logger.info("Finding elements", { text, role, type, near, within, selector });
@@ -280,6 +288,10 @@ export function registerObservationTools(
         if (selector) {
           const page = deps.pageManager.getActivePage();
           const domElements = await findBySelector(page, deps, selector);
+          if (output_file) {
+            const resolvedPath = await resolveOutputPath(output_file, deps.config);
+            return await writeOutputFile(resolvedPath, JSON.stringify(domElements, null, 2));
+          }
           return {
             content: [
               {
@@ -372,6 +384,11 @@ export function registerObservationTools(
               return isContainedWithin(element.bounds, containerElement.bounds!);
             });
           }
+        }
+
+        if (output_file) {
+          const resolvedPath = await resolveOutputPath(output_file, deps.config);
+          return await writeOutputFile(resolvedPath, JSON.stringify(matchingElements, null, 2));
         }
 
         return formatElementsResponse(matchingElements);

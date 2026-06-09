@@ -40,6 +40,15 @@ async function main(): Promise<void> {
     config.dialogAutoDismiss = resolved.dialogAutoDismiss;
   if (resolved.includeIframes !== undefined) config.includeIframes = resolved.includeIframes;
   if (resolved.iframeDepth !== undefined) config.iframeDepth = resolved.iframeDepth;
+  // Output-size caps (issue #188): each falls back to its built-in default.
+  if (resolved.maxInteractiveElements !== undefined)
+    config.limits.maxInteractiveElements = resolved.maxInteractiveElements;
+  if (resolved.maxFullContentChars !== undefined)
+    config.limits.maxFullContentChars = resolved.maxFullContentChars;
+  if (resolved.maxResponseBytes !== undefined)
+    config.limits.maxResponseBytes = resolved.maxResponseBytes;
+  if (resolved.maxEvaluateBytes !== undefined)
+    config.limits.maxEvaluateBytes = resolved.maxEvaluateBytes;
   if (resolved.outputDir) {
     const resolvedOutputDir = path.resolve(resolved.outputDir);
     config.outputDir = resolvedOutputDir;

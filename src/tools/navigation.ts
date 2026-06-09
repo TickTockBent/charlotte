@@ -123,7 +123,9 @@ export function registerNavigationTools(
           detail: detailLevel,
           source: "action",
         });
-        return formatPageResponse(representation);
+        return formatPageResponse(representation, {
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }
@@ -170,7 +172,9 @@ export function registerNavigationTools(
           detail: detailLevel,
           source: "action",
         });
-        return formatPageResponse(representation);
+        return formatPageResponse(representation, {
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }
@@ -216,7 +220,9 @@ export function registerNavigationTools(
           detail: detailLevel,
           source: "action",
         });
-        return formatPageResponse(representation);
+        return formatPageResponse(representation, {
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }
@@ -265,7 +271,9 @@ export function registerNavigationTools(
           detail: detailLevel,
           source: "action",
         });
-        return formatPageResponse(representation);
+        return formatPageResponse(representation, {
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }

@@ -409,21 +409,12 @@ export function registerSessionTools(
           source: "action",
         });
 
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: JSON.stringify(
-                {
-                  tab_id: tabId,
-                  ...representation,
-                },
-                null,
-                2,
-              ),
-            },
-          ],
-        };
+        // Route through formatPageResponse so the page payload is stripped/size-
+        // capped like every other tool, with the new tab_id merged in (#188, #204).
+        return formatPageResponse(representation, {
+          extra: { tab_id: tabId },
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }
@@ -451,7 +442,9 @@ export function registerSessionTools(
           source: "action",
         });
 
-        return formatPageResponse(representation);
+        return formatPageResponse(representation, {
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }
@@ -549,7 +542,9 @@ export function registerSessionTools(
           source: "action",
         });
 
-        return formatPageResponse(representation);
+        return formatPageResponse(representation, {
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }

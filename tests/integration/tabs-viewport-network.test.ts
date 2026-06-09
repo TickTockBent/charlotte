@@ -300,8 +300,11 @@ describe("Tabs, viewport, and network integration", () => {
         // Navigate to our test fixture (served over HTTP so fetch works)
         await page.goto(`${serverInfo.url}/network-block.html`, { waitUntil: "load" });
 
-        // Use the CDPSessionManager session — it has Network enabled, so setBlockedURLs works
+        // Mirror the charlotte_network handler: the cached session does NOT
+        // pre-enable Network (the render path doesn't need it), so the handler
+        // enables it explicitly before setBlockedURLs (#192).
         const session = await cdpSessionManager.getSession(page);
+        await session.send("Network.enable");
 
         // Block requests to simple.html
         await session.send("Network.setBlockedURLs", { urls: [`${serverInfo.url}/simple.html`] });

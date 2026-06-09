@@ -83,7 +83,8 @@ describe("Dev mode integration", () => {
         cdpSessionManager,
       });
 
-      expect(serverInfo.url).toMatch(/^http:\/\/localhost:\d+$/);
+      // The static server reports 127.0.0.1 to match its bind address (#203).
+      expect(serverInfo.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
       expect(serverInfo.port).toBeGreaterThan(0);
 
       // Navigate to the served page

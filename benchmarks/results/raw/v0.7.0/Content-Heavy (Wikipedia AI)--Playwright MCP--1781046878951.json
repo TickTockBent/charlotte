@@ -1,0 +1,40 @@
+{
+  "testName": "Content-Heavy (Wikipedia AI)",
+  "serverName": "Playwright MCP",
+  "calls": [
+    {
+      "toolName": "browser_navigate",
+      "arguments": {
+        "url": "https://en.wikipedia.org/wiki/Artificial_intelligence"
+      },
+      "responseChars": 356,
+      "estimatedTokens": 89,
+      "wallTimeMs": 1706.3986460000015,
+      "isError": false
+    },
+    {
+      "toolName": "browser_snapshot",
+      "arguments": {},
+      "responseChars": 1049228,
+      "estimatedTokens": 262307,
+      "wallTimeMs": 620.3561100000006,
+      "isError": false
+    }
+  ],
+  "cumulative": {
+    "totalChars": 1049584,
+    "totalEstimatedTokens": 262396,
+    "totalWallTimeMs": 2326.754756000002,
+    "totalCalls": 2
+  },
+  "toolDefinitions": {
+    "toolCount": 23,
+    "definitionChars": 17084,
+    "estimatedDefinitionTokens": 4882,
+    "cumulativeDefinitionTokens": 9764
+  },
+  "success": true,
+  "successCriteria": "Server identifies the article title, table of contents structure, and sidebar elements.",
+  "notes": "Snapshot: 1049228 chars; Title found: true",
+  "timestamp": 1781046878949
+}

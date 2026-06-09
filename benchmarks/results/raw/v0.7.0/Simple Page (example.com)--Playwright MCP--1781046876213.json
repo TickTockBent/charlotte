@@ -1,0 +1,40 @@
+{
+  "testName": "Simple Page (example.com)",
+  "serverName": "Playwright MCP",
+  "calls": [
+    {
+      "toolName": "browser_navigate",
+      "arguments": {
+        "url": "https://example.com"
+      },
+      "responseChars": 268,
+      "estimatedTokens": 67,
+      "wallTimeMs": 501.6859620000032,
+      "isError": false
+    },
+    {
+      "toolName": "browser_snapshot",
+      "arguments": {},
+      "responseChars": 465,
+      "estimatedTokens": 117,
+      "wallTimeMs": 10.255973000006634,
+      "isError": false
+    }
+  ],
+  "cumulative": {
+    "totalChars": 733,
+    "totalEstimatedTokens": 184,
+    "totalWallTimeMs": 511.94193500000983,
+    "totalCalls": 2
+  },
+  "toolDefinitions": {
+    "toolCount": 23,
+    "definitionChars": 17084,
+    "estimatedDefinitionTokens": 4882,
+    "cumulativeDefinitionTokens": 9764
+  },
+  "success": true,
+  "successCriteria": "Server identifies the page title, the heading, and the single link.",
+  "notes": "Title found: true",
+  "timestamp": 1781046876213
+}

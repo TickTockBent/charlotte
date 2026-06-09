@@ -97,10 +97,16 @@ export async function setupMcpHarness(options: HarnessOptions = {}): Promise<Mcp
   const config = createDefaultConfig();
   options.configOverrides?.(config);
 
-  const pageManager = new PageManager(config);
+  const cdpSessionManager = new CDPSessionManager();
+  const pageManager = new PageManager(config, cdpSessionManager);
   await pageManager.openTab(browserManager);
 
-  const cdpSessionManager = new CDPSessionManager();
+  // Mirror src/index.ts: reset PageManager + CDP caches when the browser
+  // transport drops so a crashed browser recovers on the next tool call (#201).
+  browserManager.setOnDisconnected(() => {
+    pageManager.reset();
+  });
+
   const elementIdGenerator = new ElementIdGenerator();
   const rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator);
 

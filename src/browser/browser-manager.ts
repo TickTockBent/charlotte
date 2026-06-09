@@ -10,6 +10,7 @@ import { createDefaultConfig } from "../types/config.js";
 import type { CharlotteConfig } from "../types/config.js";
 
 export type OnFirstConnect = (browser: Browser) => Promise<void> | void;
+export type OnDisconnected = () => void;
 
 /**
  * Browser launch tunables resolved from config/CLI (issues #19, #184).
@@ -32,6 +33,7 @@ export class BrowserManager {
   private config: CharlotteConfig;
   private cdpEndpoint: string | undefined;
   private onFirstConnect: OnFirstConnect | undefined;
+  private onDisconnected: OnDisconnected | undefined;
   private firstConnectDone = false;
 
   constructor(
@@ -64,6 +66,28 @@ export class BrowserManager {
     };
   }
 
+  /**
+   * Register a callback invoked whenever the browser transport drops
+   * (crash, kill, remote disconnect). Used to reset per-session state
+   * (PageManager tabs, CDP session caches) so the next tool call recovers
+   * to a clean blank tab instead of operating on dead Page objects (#201).
+   */
+  setOnDisconnected(callback: OnDisconnected): void {
+    this.onDisconnected = callback;
+  }
+
+  /** Fire the disconnect hook, swallowing callback errors. */
+  private handleDisconnect(): void {
+    this.browser = null;
+    if (this.onDisconnected) {
+      try {
+        this.onDisconnected();
+      } catch (error) {
+        logger.warn("onDisconnected callback failed", { error });
+      }
+    }
+  }
+
   async launch(options?: BrowserLaunchConfig): Promise<void> {
     if (options) {
       const { noSandbox, ...puppeteerLaunchOptions } = options;
@@ -79,7 +103,9 @@ export class BrowserManager {
       this.launchOptions = { ...this.launchOptions, ...puppeteerLaunchOptions };
     }
     if (this.cdpEndpoint) {
-      await this.doConnect();
+      // Connect AND adopt as one unit so firstConnectDone reflects a fully
+      // ready session (mirrors the ensureConnected() path).
+      await this.connectAndAdopt();
     } else {
       await this.doLaunch();
     }
@@ -91,7 +117,7 @@ export class BrowserManager {
 
     this.browser.on("disconnected", () => {
       logger.warn("Chromium disconnected unexpectedly");
-      this.browser = null;
+      this.handleDisconnect();
     });
 
     logger.info("Chromium launched", {
@@ -121,57 +147,72 @@ export class BrowserManager {
     }
 
     this.browser = await puppeteer.connect(connectOptions);
-    this.firstConnectDone = true;
 
     this.browser.on("disconnected", () => {
       logger.warn("Remote browser disconnected");
-      this.browser = null;
+      this.handleDisconnect();
     });
 
     logger.info("Connected to existing browser via CDP", { endpoint });
   }
 
+  /**
+   * Connect to the remote browser AND run page adoption as a single unit.
+   * Folding adoption into the launching promise means concurrent callers
+   * awaiting `this.launching` only return once tabs are adopted — otherwise
+   * the loser of the race sees "No active tab" (#202). `firstConnectDone`
+   * is only set after adoption succeeds, so a thrown adoption retries on the
+   * next call instead of wedging permanently.
+   */
+  private async connectAndAdopt(): Promise<void> {
+    // Reuse an already-connected browser when retrying after a failed adoption;
+    // otherwise establish the transport.
+    if (!this.browser || !this.browser.connected) {
+      await this.doConnect();
+    }
+    if (this.onFirstConnect && this.browser) {
+      await this.onFirstConnect(this.browser);
+    }
+    this.firstConnectDone = true;
+  }
+
   async ensureConnected(): Promise<void> {
-    if (this.browser && this.browser.connected) {
+    // Fully ready: connected AND (in CDP mode) page adoption has completed.
+    // We deliberately do NOT short-circuit on a connected-but-unadopted CDP
+    // session, so a prior adoption failure is retried here (#202).
+    if (this.browser && this.browser.connected && (!this.cdpEndpoint || this.firstConnectDone)) {
+      return;
+    }
+
+    // A launch/connect is already in flight (concurrent tool calls at startup).
+    // Wait for it rather than starting a second one.
+    if (this.launching) {
+      await this.launching;
+      if (!this.browser || !this.browser.connected) {
+        throw new CharlotteError(
+          CharlotteErrorCode.SESSION_ERROR,
+          "Browser launch failed during concurrent reconnection attempt.",
+        );
+      }
       return;
     }
 
     if (this.cdpEndpoint) {
-      // First connect is lazy; subsequent disconnects cannot be recovered in CDP mode.
-      if (this.firstConnectDone) {
+      // A lost transport cannot be recovered in CDP mode: only fail once the
+      // browser is actually gone (a connected-but-unadopted session falls
+      // through to retry adoption below).
+      if (this.firstConnectDone && (!this.browser || !this.browser.connected)) {
         throw new CharlotteError(
           CharlotteErrorCode.SESSION_ERROR,
           "Remote browser disconnected. Cannot reconnect in CDP mode — restart the remote browser and Charlotte.",
         );
       }
 
-      if (this.launching) {
-        await this.launching;
-        return;
-      }
-
-      this.launching = this.doConnect();
+      this.launching = this.connectAndAdopt();
       try {
         await this.launching;
       } finally {
         this.launching = null;
-      }
-
-      if (this.onFirstConnect && this.browser) {
-        await this.onFirstConnect(this.browser);
-      }
-      return;
-    }
-
-    // Prevent concurrent relaunch attempts
-    if (this.launching) {
-      await this.launching;
-      // Verify the concurrent launch actually succeeded
-      if (!this.browser || !this.browser.connected) {
-        throw new CharlotteError(
-          CharlotteErrorCode.SESSION_ERROR,
-          "Browser launch failed during concurrent reconnection attempt.",
-        );
       }
       return;
     }
@@ -189,7 +230,7 @@ export class BrowserManager {
     if (this.browser) {
       if (this.cdpEndpoint) {
         logger.info("Disconnecting from remote browser");
-        this.browser.disconnect();
+        await this.browser.disconnect();
       } else {
         logger.info("Closing Chromium");
         await this.browser.close();

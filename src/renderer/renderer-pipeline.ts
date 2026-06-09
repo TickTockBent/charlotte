@@ -58,6 +58,14 @@ export class RendererPipeline {
 
   private config: CharlotteConfig;
 
+  /**
+   * Per-page render mutex. Concurrent renders of the same page race the shared
+   * ElementIdGenerator (last writer wins via replaceWith(), so the loser's
+   * representation holds IDs that no longer resolve) and tear when a navigation
+   * lands mid-render. Chaining renders per page serializes them (#202).
+   */
+  private renderChains = new WeakMap<Page, Promise<unknown>>();
+
   constructor(
     private cdpSessionManager: CDPSessionManager,
     private elementIdGenerator: ElementIdGenerator,
@@ -68,6 +76,19 @@ export class RendererPipeline {
   }
 
   async render(page: Page, options: RenderOptions): Promise<PageRepresentation> {
+    // Serialize renders of the same page. Run after any in-flight render
+    // settles (success OR failure) so one failed render cannot wedge the chain.
+    const previous = this.renderChains.get(page) ?? Promise.resolve();
+    const result = previous.catch(() => {}).then(() => this.renderInternal(page, options));
+    // Store a swallowed copy so the chain link never rejects.
+    this.renderChains.set(
+      page,
+      result.catch(() => {}),
+    );
+    return result;
+  }
+
+  private async renderInternal(page: Page, options: RenderOptions): Promise<PageRepresentation> {
     const startTime = Date.now();
     logger.debug("Starting render pipeline", { detail: options.detail });
 

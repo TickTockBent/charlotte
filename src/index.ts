@@ -62,6 +62,13 @@ async function main(): Promise<void> {
       : undefined,
   );
 
+  // When the browser transport drops (crash/kill), clear PageManager's dead
+  // Page objects and CDP session caches so the next tool call relaunches and
+  // opens a fresh blank tab instead of operating on a wedged connection (#201).
+  browserManager.setOnDisconnected(() => {
+    pageManager.reset();
+  });
+
   // Initialize renderer pipeline
   const elementIdGenerator = new ElementIdGenerator();
   const rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator, config);

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Same-URL History</title>
+  </head>
+  <body>
+    <main>
+      <h1 id="state-label">state: start</h1>
+      <!--
+        Pushes a NEW history entry whose URL is identical to the current one
+        (SPA pushState pattern). Going back from here is a real navigation, but
+        the URL does not change — which is exactly the case that URL-comparison
+        back/forward detection misreports as "no previous page" (#202).
+      -->
+      <button id="push-same-url" onclick="pushSameUrl()">push same-url entry</button>
+    </main>
+    <script>
+      var counter = 0;
+      function pushSameUrl() {
+        counter += 1;
+        // Same URL, new history entry.
+        history.pushState({ counter: counter }, "", location.href);
+        document.getElementById("state-label").textContent = "state: pushed " + counter;
+      }
+      window.addEventListener("popstate", function (event) {
+        var n = event.state && event.state.counter ? event.state.counter : 0;
+        document.getElementById("state-label").textContent = "state: popped " + n;
+      });
+    </script>
+  </body>
+</html>

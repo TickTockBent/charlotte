@@ -51,6 +51,15 @@ npm run test:watch
 npx tsc --noEmit
 ```
 
+### Linting and formatting
+
+CI fails PRs that don't lint clean or aren't formatted, so run both before pushing:
+
+```bash
+npm run lint          # ESLint over src/ and tests/
+npm run format:check  # Prettier check (use `npm run format` to auto-fix)
+```
+
 ### Building
 
 ```bash
@@ -80,7 +89,7 @@ tests/
 - **ToolDependencies**: All tools receive the same dependency bundle (browserManager, pageManager, rendererPipeline, etc.)
 - **renderActivePage**: The common render path for all tools — handles snapshots, reload events, and response assembly
 - **renderAfterAction**: Captures pre/post snapshots and computes deltas for interaction tools
-- **Element IDs**: Hash-based (`type prefix + 4-char hex`), stable across re-renders
+- **Element IDs**: Hash-based (`type prefix + 6-char hex`), stable across re-renders
 
 ## Submitting Changes
 
@@ -94,10 +103,12 @@ tests/
    - Add tests for new functionality
    - Keep changes focused — one feature or fix per PR
 
-3. Make sure all tests pass and types check:
+3. Make sure all tests pass, types check, and the code lints and is formatted (CI enforces all four):
    ```bash
    npm test
    npx tsc --noEmit
+   npm run lint
+   npm run format:check
    ```
 
 4. Commit with a clear message describing what changed and why.
@@ -113,7 +124,7 @@ tests/
 
 ### Manual testing with the sandbox
 
-Charlotte ships a multi-page test website in `tests/sandbox/` that exercises all 30 tools. Connect Charlotte as an MCP server, then serve the sandbox locally:
+Charlotte ships a multi-page test website in `tests/sandbox/` that exercises the full tool set. Connect Charlotte as an MCP server, then serve the sandbox locally:
 
 ```
 dev_serve({ path: "tests/sandbox" })

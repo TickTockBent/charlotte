@@ -10,6 +10,7 @@ import {
   renderActivePage,
   renderAfterAction,
   formatPageResponse,
+  stripEmptyFields,
   handleToolError,
 } from "./tool-helpers.js";
 
@@ -61,18 +62,25 @@ export function registerWaitForTools(
         });
 
         // Build a composite wait condition
+        let lastExceptionText: string | undefined;
         const satisfied = await pollWaitForCondition(
           deps,
           page,
           { element_id, state, text, selector, js },
           waitTimeout,
+          (exceptionText) => {
+            lastExceptionText = exceptionText;
+          },
         );
 
         if (!satisfied) {
           const representation = await renderAfterAction(deps);
+          const timeoutMessage = lastExceptionText
+            ? `Wait condition not met within ${waitTimeout}ms. JS expression threw: ${lastExceptionText}`
+            : `Wait condition not met within ${waitTimeout}ms.`;
           const timeoutError = new CharlotteError(
             CharlotteErrorCode.TIMEOUT,
-            `Wait condition not met within ${waitTimeout}ms.`,
+            timeoutMessage,
             "The current page state is included in the response. Consider increasing timeout or adjusting your condition.",
           );
           return {
@@ -81,7 +89,7 @@ export function registerWaitForTools(
                 type: "text" as const,
                 text: JSON.stringify({
                   ...timeoutError.toResponse(),
-                  page: representation,
+                  page: stripEmptyFields(representation),
                 }),
               },
             ],
@@ -102,6 +110,12 @@ export function registerWaitForTools(
 
 /**
  * Poll for complex wait_for conditions that may involve element state checks.
+ *
+ * Throws CharlotteError(INVALID_ARGUMENT) immediately if the `js` expression
+ * evaluates to a function (agent passed a lambda instead of an expression).
+ *
+ * @param onException - optional callback invoked with the exception text each time
+ *   the JS expression throws; the last recorded text is included in timeout errors.
  */
 async function pollWaitForCondition(
   deps: ToolDependencies,
@@ -114,6 +128,7 @@ async function pollWaitForCondition(
     js?: string;
   },
   timeoutMs: number,
+  onException?: (exceptionText: string) => void,
 ): Promise<boolean> {
   const pollInterval = 100;
   const deadline = Date.now() + timeoutMs;
@@ -152,9 +167,41 @@ async function pollWaitForCondition(
           awaitPromise: true,
           timeout: Math.max(0, deadline - Date.now()),
         });
-        const isTruthy = !evalResult.exceptionDetails && !!evalResult.result.value;
-        if (!isTruthy) allSatisfied = false;
-      } catch {
+
+        // Detect function-type results: agent passed a lambda instead of an expression.
+        // Fail immediately with INVALID_ARGUMENT — polling would never fix this.
+        if (evalResult.result.type === "function") {
+          throw new CharlotteError(
+            CharlotteErrorCode.INVALID_ARGUMENT,
+            "The 'js' condition evaluated to a function. Pass an expression (e.g. `document.title === 'x'`), not a function literal (e.g. `() => ...`).",
+            "Change the 'js' parameter to a plain expression that returns a truthy/falsy value.",
+          );
+        }
+
+        // Track exception text so it can be surfaced in the timeout error message.
+        if (evalResult.exceptionDetails) {
+          const exceptionText =
+            evalResult.exceptionDetails.text ??
+            evalResult.exceptionDetails.exception?.description ??
+            "unknown exception";
+          onException?.(exceptionText);
+          allSatisfied = false;
+        } else {
+          // Truthy if the value is truthy OR the result is a non-null object
+          // (handles DOM nodes that serialize to `{}` under returnByValue).
+          const resultValue = evalResult.result.value;
+          const resultType = evalResult.result.type;
+          const isTruthy =
+            !!resultValue ||
+            (resultType === "object" && evalResult.result.subtype !== "null" && !resultValue);
+          if (!isTruthy) allSatisfied = false;
+        }
+      } catch (err) {
+        // Re-throw CharlotteErrors (e.g. INVALID_ARGUMENT) so the handler can return them.
+        if (err instanceof CharlotteError) {
+          throw err;
+        }
+        // Protocol/serialization errors count as "not satisfied"
         allSatisfied = false;
       } finally {
         await cdpSession.detach().catch(() => {});
@@ -182,17 +229,17 @@ async function checkElementCondition(
 ): Promise<boolean> {
   switch (targetState) {
     case "exists": {
-      const backendNodeId = deps.elementIdGenerator.resolveId(elementId);
-      return backendNodeId !== null;
+      // Always re-render so newly-appearing elements (not yet in the ID map) are detected.
+      // Without re-rendering, the exists check polls a frozen map and always misses elements
+      // that appeared after the last render — guaranteed timeout (#193).
+      await renderActivePage(deps, { detail: "minimal" });
+      return deps.elementIdGenerator.resolveId(elementId) !== null;
     }
     case "removed": {
-      const backendNodeId = deps.elementIdGenerator.resolveId(elementId);
-      if (backendNodeId !== null) {
-        // Re-render to check if it's truly still there
-        await renderActivePage(deps, { detail: "minimal" });
-        return deps.elementIdGenerator.resolveId(elementId) === null;
-      }
-      return true;
+      // Always re-render before declaring the element gone, so a stale ID in the map
+      // doesn't produce a false positive (#193).
+      await renderActivePage(deps, { detail: "minimal" });
+      return deps.elementIdGenerator.resolveId(elementId) === null;
     }
     case "visible":
     case "hidden":

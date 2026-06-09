@@ -102,9 +102,29 @@ export class DevModeState {
       };
     }
 
-    // Reload the active page if not already reloading
+    // Reload the active page if not already reloading.
+    // If a reload is already in progress, we already merged the changed files into
+    // pendingReloadEvent above. We schedule a trailing reload so the page does not stay stale
+    // when files arrive during an in-progress reload (e.g. a slow page reload with rapid saves).
     if (this.reloadInProgress) {
-      logger.debug("Reload already in progress, skipping duplicate reload");
+      logger.debug("Reload already in progress; trailing reload will run when current finishes");
+      this.reloadInProgress = this.reloadInProgress.then(() => {
+        // By the time the current reload finishes a new reloadInProgress has been set to null.
+        // Re-check whether there are still pending events to service; if the file-watcher fired
+        // again during the reload those files are already in pendingReloadEvent.
+        if (!pageManager.hasPages()) {
+          return;
+        }
+        const nextPage = pageManager.getActivePage();
+        return nextPage
+          .reload({ waitUntil: "load" })
+          .then(() => {
+            logger.info("Trailing page reload completed after file change");
+          })
+          .catch((error: unknown) => {
+            logger.warn("Failed to run trailing reload after file change", error);
+          });
+      });
       return;
     }
 

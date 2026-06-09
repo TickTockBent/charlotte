@@ -503,6 +503,26 @@ export async function resolveOutputPath(
     );
   }
 
+  // Leaf-symlink check: if the output file already exists as a symlink, refuse to follow it.
+  // The parent-directory realpath above catches symlinked *parents*, but a pre-planted symlink
+  // at the leaf node (e.g. `output.png -> /etc/passwd`) would be followed by `writeFile`.
+  // We check via lstat (which does NOT follow symlinks) and reject if the leaf is a symlink.
+  try {
+    const leafStat = await fs.lstat(realResolved);
+    if (leafStat.isSymbolicLink()) {
+      throw new CharlotteError(
+        CharlotteErrorCode.SESSION_ERROR,
+        `Output path '${outputFile}' is a symbolic link. Writing through symlinks is not allowed.`,
+        "Remove the symlink or use a different filename.",
+      );
+    }
+  } catch (error) {
+    // ENOENT — file does not exist yet, which is the normal case. Re-throw anything else.
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      throw error;
+    }
+  }
+
   return realResolved;
 }
 

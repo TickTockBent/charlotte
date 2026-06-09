@@ -77,6 +77,19 @@ describe("file output helpers", () => {
         /resolves outside the allowed directory/,
       );
     });
+
+    it("rejects a pre-planted leaf symlink at the output path", async () => {
+      // Plant a symlink at the exact leaf path that points to a file outside the output dir.
+      // This tests the leaf-symlink gap: parents are within the boundary but the leaf itself
+      // is a symlink to an external target.
+      const leafSymlinkPath = path.join(tmpDir, "output.json");
+      const outsideTarget = path.join(os.tmpdir(), "outside-target.json");
+      await fs.symlink(outsideTarget, leafSymlinkPath);
+
+      await expect(resolveOutputPath("output.json", config)).rejects.toThrow(
+        /symbolic link/,
+      );
+    });
   });
 
   describe("writeOutputFile", () => {

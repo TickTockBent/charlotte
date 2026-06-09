@@ -1,4 +1,5 @@
 import type { Page, Frame, CDPSession } from "puppeteer";
+import { frameClient } from "../browser/cdp-session.js";
 import type { CDPSessionManager } from "../browser/cdp-session.js";
 import type { Bounds } from "../types/page-representation.js";
 import { logger } from "../utils/logger.js";
@@ -9,6 +10,15 @@ export interface DiscoveredFrame {
   url: string;
   /** CDP session for this frame (may be the parent's session for same-origin). */
   session: CDPSession;
+  /**
+   * Whether this frame runs in its own renderer process (out-of-process
+   * iframe / OOPIF, typically cross-origin). For same-process frames the
+   * session is shared with the main frame, so `DOM.getBoxModel` already
+   * returns main-frame-viewport coordinates and `contentOffset` must NOT be
+   * applied again. For OOPIFs the session is frame-local, so `contentOffset`
+   * is required to map frame-local coordinates into page space. See issue #183.
+   */
+  isOutOfProcess: boolean;
   /** Bounds of the <iframe> element in page-level coordinates. */
   iframeBounds: Bounds | null;
   /** Cumulative offset from page origin to this frame's content origin. */
@@ -25,12 +35,21 @@ export async function discoverFrames(
   maxDepth: number,
 ): Promise<DiscoveredFrame[]> {
   const discovered: DiscoveredFrame[] = [];
-  const mainSession = await cdpSessionManager.getSession(page);
+  const mainFrame = page.mainFrame();
+  const parentSession = await cdpSessionManager.getSession(page);
+
+  // The main frame's CDP client identifies the page's renderer process. A
+  // child frame is out-of-process (OOPIF) iff its `client` differs from the
+  // main frame's client. We compare against the main frame client (not the
+  // session from getSession(), which is a separately-created CDP session and
+  // never identity-equal to Frame.client). See issues #183 and #84.
+  const mainFrameClient = frameClient(mainFrame);
 
   await traverseFrames(
-    page.mainFrame(),
-    mainSession,
+    mainFrame,
+    parentSession,
     cdpSessionManager,
+    mainFrameClient,
     { x: 0, y: 0 },
     0,
     maxDepth,
@@ -45,6 +64,7 @@ async function traverseFrames(
   parentFrame: Frame,
   parentSession: CDPSession,
   cdpSessionManager: CDPSessionManager,
+  mainFrameClient: CDPSession | undefined,
   parentOffset: { x: number; y: number },
   currentDepth: number,
   maxDepth: number,
@@ -93,11 +113,19 @@ async function traverseFrames(
         continue;
       }
 
+      // OOPIF detection: a frame is out-of-process iff its CDP client differs
+      // from the main frame's client. Same-process frames share the client,
+      // so their box-model quads are already in page coordinates. See #183.
+      // If the main frame client could not be resolved (should not happen for
+      // a live page), assume same-process so we don't double-offset.
+      const isOutOfProcess = mainFrameClient !== undefined && frameSession !== mainFrameClient;
+
       discovered.push({
         frame: childFrame,
         frameId,
         url: frameUrl,
         session: frameSession,
+        isOutOfProcess,
         iframeBounds,
         contentOffset,
       });
@@ -108,6 +136,7 @@ async function traverseFrames(
           childFrame,
           frameSession,
           cdpSessionManager,
+          mainFrameClient,
           contentOffset,
           currentDepth + 1,
           maxDepth,

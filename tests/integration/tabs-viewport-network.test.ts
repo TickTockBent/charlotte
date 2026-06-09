@@ -310,17 +310,14 @@ describe("Tabs, viewport, and network integration", () => {
         await session.send("Network.setBlockedURLs", { urls: [`${serverInfo.url}/simple.html`] });
 
         // Attempt to fetch the blocked URL from within the page
-        const resultBlocked = await page.evaluate(
-          async (url: string) => {
-            try {
-              await fetch(url);
-              return { blocked: false };
-            } catch (err) {
-              return { blocked: true, error: (err as Error).message };
-            }
-          },
-          `${serverInfo.url}/simple.html`,
-        );
+        const resultBlocked = await page.evaluate(async (url: string) => {
+          try {
+            await fetch(url);
+            return { blocked: false };
+          } catch (err) {
+            return { blocked: true, error: (err as Error).message };
+          }
+        }, `${serverInfo.url}/simple.html`);
 
         // The fetch should have been blocked (net::ERR_BLOCKED_BY_CLIENT)
         expect(resultBlocked.blocked).toBe(true);
@@ -328,17 +325,14 @@ describe("Tabs, viewport, and network integration", () => {
         // Now clear the block and verify the URL becomes reachable again
         await session.send("Network.setBlockedURLs", { urls: [] });
 
-        const resultUnblocked = await page.evaluate(
-          async (url: string) => {
-            try {
-              const response = await fetch(url);
-              return { blocked: false, status: response.status };
-            } catch {
-              return { blocked: true };
-            }
-          },
-          `${serverInfo.url}/simple.html`,
-        );
+        const resultUnblocked = await page.evaluate(async (url: string) => {
+          try {
+            const response = await fetch(url);
+            return { blocked: false, status: response.status };
+          } catch {
+            return { blocked: true };
+          }
+        }, `${serverInfo.url}/simple.html`);
 
         // After clearing, the fetch should succeed
         expect(resultUnblocked.blocked).toBe(false);

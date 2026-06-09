@@ -86,9 +86,7 @@ describe("file output helpers", () => {
       const outsideTarget = path.join(os.tmpdir(), "outside-target.json");
       await fs.symlink(outsideTarget, leafSymlinkPath);
 
-      await expect(resolveOutputPath("output.json", config)).rejects.toThrow(
-        /symbolic link/,
-      );
+      await expect(resolveOutputPath("output.json", config)).rejects.toThrow(/symbolic link/);
     });
   });
 

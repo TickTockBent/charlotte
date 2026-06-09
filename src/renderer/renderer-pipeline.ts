@@ -400,7 +400,10 @@ export class RendererPipeline {
     const nodes: ParsedAXNode[] = [];
 
     const traverse = (node: ParsedAXNode) => {
-      if (isLandmarkRole(node.role) || isHeadingRole(node.role) || this.isInteractiveNode(node)) {
+      // Reuse the single source of truth for interactive roles
+      // (accessibility-extractor's isInteractiveRole) rather than re-creating a
+      // duplicate 16-entry Set on every call (#205).
+      if (isLandmarkRole(node.role) || isHeadingRole(node.role) || isInteractiveRole(node.role)) {
         nodes.push(node);
       }
 
@@ -414,28 +417,6 @@ export class RendererPipeline {
     }
 
     return nodes;
-  }
-
-  private isInteractiveNode(node: ParsedAXNode): boolean {
-    const interactiveRoles = new Set([
-      "button",
-      "link",
-      "textbox",
-      "combobox",
-      "listbox",
-      "checkbox",
-      "radio",
-      "switch",
-      "slider",
-      "spinbutton",
-      "searchbox",
-      "menuitem",
-      "menuitemcheckbox",
-      "menuitemradio",
-      "tab",
-      "treeitem",
-    ]);
-    return interactiveRoles.has(node.role);
   }
 
   private extractLandmarks(

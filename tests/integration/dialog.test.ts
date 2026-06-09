@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from "vitest";
 import * as path from "node:path";
 import * as os from "node:os";
 import { BrowserManager } from "../../src/browser/browser-manager.js";
@@ -20,6 +20,8 @@ import { waitForPossibleNavigation } from "../../src/tools/interaction.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createServer } from "../../src/server.js";
+import { pollUntil } from "../helpers/poll.js";
+import type { PendingDialog } from "../../src/types/page-representation.js";
 
 const DIALOG_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/dialog.html")}`;
 
@@ -62,10 +64,91 @@ describe("Dialog integration", () => {
   });
 
   /**
+   * In-flight click/navigation promises that block on a dialog. A test triggers
+   * a dialog by clicking; the click promise does not settle until the dialog is
+   * handled. If a test's assertion throws before it awaits that promise, the
+   * promise leaks into the next test — Puppeteer later tries to resolve a node
+   * against a page that has since navigated, producing the ProtocolError /
+   * "expected null not to be null" flake in #166. Tracking every triggering
+   * promise here and draining them in afterEach guarantees no handle outlives
+   * its test.
+   */
+  let inFlightDialogPromises: Promise<unknown>[] = [];
+
+  /**
+   * Click a selector that triggers a (possibly blocking) dialog. The returned
+   * promise is registered so afterEach can drain it even if the test throws.
+   */
+  function triggerDialog(selector: string): Promise<unknown> {
+    const page = pageManager.getActivePage();
+    const promise = page.click(selector).catch(() => {
+      // The triggering click may reject if the page navigates or the dialog
+      // tears down the execution context — that is expected on teardown.
+    });
+    inFlightDialogPromises.push(promise);
+    return promise;
+  }
+
+  /** Poll until a pending dialog is captured, optionally of a specific type. */
+  async function waitForDialog(type?: PendingDialog["type"]): Promise<PendingDialog> {
+    return pollUntil(
+      () => {
+        const info = pageManager.getPendingDialogInfo();
+        if (!info) return null;
+        if (type && info.type !== type) return null;
+        return info;
+      },
+      { message: `dialog${type ? ` of type ${type}` : ""} did not appear` },
+    );
+  }
+
+  /** Poll until a pending dialog with the given message is captured. */
+  async function waitForDialogMessage(message: string): Promise<PendingDialog> {
+    return pollUntil(
+      () => {
+        const info = pageManager.getPendingDialogInfo();
+        return info && info.message === message ? info : null;
+      },
+      { message: `dialog with message "${message}" did not appear` },
+    );
+  }
+
+  /** Poll until no dialog is pending. */
+  async function waitForNoDialog(): Promise<void> {
+    await pollUntil(() => pageManager.getPendingDialogInfo() === null, {
+      message: "pending dialog was not cleared",
+    });
+  }
+
+  /**
+   * Drain every in-flight triggering promise: dismiss any still-pending dialog
+   * (which unblocks the click), then await all tracked promises so no handle
+   * survives into the next test.
+   */
+  async function drainInFlightDialogs(): Promise<void> {
+    // Repeatedly dismiss until no dialog is pending — sequential dialogs may
+    // queue a second one once the first is handled.
+    for (let guard = 0; guard < 10; guard++) {
+      const rawDialog = pageManager.getPendingDialog();
+      if (!rawDialog) break;
+      await rawDialog.accept().catch(() => {});
+      pageManager.clearPendingDialog();
+      // Give a queued follow-up dialog a chance to surface before re-checking.
+      await new Promise((resolve) => setImmediate(resolve));
+    }
+    const pending = inFlightDialogPromises;
+    inFlightDialogPromises = [];
+    await Promise.allSettled(pending);
+  }
+
+  /**
    * Helper: dismiss any pending dialog and clear state, then navigate fresh.
    * Handles the case where a previous test left a beforeunload handler registered.
    */
   async function cleanNavigate(): Promise<void> {
+    // Drain any leaked in-flight dialog promises from a prior test first.
+    await drainInFlightDialogs();
+
     // Dismiss any pending dialog from a previous test
     const rawDialog = pageManager.getPendingDialog();
     if (rawDialog) {
@@ -100,120 +183,101 @@ describe("Dialog integration", () => {
     });
   }
 
+  // Drain leaked dialog promises after every test (incl. ones that threw) so a
+  // stale ElementHandle never resolves against the next test's page (#166).
+  afterEach(async () => {
+    await drainInFlightDialogs();
+  });
+
   describe("dialog capture and handling", () => {
     beforeEach(async () => {
       await cleanNavigate();
     });
 
     it("captures and accepts an alert dialog", async () => {
-      const page = pageManager.getActivePage();
-
-      // Click triggers alert — don't await as it blocks until dialog handled
-      const clickPromise = page.click("#alert-btn");
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // Click triggers alert — it blocks until the dialog is handled.
+      triggerDialog("#alert-btn");
 
       // Dialog should be captured
-      const dialogInfo = pageManager.getPendingDialogInfo();
-      expect(dialogInfo).not.toBeNull();
-      expect(dialogInfo!.type).toBe("alert");
-      expect(dialogInfo!.message).toBe("Hello from alert");
-      expect(dialogInfo!.timestamp).toBeTruthy();
+      const dialogInfo = await waitForDialog("alert");
+      expect(dialogInfo.message).toBe("Hello from alert");
+      expect(dialogInfo.timestamp).toBeTruthy();
 
       // Accept the dialog
       const rawDialog = pageManager.getPendingDialog();
       expect(rawDialog).not.toBeNull();
       await rawDialog!.accept();
       pageManager.clearPendingDialog();
-      await clickPromise;
 
       // Dialog state should be cleared
-      expect(pageManager.getPendingDialogInfo()).toBeNull();
+      await waitForNoDialog();
     });
 
     it("accepts a confirm dialog and returns true to page", async () => {
-      const page = pageManager.getActivePage();
+      triggerDialog("#confirm-btn");
 
-      const clickPromise = page.click("#confirm-btn");
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      const dialogInfo = pageManager.getPendingDialogInfo();
-      expect(dialogInfo).not.toBeNull();
-      expect(dialogInfo!.type).toBe("confirm");
-      expect(dialogInfo!.message).toBe("Do you agree?");
+      const dialogInfo = await waitForDialog("confirm");
+      expect(dialogInfo.message).toBe("Do you agree?");
 
       const rawDialog = pageManager.getPendingDialog()!;
       await rawDialog.accept();
       pageManager.clearPendingDialog();
-      await clickPromise;
 
-      const resultText = await getResultText();
-      expect(resultText).toBe("confirmed");
+      await pollUntil(async () => (await getResultText()) === "confirmed", {
+        message: 'result text never became "confirmed"',
+      });
     });
 
     it("dismisses a confirm dialog and returns false to page", async () => {
-      const page = pageManager.getActivePage();
+      triggerDialog("#confirm-btn");
 
-      const clickPromise = page.click("#confirm-btn");
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
+      await waitForDialog("confirm");
       const rawDialog = pageManager.getPendingDialog()!;
       await rawDialog.dismiss();
       pageManager.clearPendingDialog();
-      await clickPromise;
 
-      const resultText = await getResultText();
-      expect(resultText).toBe("cancelled");
+      await pollUntil(async () => (await getResultText()) === "cancelled", {
+        message: 'result text never became "cancelled"',
+      });
     });
 
     it("accepts a prompt dialog with custom text", async () => {
-      const page = pageManager.getActivePage();
+      triggerDialog("#prompt-btn");
 
-      const clickPromise = page.click("#prompt-btn");
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      const dialogInfo = pageManager.getPendingDialogInfo();
-      expect(dialogInfo).not.toBeNull();
-      expect(dialogInfo!.type).toBe("prompt");
-      expect(dialogInfo!.message).toBe("Enter name");
+      const dialogInfo = await waitForDialog("prompt");
+      expect(dialogInfo.message).toBe("Enter name");
 
       const rawDialog = pageManager.getPendingDialog()!;
       await rawDialog.accept("Custom Name");
       pageManager.clearPendingDialog();
-      await clickPromise;
 
-      const resultText = await getResultText();
-      expect(resultText).toBe("Custom Name");
+      await pollUntil(async () => (await getResultText()) === "Custom Name", {
+        message: 'result text never became "Custom Name"',
+      });
     });
 
     it("captures default_value for prompt dialogs", async () => {
-      const page = pageManager.getActivePage();
+      triggerDialog("#prompt-btn");
 
-      const clickPromise = page.click("#prompt-btn");
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      const dialogInfo = pageManager.getPendingDialogInfo();
-      expect(dialogInfo).not.toBeNull();
-      expect(dialogInfo!.default_value).toBe("default-name");
+      const dialogInfo = await waitForDialog("prompt");
+      expect(dialogInfo.default_value).toBe("default-name");
 
       const rawDialog = pageManager.getPendingDialog()!;
       await rawDialog.accept();
       pageManager.clearPendingDialog();
-      await clickPromise;
     });
 
     it("dismisses a prompt dialog and returns null to page", async () => {
-      const page = pageManager.getActivePage();
+      triggerDialog("#prompt-btn");
 
-      const clickPromise = page.click("#prompt-btn");
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
+      await waitForDialog("prompt");
       const rawDialog = pageManager.getPendingDialog()!;
       await rawDialog.dismiss();
       pageManager.clearPendingDialog();
-      await clickPromise;
 
-      const resultText = await getResultText();
-      expect(resultText).toBe("null");
+      await pollUntil(async () => (await getResultText()) === "null", {
+        message: 'result text never became "null"',
+      });
     });
   });
 
@@ -223,10 +287,8 @@ describe("Dialog integration", () => {
     });
 
     it("pending_dialog appears in renderActivePage response when dialog is blocking", async () => {
-      const page = pageManager.getActivePage();
-
-      const clickPromise = page.click("#alert-btn");
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      triggerDialog("#alert-btn");
+      await waitForDialog("alert");
 
       // renderActivePage returns a stub with pending_dialog when dialog is blocking
       const representation = await renderActivePage(deps, { source: "action" });
@@ -235,12 +297,6 @@ describe("Dialog integration", () => {
       expect(representation.pending_dialog!.message).toBe("Hello from alert");
       // Stub representation has placeholder title
       expect(representation.title).toBe("(dialog blocking)");
-
-      // Clean up
-      const rawDialog = pageManager.getPendingDialog()!;
-      await rawDialog.accept();
-      pageManager.clearPendingDialog();
-      await clickPromise;
     });
 
     it("no pending_dialog field when no dialog is active", async () => {
@@ -258,49 +314,45 @@ describe("Dialog integration", () => {
       config.dialogAutoDismiss = "accept_alerts";
       const page = pageManager.getActivePage();
 
-      // Alert should be auto-accepted (no blocking)
+      // Alert should be auto-accepted (click resolves once handled, no blocking)
       await page.click("#alert-btn");
-      await new Promise((resolve) => setTimeout(resolve, 100));
       expect(pageManager.getPendingDialogInfo()).toBeNull();
 
       // Confirm should be queued
-      const clickPromise = page.click("#confirm-btn");
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      const dialogInfo = pageManager.getPendingDialogInfo();
-      expect(dialogInfo).not.toBeNull();
-      expect(dialogInfo!.type).toBe("confirm");
+      triggerDialog("#confirm-btn");
+      const dialogInfo = await waitForDialog("confirm");
+      expect(dialogInfo.type).toBe("confirm");
 
       // Clean up
       const rawDialog = pageManager.getPendingDialog()!;
       await rawDialog.accept();
       pageManager.clearPendingDialog();
-      await clickPromise;
     });
 
     it("accept_all auto-accepts confirm", async () => {
       config.dialogAutoDismiss = "accept_all";
       const page = pageManager.getActivePage();
 
-      // Confirm should be auto-accepted
+      // Confirm should be auto-accepted (click resolves once handled)
       await page.click("#confirm-btn");
-      await new Promise((resolve) => setTimeout(resolve, 100));
       expect(pageManager.getPendingDialogInfo()).toBeNull();
 
-      const resultText = await getResultText();
-      expect(resultText).toBe("confirmed");
+      await pollUntil(async () => (await getResultText()) === "confirmed", {
+        message: 'result text never became "confirmed"',
+      });
     });
 
     it("dismiss_all auto-dismisses confirm", async () => {
       config.dialogAutoDismiss = "dismiss_all";
       const page = pageManager.getActivePage();
 
-      // Confirm should be auto-dismissed
+      // Confirm should be auto-dismissed (click resolves once handled)
       await page.click("#confirm-btn");
-      await new Promise((resolve) => setTimeout(resolve, 100));
       expect(pageManager.getPendingDialogInfo()).toBeNull();
 
-      const resultText = await getResultText();
-      expect(resultText).toBe("cancelled");
+      await pollUntil(async () => (await getResultText()) === "cancelled", {
+        message: 'result text never became "cancelled"',
+      });
     });
   });
 
@@ -312,18 +364,19 @@ describe("Dialog integration", () => {
     it("beforeunload dialog fires on navigation, accept allows navigation", async () => {
       const page = pageManager.getActivePage();
 
-      // Register beforeunload handler
+      // Register beforeunload handler (click resolves normally — no dialog yet)
       await page.click("#beforeunload-btn");
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      expect(await getResultText()).toBe("beforeunload registered");
+      await pollUntil(async () => (await getResultText()) === "beforeunload registered", {
+        message: "beforeunload handler was not registered",
+      });
 
-      // Attempt navigation — triggers beforeunload dialog
-      const navPromise = page.goto("about:blank", { waitUntil: "load" });
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      // Attempt navigation — triggers beforeunload dialog. Track the promise so
+      // it cannot leak into the next test.
+      const navPromise = page.goto("about:blank", { waitUntil: "load" }).catch(() => {});
+      inFlightDialogPromises.push(navPromise);
 
-      const dialogInfo = pageManager.getPendingDialogInfo();
-      expect(dialogInfo).not.toBeNull();
-      expect(dialogInfo!.type).toBe("beforeunload");
+      const dialogInfo = await waitForDialog("beforeunload");
+      expect(dialogInfo.type).toBe("beforeunload");
 
       // Accept — allows navigation to proceed
       const rawDialog = pageManager.getPendingDialog()!;
@@ -340,17 +393,18 @@ describe("Dialog integration", () => {
 
       // Register beforeunload handler
       await page.click("#beforeunload-btn");
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await pollUntil(async () => (await getResultText()) === "beforeunload registered", {
+        message: "beforeunload handler was not registered",
+      });
 
       // Attempt navigation — triggers beforeunload dialog
       const navPromise = page.goto("about:blank", { waitUntil: "load" }).catch(() => {
         // Navigation was cancelled by beforeunload dismiss — expected
       });
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      inFlightDialogPromises.push(navPromise);
 
-      const dialogInfo = pageManager.getPendingDialogInfo();
-      expect(dialogInfo).not.toBeNull();
-      expect(dialogInfo!.type).toBe("beforeunload");
+      const dialogInfo = await waitForDialog("beforeunload");
+      expect(dialogInfo.type).toBe("beforeunload");
 
       // Dismiss — cancels navigation
       const rawDialog = pageManager.getPendingDialog()!;
@@ -361,7 +415,7 @@ describe("Dialog integration", () => {
       // URL should be unchanged (navigation was cancelled)
       expect(page.url()).toBe(originalUrl);
       // Dialog state should be cleared
-      expect(pageManager.getPendingDialogInfo()).toBeNull();
+      await waitForNoDialog();
     });
   });
 
@@ -417,19 +471,15 @@ describe("Dialog integration", () => {
     });
 
     it("charlotte_dialog accept returns dialog_handled with correct type, message, and action", async () => {
-      const page = pageManager.getActivePage();
+      // Trigger confirm dialog and wait for it to be captured
+      triggerDialog("#confirm-btn");
+      await waitForDialog("confirm");
 
-      // Trigger confirm dialog
-      const clickPromise = page.click("#confirm-btn");
-      await new Promise((resolve) => setTimeout(resolve, 200));
-
-      // Call charlotte_dialog through MCP
+      // Call charlotte_dialog through MCP (handling it unblocks the click)
       const result = await mcpClient.callTool({
         name: "charlotte_dialog",
         arguments: { accept: true },
       });
-
-      await clickPromise;
 
       // Parse the actual tool response
       expect(result.content).toHaveLength(1);
@@ -449,17 +499,13 @@ describe("Dialog integration", () => {
     });
 
     it("charlotte_dialog dismiss returns action 'dismissed'", async () => {
-      const page = pageManager.getActivePage();
-
-      const clickPromise = page.click("#confirm-btn");
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      triggerDialog("#confirm-btn");
+      await waitForDialog("confirm");
 
       const result = await mcpClient.callTool({
         name: "charlotte_dialog",
         arguments: { accept: false },
       });
-
-      await clickPromise;
 
       const responsePayload = JSON.parse(
         (result.content as Array<{ type: string; text: string }>)[0].text,
@@ -470,17 +516,13 @@ describe("Dialog integration", () => {
     });
 
     it("charlotte_dialog with prompt_text includes text in accept", async () => {
-      const page = pageManager.getActivePage();
-
-      const clickPromise = page.click("#prompt-btn");
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      triggerDialog("#prompt-btn");
+      await waitForDialog("prompt");
 
       const result = await mcpClient.callTool({
         name: "charlotte_dialog",
         arguments: { accept: true, prompt_text: "Test Name" },
       });
-
-      await clickPromise;
 
       const responsePayload = JSON.parse(
         (result.content as Array<{ type: string; text: string }>)[0].text,
@@ -491,8 +533,9 @@ describe("Dialog integration", () => {
       expect(responsePayload.dialog_handled.action).toBe("accepted");
 
       // Verify the prompt text was passed through to the page
-      const resultText = await getResultText();
-      expect(resultText).toBe("Test Name");
+      await pollUntil(async () => (await getResultText()) === "Test Name", {
+        message: 'result text never became "Test Name"',
+      });
     });
 
     it("charlotte_dialog returns error when no dialog is pending", async () => {
@@ -542,14 +585,7 @@ describe("Dialog integration", () => {
       expect(representation.pending_dialog!.type).toBe("alert");
       expect(representation.pending_dialog!.message).toBe("Hello from alert");
       expect(representation.title).toBe("(dialog blocking)");
-
-      // Clean up
-      const rawDialog = pageManager.getPendingDialog();
-      if (rawDialog) {
-        await rawDialog.accept();
-        pageManager.clearPendingDialog();
-      }
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // afterEach drains the pending dialog.
     });
 
     it("waitForPossibleNavigation returns early when click triggers confirm", async () => {
@@ -571,12 +607,7 @@ describe("Dialog integration", () => {
       const dialogInfo = pageManager.getPendingDialogInfo();
       expect(dialogInfo).not.toBeNull();
       expect(dialogInfo!.type).toBe("confirm");
-
-      // Clean up
-      const rawDialog = pageManager.getPendingDialog()!;
-      await rawDialog.accept();
-      pageManager.clearPendingDialog();
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // afterEach drains the pending dialog.
     });
 
     it("full click→dialog→render path produces correct response", async () => {
@@ -607,14 +638,7 @@ describe("Dialog integration", () => {
       const afterAction = await renderAfterAction(deps);
       expect(afterAction.pending_dialog).toBeDefined();
       expect(afterAction.pending_dialog!.type).toBe("alert");
-
-      // Clean up
-      const rawDialog = pageManager.getPendingDialog();
-      if (rawDialog) {
-        await rawDialog.accept();
-        pageManager.clearPendingDialog();
-      }
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // afterEach drains the pending dialog.
     });
   });
 
@@ -625,110 +649,88 @@ describe("Dialog integration", () => {
     });
 
     it("handles two confirm dialogs in sequence", async () => {
-      const page = pageManager.getActivePage();
-
       // Click triggers: confirm('First question?') then confirm('Second question?')
-      const clickPromise = page.click("#double-confirm");
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      triggerDialog("#double-confirm");
 
       // First dialog should be captured
-      const firstDialogInfo = pageManager.getPendingDialogInfo();
-      expect(firstDialogInfo).not.toBeNull();
-      expect(firstDialogInfo!.type).toBe("confirm");
-      expect(firstDialogInfo!.message).toBe("First question?");
+      const firstDialogInfo = await waitForDialogMessage("First question?");
+      expect(firstDialogInfo.type).toBe("confirm");
 
       // Accept the first dialog
       const firstDialog = pageManager.getPendingDialog()!;
       await firstDialog.accept();
       pageManager.clearPendingDialog();
 
-      // Wait for the second dialog to appear (JS continues synchronously after first is handled)
-      await new Promise((resolve) => setTimeout(resolve, 200));
-
-      // Second dialog should now be captured
-      const secondDialogInfo = pageManager.getPendingDialogInfo();
-      expect(secondDialogInfo).not.toBeNull();
-      expect(secondDialogInfo!.type).toBe("confirm");
-      expect(secondDialogInfo!.message).toBe("Second question?");
+      // Second dialog should now be captured (JS continues after first is handled)
+      const secondDialogInfo = await waitForDialogMessage("Second question?");
+      expect(secondDialogInfo.type).toBe("confirm");
 
       // Accept the second dialog
       const secondDialog = pageManager.getPendingDialog()!;
       await secondDialog.accept();
       pageManager.clearPendingDialog();
-      await clickPromise;
 
       // Verify both dialogs were processed correctly
-      const resultText = await getResultText();
-      expect(resultText).toBe("first:yes,second:yes");
+      await pollUntil(async () => (await getResultText()) === "first:yes,second:yes", {
+        message: 'result text never became "first:yes,second:yes"',
+      });
     });
 
     it("handles mixed accept/dismiss in sequential dialogs", async () => {
-      const page = pageManager.getActivePage();
-
-      const clickPromise = page.click("#double-confirm");
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      triggerDialog("#double-confirm");
 
       // Dismiss the first dialog
+      await waitForDialogMessage("First question?");
       const firstDialog = pageManager.getPendingDialog()!;
       await firstDialog.dismiss();
       pageManager.clearPendingDialog();
 
-      await new Promise((resolve) => setTimeout(resolve, 200));
-
       // Accept the second dialog
+      await waitForDialogMessage("Second question?");
       const secondDialog = pageManager.getPendingDialog()!;
-      expect(secondDialog).not.toBeNull();
       await secondDialog.accept();
       pageManager.clearPendingDialog();
-      await clickPromise;
 
-      const resultText = await getResultText();
-      expect(resultText).toBe("first:no,second:yes");
+      await pollUntil(async () => (await getResultText()) === "first:no,second:yes", {
+        message: 'result text never became "first:no,second:yes"',
+      });
     });
 
     it("clearPendingDialog does not lose a subsequent dialog", async () => {
-      const page = pageManager.getActivePage();
-
       // Trigger double confirm — two synchronous dialogs
-      const clickPromise = page.click("#double-confirm");
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      triggerDialog("#double-confirm");
 
       // First dialog present
-      expect(pageManager.getPendingDialogInfo()!.message).toBe("First question?");
+      await waitForDialogMessage("First question?");
 
       // Accept and clear
       await pageManager.getPendingDialog()!.accept();
       pageManager.clearPendingDialog();
 
       // After clearing first, second should arrive
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      const secondInfo = pageManager.getPendingDialogInfo();
-      expect(secondInfo).not.toBeNull();
-      expect(secondInfo!.message).toBe("Second question?");
+      const secondInfo = await waitForDialogMessage("Second question?");
+      expect(secondInfo.message).toBe("Second question?");
 
       // Clean up
       await pageManager.getPendingDialog()!.accept();
       pageManager.clearPendingDialog();
-      await clickPromise;
     });
 
     it("dialog state is clean after handling all sequential dialogs", async () => {
-      const page = pageManager.getActivePage();
-
-      const clickPromise = page.click("#double-confirm");
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      triggerDialog("#double-confirm");
 
       // Handle first
+      await waitForDialogMessage("First question?");
       await pageManager.getPendingDialog()!.accept();
       pageManager.clearPendingDialog();
-      await new Promise((resolve) => setTimeout(resolve, 200));
 
       // Handle second
+      await waitForDialogMessage("Second question?");
       await pageManager.getPendingDialog()!.accept();
       pageManager.clearPendingDialog();
-      await clickPromise;
 
       // State should be fully clean
+      await waitForNoDialog();
       expect(pageManager.getPendingDialog()).toBeNull();
       expect(pageManager.getPendingDialogInfo()).toBeNull();
 

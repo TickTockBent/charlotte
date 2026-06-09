@@ -5,6 +5,7 @@ import { BrowserManager } from "../../src/browser/browser-manager.js";
 import { PageManager } from "../../src/browser/page-manager.js";
 import { createDefaultConfig } from "../../src/types/config.js";
 import type { CharlotteConfig } from "../../src/types/config.js";
+import { pollUntil } from "../helpers/poll.js";
 
 const MONITORING_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/monitoring.html")}`;
 
@@ -35,7 +36,10 @@ describe("Monitoring integration", () => {
     it("captures console.log messages", async () => {
       const page = pageManager.getActivePage();
       await page.click("#log-btn");
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await pollUntil(
+        () => pageManager.getConsoleMessages("log").some((m) => m.text === "log message"),
+        { message: "log message not captured" },
+      );
 
       const messages = pageManager.getConsoleMessages("log");
       expect(messages.length).toBeGreaterThanOrEqual(1);
@@ -49,7 +53,10 @@ describe("Monitoring integration", () => {
     it("captures console.info messages", async () => {
       const page = pageManager.getActivePage();
       await page.click("#info-btn");
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await pollUntil(
+        () => pageManager.getConsoleMessages("info").some((m) => m.text === "info message"),
+        { message: "info message not captured" },
+      );
 
       const messages = pageManager.getConsoleMessages("info");
       expect(messages.length).toBeGreaterThanOrEqual(1);
@@ -62,7 +69,10 @@ describe("Monitoring integration", () => {
     it("captures console.warn messages", async () => {
       const page = pageManager.getActivePage();
       await page.click("#warn-btn");
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await pollUntil(
+        () => pageManager.getConsoleMessages("warn").some((m) => m.text === "warning message"),
+        { message: "warn message not captured" },
+      );
 
       const messages = pageManager.getConsoleMessages("warn");
       expect(messages.length).toBeGreaterThanOrEqual(1);
@@ -75,7 +85,10 @@ describe("Monitoring integration", () => {
     it("captures console.error messages", async () => {
       const page = pageManager.getActivePage();
       await page.click("#error-btn");
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await pollUntil(
+        () => pageManager.getConsoleMessages("error").some((m) => m.text === "error message"),
+        { message: "error message not captured" },
+      );
 
       const messages = pageManager.getConsoleMessages("error");
       expect(messages.length).toBeGreaterThanOrEqual(1);
@@ -88,7 +101,10 @@ describe("Monitoring integration", () => {
     it("captures console.debug messages", async () => {
       const page = pageManager.getActivePage();
       await page.click("#debug-btn");
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await pollUntil(
+        () => pageManager.getConsoleMessages("debug").some((m) => m.text === "debug message"),
+        { message: "debug message not captured" },
+      );
 
       const messages = pageManager.getConsoleMessages("debug");
       expect(messages.length).toBeGreaterThanOrEqual(1);
@@ -101,7 +117,13 @@ describe("Monitoring integration", () => {
     it("returns all levels when filter is 'all'", async () => {
       const page = pageManager.getActivePage();
       await page.click("#multi-log-btn");
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await pollUntil(
+        () =>
+          pageManager
+            .getConsoleMessages("all")
+            .filter((m) => ["first", "second", "third", "fourth"].includes(m.text)).length === 4,
+        { message: "multi-log messages not captured" },
+      );
 
       const allMessages = pageManager.getConsoleMessages("all");
       const relevantMessages = allMessages.filter((m) =>
@@ -117,7 +139,13 @@ describe("Monitoring integration", () => {
     it("returns all levels when no filter provided", async () => {
       const page = pageManager.getActivePage();
       await page.click("#multi-log-btn");
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await pollUntil(
+        () =>
+          pageManager
+            .getConsoleMessages("all")
+            .filter((m) => ["first", "second", "third", "fourth"].includes(m.text)).length === 4,
+        { message: "multi-log messages not captured" },
+      );
 
       const allMessages = pageManager.getConsoleMessages();
       const relevantMessages = allMessages.filter((m) =>
@@ -130,7 +158,9 @@ describe("Monitoring integration", () => {
     it("clearConsoleMessages empties the buffer", async () => {
       const page = pageManager.getActivePage();
       await page.click("#log-btn");
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await pollUntil(() => pageManager.getConsoleMessages().length > 0, {
+        message: "console message not captured",
+      });
 
       expect(pageManager.getConsoleMessages().length).toBeGreaterThan(0);
       pageManager.clearConsoleMessages();
@@ -140,7 +170,13 @@ describe("Monitoring integration", () => {
     it("getConsoleErrors still returns only error/warn for backward compat", async () => {
       const page = pageManager.getActivePage();
       await page.click("#multi-log-btn");
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await pollUntil(
+        () =>
+          pageManager
+            .getConsoleMessages("all")
+            .filter((m) => ["first", "second", "third", "fourth"].includes(m.text)).length === 4,
+        { message: "multi-log messages not captured" },
+      );
 
       const errors = pageManager.getConsoleErrors();
       for (const err of errors) {
@@ -204,7 +240,10 @@ describe("Monitoring integration", () => {
       await page.evaluate(async (baseUrl) => {
         await fetch(`${baseUrl}/api/data`);
       }, serverUrl);
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await pollUntil(
+        () => pageManager.getNetworkRequests().some((r) => r.url.includes("/api/data")),
+        { message: "api request not captured" },
+      );
 
       const requests = pageManager.getNetworkRequests();
       const apiRequest = requests.find((r) => r.url.includes("/api/data"));
@@ -218,7 +257,13 @@ describe("Monitoring integration", () => {
       await page.evaluate(async (baseUrl) => {
         await fetch(`${baseUrl}/api/data`, { method: "POST" });
       }, serverUrl);
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await pollUntil(
+        () =>
+          pageManager
+            .getNetworkRequests()
+            .some((r) => r.url.includes("/api/data") && r.method === "POST"),
+        { message: "POST request not captured" },
+      );
 
       const requests = pageManager.getNetworkRequests();
       const postRequest = requests.find((r) => r.url.includes("/api/data") && r.method === "POST");
@@ -231,7 +276,10 @@ describe("Monitoring integration", () => {
       await page.evaluate(async (baseUrl) => {
         await fetch(`${baseUrl}/not-found`);
       }, serverUrl);
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await pollUntil(
+        () => pageManager.getNetworkRequests().some((r) => r.url.includes("/not-found")),
+        { message: "not-found request not captured" },
+      );
 
       const requests = pageManager.getNetworkRequests();
       const failedRequest = requests.find((r) => r.url.includes("/not-found"));
@@ -244,7 +292,10 @@ describe("Monitoring integration", () => {
       await page.evaluate(async (baseUrl) => {
         await fetch(`${baseUrl}/not-found`);
       }, serverUrl);
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await pollUntil(
+        () => pageManager.getNetworkRequests().some((r) => r.url.includes("/not-found")),
+        { message: "not-found request not captured" },
+      );
 
       const allRequests = pageManager.getNetworkRequests();
       const errors = pageManager.getNetworkErrors();
@@ -277,7 +328,10 @@ describe("Monitoring integration", () => {
       await page.evaluate(async (baseUrl) => {
         await fetch(`${baseUrl}/api/data`);
       }, serverUrl);
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await pollUntil(
+        () => pageManager.getNetworkRequests().some((r) => r.url.includes("/api/data")),
+        { message: "fetch request not captured" },
+      );
 
       const requests = pageManager.getNetworkRequests();
       const fetchRequest = requests.find((r) => r.url.includes("/api/data"));
@@ -291,7 +345,9 @@ describe("Monitoring integration", () => {
       const page = pageManager.getActivePage();
       await page.goto(MONITORING_FIXTURE, { waitUntil: "load" });
       await page.click("#log-btn");
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await pollUntil(() => pageManager.getConsoleMessages().length > 0, {
+        message: "console message not captured",
+      });
 
       // Console should have entries from the click
       expect(pageManager.getConsoleMessages().length).toBeGreaterThan(0);

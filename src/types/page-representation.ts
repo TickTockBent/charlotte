@@ -26,7 +26,8 @@ export interface ElementState {
   enabled?: boolean;
   visible?: boolean;
   focused?: boolean;
-  checked?: boolean;
+  /** `"mixed"` for tri-state (indeterminate) checkboxes. */
+  checked?: boolean | "mixed";
   expanded?: boolean;
   selected?: boolean;
   required?: boolean;

@@ -51,6 +51,7 @@ async function findBySelector(
     });
 
     const results: DOMElementResult[] = [];
+    let matchIndex = 0;
 
     for (const nodeId of nodeIds) {
       try {
@@ -87,7 +88,10 @@ async function findBySelector(
           // Element may be hidden or zero-sized — leave bounds as null
         }
 
-        // Register with ElementIdGenerator so the ID works with click, hover, drag, etc.
+        // Generate a stable hash-based ID, then register it durably so it
+        // survives the renders that every interaction tool triggers. The
+        // originating selector + match index let resolveElement re-query a
+        // fresh backend node ID after the DOM mutates (issue #191).
         const elementId = deps.elementIdGenerator.generateId(
           "dom_element",
           tag,
@@ -96,10 +100,17 @@ async function findBySelector(
             nearestLandmarkRole: null,
             nearestLandmarkLabel: null,
             nearestLabelledContainer: null,
-            siblingIndex: results.length,
+            siblingIndex: matchIndex,
           },
           backendNodeId,
         );
+
+        deps.elementIdGenerator.registerDomQueryId(elementId, {
+          backendDOMNodeId: backendNodeId,
+          frameId: null,
+          selector,
+          matchIndex,
+        });
 
         results.push({
           id: elementId,
@@ -107,6 +118,7 @@ async function findBySelector(
           text: textContent,
           bounds,
         });
+        matchIndex++;
       } catch {
         // Skip nodes that can't be described (e.g. pseudo-elements)
         continue;
@@ -255,7 +267,7 @@ export function registerObservationTools(
           .string()
           .optional()
           .describe(
-            "CSS selector to query the DOM directly. Returns elements that may not be in the accessibility tree. Results include Charlotte element IDs for use with interaction tools.",
+            "CSS selector to query the DOM directly. Returns elements that may not be in the accessibility tree. Results include durable Charlotte element IDs (dom-…) that remain valid across subsequent renders and interactions, and work with fill_form; they are re-resolved against the live DOM by re-running the selector.",
           ),
       },
     },

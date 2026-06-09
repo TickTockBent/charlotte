@@ -219,14 +219,18 @@ export function registerInteractionTools(
           characterDelay: delayMs,
         });
 
-        await typeIntoElement(
-          resolved.page,
-          resolved.backendNodeId,
-          text,
-          shouldClearFirst,
-          shouldPressEnter,
-          delayMs,
-          session,
+        // press_enter can submit a form (navigation) or trigger a JS dialog from
+        // a keydown/submit handler — guard against the dialog blocking forever (#182).
+        await waitForPossibleNavigation(resolved.page, () =>
+          typeIntoElement(
+            resolved.page,
+            resolved.backendNodeId,
+            text,
+            shouldClearFirst,
+            shouldPressEnter,
+            delayMs,
+            session,
+          ),
         );
 
         const representation = await renderAfterAction(deps);
@@ -256,7 +260,11 @@ export function registerInteractionTools(
 
         logger.info("Selecting option", { element_id, value });
 
-        await selectOptionByBackendNodeId(resolved.page, resolved.backendNodeId, value, session);
+        // A change handler may open a dialog or navigate — guard so the action
+        // promise can't block on a dialog forever (#182).
+        await waitForPossibleNavigation(resolved.page, () =>
+          selectOptionByBackendNodeId(resolved.page, resolved.backendNodeId, value, session),
+        );
 
         const representation = await renderAfterAction(deps);
         return formatPageResponse(representation);
@@ -284,16 +292,11 @@ export function registerInteractionTools(
 
         logger.info("Toggling element", { element_id });
 
-        // Toggle by clicking the element
-        await clickElementByBackendNodeId(
-          resolved.page,
-          resolved.backendNodeId,
-          "left",
-          [],
-          session,
+        // Toggle by clicking the element. A change handler may open a dialog or
+        // navigate — guard so the click can't block on a dialog forever (#182).
+        await waitForPossibleNavigation(resolved.page, () =>
+          clickElementByBackendNodeId(resolved.page, resolved.backendNodeId, "left", [], session),
         );
-
-        await new Promise((resolve) => setTimeout(resolve, 50));
 
         const representation = await renderAfterAction(deps);
         return formatPageResponse(representation);
@@ -524,15 +527,20 @@ export function registerInteractionTools(
 
         logger.info("Dragging element", { source_id, target_id });
 
-        await dragElementToElement(
+        // A drop handler may open a dialog or navigate — guard so the drag can't
+        // block on a dialog forever (#182).
+        await waitForPossibleNavigation(
           sourceResolved.page,
-          sourceResolved.backendNodeId,
-          targetResolved.backendNodeId,
-          session,
+          () =>
+            dragElementToElement(
+              sourceResolved.page,
+              sourceResolved.backendNodeId,
+              targetResolved.backendNodeId,
+              session,
+            ),
+          // Drags include built-in settle pauses; give DOM updates a beat to land.
+          { settleMs: 100 },
         );
-
-        // Brief settle for DOM updates after drop
-        await new Promise((resolve) => setTimeout(resolve, 100));
 
         const representation = await renderAfterAction(deps);
         return formatPageResponse(representation);
@@ -608,36 +616,41 @@ export function registerInteractionTools(
           await focusElementByBackendNodeId(resolved.page, resolved.backendNodeId, session);
         }
 
-        if (key) {
-          // Single key with optional modifiers
-          logger.info("Pressing key", { key, modifiers, element_id });
+        // Enter (and other keys) on a focused form can submit/navigate or fire a
+        // dialog from a keydown handler — guard so the dispatch can't block on a
+        // dialog forever (#182).
+        await waitForPossibleNavigation(page, async () => {
+          if (key) {
+            // Single key with optional modifiers
+            logger.info("Pressing key", { key, modifiers, element_id });
 
-          const activeModifiers = modifiers ?? [];
-          for (const modifier of activeModifiers) {
-            const modifierKey = MODIFIER_KEY_MAP[modifier];
-            await page.keyboard.down(modifierKey as KeyInput);
-          }
+            const activeModifiers = modifiers ?? [];
+            for (const modifier of activeModifiers) {
+              const modifierKey = MODIFIER_KEY_MAP[modifier];
+              await page.keyboard.down(modifierKey as KeyInput);
+            }
 
-          await page.keyboard.press(key as KeyInput);
+            try {
+              await page.keyboard.press(key as KeyInput);
+            } finally {
+              for (const modifier of [...activeModifiers].reverse()) {
+                const modifierKey = MODIFIER_KEY_MAP[modifier];
+                await page.keyboard.up(modifierKey as KeyInput);
+              }
+            }
+          } else if (keys) {
+            // Key sequence
+            logger.info("Pressing key sequence", { keys, element_id, delay });
 
-          for (const modifier of [...activeModifiers].reverse()) {
-            const modifierKey = MODIFIER_KEY_MAP[modifier];
-            await page.keyboard.up(modifierKey as KeyInput);
-          }
-        } else if (keys) {
-          // Key sequence
-          logger.info("Pressing key sequence", { keys, element_id, delay });
-
-          const delayMs = delay ?? 0;
-          for (let i = 0; i < keys.length; i++) {
-            await page.keyboard.press(keys[i] as KeyInput);
-            if (delayMs > 0 && i < keys.length - 1) {
-              await new Promise((resolve) => setTimeout(resolve, delayMs));
+            const delayMs = delay ?? 0;
+            for (let i = 0; i < keys.length; i++) {
+              await page.keyboard.press(keys[i] as KeyInput);
+              if (delayMs > 0 && i < keys.length - 1) {
+                await new Promise((resolve) => setTimeout(resolve, delayMs));
+              }
             }
           }
-        }
-
-        await new Promise((resolve) => setTimeout(resolve, 50));
+        });
 
         const representation = await renderAfterAction(deps);
         return formatPageResponse(representation);
@@ -777,8 +790,15 @@ export function registerInteractionTools(
 
         logger.info("Filling form fields", { fieldCount: resolvedFields.length });
 
-        // Fill each field using the appropriate action
+        // Fill each field using the appropriate action. Each field action is
+        // guarded so a change/input handler that opens a dialog can't block the
+        // whole fill forever (#182). If a dialog appears, waitForPossibleNavigation
+        // returns early and renderAfterAction surfaces pending_dialog.
         for (const field of resolvedFields) {
+          // Stop issuing further field actions once a dialog is blocking — they
+          // would queue behind the blocked execution context.
+          if (deps.pageManager.getPendingDialogInfo()) break;
+
           const fieldSession = await getSessionForElement(deps, {
             page: field.page,
             backendNodeId: field.backendNodeId,
@@ -789,33 +809,39 @@ export function registerInteractionTools(
             case "textarea":
             case "date_input":
             case "color_input":
-              await typeIntoElement(
-                field.page,
-                field.backendNodeId,
-                field.value,
-                true,
-                false,
-                undefined,
-                fieldSession,
+              await waitForPossibleNavigation(field.page, () =>
+                typeIntoElement(
+                  field.page,
+                  field.backendNodeId,
+                  field.value,
+                  true,
+                  false,
+                  undefined,
+                  fieldSession,
+                ),
               );
               break;
             case "select":
-              await selectOptionByBackendNodeId(
-                field.page,
-                field.backendNodeId,
-                field.value,
-                fieldSession,
+              await waitForPossibleNavigation(field.page, () =>
+                selectOptionByBackendNodeId(
+                  field.page,
+                  field.backendNodeId,
+                  field.value,
+                  fieldSession,
+                ),
               );
               break;
             case "checkbox":
             case "radio":
             case "toggle":
-              await clickElementByBackendNodeId(
-                field.page,
-                field.backendNodeId,
-                "left",
-                [],
-                fieldSession,
+              await waitForPossibleNavigation(field.page, () =>
+                clickElementByBackendNodeId(
+                  field.page,
+                  field.backendNodeId,
+                  "left",
+                  [],
+                  fieldSession,
+                ),
               );
               break;
           }

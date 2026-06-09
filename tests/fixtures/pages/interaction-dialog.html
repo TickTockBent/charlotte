@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Interaction Dialog Test Page</title>
+</head>
+<body>
+  <h1>Interaction Dialog Tests</h1>
+
+  <!-- Each control's handler opens a blocking dialog so we can verify the
+       dialog-race guard on every interaction tool (#182). -->
+
+  <label for="color-select">Color (alerts on change)</label>
+  <select id="color-select" name="color" onchange="alert('select changed: ' + this.value)">
+    <option value="">Choose a color</option>
+    <option value="red">Red</option>
+    <option value="green">Green</option>
+    <option value="blue">Blue</option>
+  </select>
+
+  <label>
+    <input type="checkbox" id="agree-box" onchange="alert('toggled: ' + this.checked)">
+    Agree (alerts on toggle)
+  </label>
+
+  <label for="enter-input">Press Enter input (alerts on Enter)</label>
+  <input type="text" id="enter-input" onkeydown="if (event.key === 'Enter') alert('enter pressed')">
+
+  <label for="bio-input">Bio (typed into by fill_form, alerts on input)</label>
+  <input type="text" id="bio-input" oninput="alert('input: ' + this.value)">
+
+  <div id="drag-source" role="button" tabindex="0" style="width:120px;height:40px;background:#2196F3;color:#fff;">Drag me</div>
+  <div id="drag-target" role="region" style="width:160px;height:60px;border:2px dashed #999;margin-top:8px;"
+       onmouseup="alert('dropped')">Drop here</div>
+
+  <div id="result"></div>
+</body>
+</html>

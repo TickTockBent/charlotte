@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Drag With Scroll Test Page</title>
+  <style>
+    .draggable {
+      width: 200px;
+      padding: 12px;
+      background: #2196F3;
+      color: white;
+      border-radius: 4px;
+      cursor: grab;
+    }
+    .dropzone {
+      width: 220px;
+      min-height: 120px;
+      border: 2px dashed #999;
+      padding: 10px;
+      border-radius: 8px;
+    }
+    /* Force the target well past the fold (more than a viewport away) so the
+       page MUST scroll to bring it into view, moving the source off-screen. The
+       old code pressed down on stale source coordinates and the drop never fired;
+       the fix presses the source first, then scrolls the target in mid-drag (#185). */
+    .spacer { height: 2000px; }
+    #result { font-family: monospace; }
+  </style>
+</head>
+<body>
+  <h1>Drag With Scroll Tests</h1>
+
+  <div class="draggable" id="item-1" role="button" aria-label="Item 1">Item 1</div>
+
+  <div class="spacer"></div>
+
+  <div class="dropzone" id="zone-b" role="region" aria-label="Zone B">
+    <h2>Zone B</h2>
+  </div>
+
+  <div id="result"></div>
+
+  <script>
+    const result = document.getElementById('result');
+    let draggedElement = null;
+
+    const item = document.getElementById('item-1');
+    item.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      draggedElement = item;
+      result.textContent = 'drag-start: ' + item.id;
+    });
+
+    const zone = document.getElementById('zone-b');
+    zone.addEventListener('mouseup', () => {
+      if (draggedElement) {
+        zone.appendChild(draggedElement);
+        result.textContent = 'dropped: ' + draggedElement.id + ' into ' + zone.id;
+      }
+      draggedElement = null;
+    });
+
+    document.addEventListener('mouseup', () => {
+      draggedElement = null;
+    });
+  </script>
+</body>
+</html>

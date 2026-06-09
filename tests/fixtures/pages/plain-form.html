@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Plain Form Submit Test Page</title>
+</head>
+<body>
+  <h1>Plain Form</h1>
+
+  <!-- A classic server-rendered form with NO submit button in the markup and
+       NO JS submit handler. Dispatching a bare submit event does nothing here;
+       only a real submission navigates (#189). GET keeps the navigation simple
+       and visible in the resulting URL. -->
+  <form id="plain-form" action="result.html" method="GET" aria-label="Plain form">
+    <label for="q-input">Query</label>
+    <input type="text" id="q-input" name="q" value="">
+  </form>
+</body>
+</html>

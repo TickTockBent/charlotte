@@ -283,8 +283,26 @@ export function registerSessionTools(
         }
 
         if (screenshot_dir !== undefined) {
-          deps.config.screenshotDir = screenshot_dir;
-          await deps.artifactStore.setScreenshotDir(screenshot_dir);
+          // Validate against allowedWorkspaceRoot so that an agent cannot use charlotte_configure
+          // to silently repoint the screenshot directory outside the workspace. resolveOutputPath
+          // enforces containment at write time, but validating here catches the misconfiguration
+          // early and provides a clear error message. The agent is trusted to manage files within
+          // the workspace; this boundary is a bug-catcher, not a hard security sandbox.
+          const resolvedScreenshotDir = path.resolve(screenshot_dir);
+          const workspaceRoot =
+            deps.config.allowedWorkspaceRoot ??
+            (deps.config.outputDir ? path.resolve(deps.config.outputDir) : process.cwd());
+          if (
+            !resolvedScreenshotDir.startsWith(workspaceRoot + path.sep) &&
+            resolvedScreenshotDir !== workspaceRoot
+          ) {
+            throw new Error(
+              `screenshot_dir '${screenshot_dir}' resolves outside the allowed workspace root '${workspaceRoot}'. ` +
+                `Use a path within the workspace or update allowedWorkspaceRoot.`,
+            );
+          }
+          deps.config.screenshotDir = resolvedScreenshotDir;
+          await deps.artifactStore.setScreenshotDir(resolvedScreenshotDir);
         }
 
         if (dialog_auto_dismiss !== undefined) {
@@ -293,6 +311,19 @@ export function registerSessionTools(
 
         if (output_dir !== undefined) {
           const resolvedOutputDir = path.resolve(output_dir);
+          // Validate against allowedWorkspaceRoot (same rationale as screenshot_dir above).
+          const workspaceRoot =
+            deps.config.allowedWorkspaceRoot ??
+            (deps.config.screenshotDir ? path.resolve(deps.config.screenshotDir) : process.cwd());
+          if (
+            !resolvedOutputDir.startsWith(workspaceRoot + path.sep) &&
+            resolvedOutputDir !== workspaceRoot
+          ) {
+            throw new Error(
+              `output_dir '${output_dir}' resolves outside the allowed workspace root '${workspaceRoot}'. ` +
+                `Use a path within the workspace or update allowedWorkspaceRoot.`,
+            );
+          }
           deps.config.outputDir = resolvedOutputDir;
           await fs.mkdir(resolvedOutputDir, { recursive: true });
         }
@@ -586,7 +617,13 @@ export function registerSessionTools(
       try {
         await ensureReady(deps);
         const page = deps.pageManager.getActivePage();
-        const session = await page.createCDPSession();
+        // Use the cached long-lived CDP session (Network domain already enabled) rather than
+        // creating a fresh session. A fresh session would require a separate Network.enable call
+        // before setBlockedURLs / emulateNetworkConditions would take effect, and the session
+        // would be leaked (never detached). The cached session lives as long as the page lives,
+        // which is the correct lifetime for blocking rules — the rules are lost when the page
+        // (and its session) are closed, but that is the expected browser behaviour.
+        const session = await deps.cdpSessionManager.getSession(page);
 
         const appliedSettings: {
           throttle?: string;

@@ -61,6 +61,12 @@ export class FileWatcher {
       this.watcher!.on("error", reject);
     });
 
+    // Attach a persistent error handler so that post-ready chokidar errors (e.g. inotify
+    // limit hit after startup, unmounted volume) are logged rather than silently swallowed.
+    this.watcher!.on("error", (error: unknown) => {
+      logger.warn("File watcher error", error);
+    });
+
     logger.info("File watcher started", {
       directory: this.directoryPath,
       debounceMs: this.debounceMs,

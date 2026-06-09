@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { relativeLuminance, contrastRatio, parseRgbColor } from "../../../src/dev/auditor.js";
+import {
+  relativeLuminance,
+  contrastRatio,
+  parseRgbColor,
+  isPrivateOrInternalIp,
+  isInternalUrl,
+} from "../../../src/dev/auditor.js";
 
 describe("Auditor utilities", () => {
   describe("relativeLuminance", () => {
@@ -71,6 +77,83 @@ describe("Auditor utilities", () => {
 
     it("returns null for empty string", () => {
       expect(parseRgbColor("")).toBeNull();
+    });
+  });
+
+  describe("isPrivateOrInternalIp (SSRF filter)", () => {
+    it("identifies loopback addresses", () => {
+      expect(isPrivateOrInternalIp("127.0.0.1")).toBe(true);
+      expect(isPrivateOrInternalIp("127.255.255.255")).toBe(true);
+    });
+
+    it("identifies IPv6 loopback", () => {
+      expect(isPrivateOrInternalIp("::1")).toBe(true);
+    });
+
+    it("identifies private Class A (10.x.x.x)", () => {
+      expect(isPrivateOrInternalIp("10.0.0.1")).toBe(true);
+      expect(isPrivateOrInternalIp("10.255.255.255")).toBe(true);
+    });
+
+    it("identifies private Class B (172.16-31.x.x)", () => {
+      expect(isPrivateOrInternalIp("172.16.0.1")).toBe(true);
+      expect(isPrivateOrInternalIp("172.31.255.255")).toBe(true);
+      // Just outside Class B range
+      expect(isPrivateOrInternalIp("172.15.255.255")).toBe(false);
+      expect(isPrivateOrInternalIp("172.32.0.0")).toBe(false);
+    });
+
+    it("identifies private Class C (192.168.x.x)", () => {
+      expect(isPrivateOrInternalIp("192.168.1.1")).toBe(true);
+      // Outside Class C range
+      expect(isPrivateOrInternalIp("192.169.1.1")).toBe(false);
+    });
+
+    it("identifies link-local / IMDS (169.254.x.x)", () => {
+      expect(isPrivateOrInternalIp("169.254.169.254")).toBe(true);
+      expect(isPrivateOrInternalIp("169.254.0.1")).toBe(true);
+    });
+
+    it("allows public IP addresses", () => {
+      expect(isPrivateOrInternalIp("8.8.8.8")).toBe(false);
+      expect(isPrivateOrInternalIp("1.1.1.1")).toBe(false);
+      expect(isPrivateOrInternalIp("93.184.216.34")).toBe(false);
+    });
+
+    it("returns false for invalid IP strings (not an IPv4 address)", () => {
+      expect(isPrivateOrInternalIp("not-an-ip")).toBe(false);
+      expect(isPrivateOrInternalIp("")).toBe(false);
+    });
+  });
+
+  describe("isInternalUrl (SSRF filter)", () => {
+    it("identifies localhost URLs", async () => {
+      expect(await isInternalUrl("http://localhost/api")).toBe(true);
+      expect(await isInternalUrl("http://localhost:8080/")).toBe(true);
+    });
+
+    it("identifies URLs with loopback IP", async () => {
+      expect(await isInternalUrl("http://127.0.0.1/")).toBe(true);
+      expect(await isInternalUrl("http://127.0.0.1:9200/")).toBe(true);
+    });
+
+    it("identifies AWS IMDS URL", async () => {
+      expect(await isInternalUrl("http://169.254.169.254/latest/meta-data")).toBe(true);
+    });
+
+    it("identifies private network URLs", async () => {
+      expect(await isInternalUrl("http://192.168.1.1/admin")).toBe(true);
+      expect(await isInternalUrl("http://10.0.0.1/")).toBe(true);
+    });
+
+    it("allows public URLs", async () => {
+      expect(await isInternalUrl("https://example.com/")).toBe(false);
+      expect(await isInternalUrl("https://8.8.8.8/")).toBe(false);
+    });
+
+    it("returns false for malformed URLs", async () => {
+      expect(await isInternalUrl("not a url")).toBe(false);
+      expect(await isInternalUrl("")).toBe(false);
     });
   });
 });

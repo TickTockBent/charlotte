@@ -11,6 +11,7 @@ import { ArtifactStore } from "../../src/state/artifact-store.js";
 import { createDefaultConfig } from "../../src/types/config.js";
 import type { ToolDependencies } from "../../src/tools/tool-helpers.js";
 import { renderActivePage } from "../../src/tools/tool-helpers.js";
+import { StaticServer } from "../../src/dev/static-server.js";
 
 const SIMPLE_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/simple.html")}`;
 const DYNAMIC_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/dynamic.html")}`;
@@ -271,7 +272,7 @@ describe("Tabs, viewport, and network integration", () => {
       });
     });
 
-    it("blocks URL patterns via CDP", async () => {
+    it("blocks URL patterns via CDP (legacy direct-session test)", async () => {
       const page = pageManager.getActivePage();
       const session = await page.createCDPSession();
 
@@ -282,6 +283,70 @@ describe("Tabs, viewport, and network integration", () => {
 
       // Clear blocked patterns
       await session.send("Network.setBlockedURLs", { urls: [] });
+    });
+
+    it("blocks URL patterns via CDPSessionManager (issue #192 — blocking actually works)", async () => {
+      // This test verifies that using the cached CDPSessionManager session (which has
+      // Network domain enabled) actually causes Network.setBlockedURLs to block requests,
+      // unlike a fresh session without Network.enable.
+
+      const staticServer = new StaticServer();
+      const fixturesDir = path.resolve(import.meta.dirname, "../fixtures/pages");
+      const serverInfo = await staticServer.start({ directoryPath: fixturesDir });
+
+      try {
+        const page = pageManager.getActivePage();
+
+        // Navigate to our test fixture (served over HTTP so fetch works)
+        await page.goto(`${serverInfo.url}/network-block.html`, { waitUntil: "load" });
+
+        // Use the CDPSessionManager session — it has Network enabled, so setBlockedURLs works
+        const session = await cdpSessionManager.getSession(page);
+
+        // Block requests to simple.html
+        await session.send("Network.setBlockedURLs", { urls: [`${serverInfo.url}/simple.html`] });
+
+        // Attempt to fetch the blocked URL from within the page
+        const resultBlocked = await page.evaluate(
+          async (url: string) => {
+            try {
+              await fetch(url);
+              return { blocked: false };
+            } catch (err) {
+              return { blocked: true, error: (err as Error).message };
+            }
+          },
+          `${serverInfo.url}/simple.html`,
+        );
+
+        // The fetch should have been blocked (net::ERR_BLOCKED_BY_CLIENT)
+        expect(resultBlocked.blocked).toBe(true);
+
+        // Now clear the block and verify the URL becomes reachable again
+        await session.send("Network.setBlockedURLs", { urls: [] });
+
+        const resultUnblocked = await page.evaluate(
+          async (url: string) => {
+            try {
+              const response = await fetch(url);
+              return { blocked: false, status: response.status };
+            } catch {
+              return { blocked: true };
+            }
+          },
+          `${serverInfo.url}/simple.html`,
+        );
+
+        // After clearing, the fetch should succeed
+        expect(resultUnblocked.blocked).toBe(false);
+        expect(resultUnblocked.status).toBe(200);
+      } finally {
+        // Restore clean state: clear any remaining block patterns
+        const page = pageManager.getActivePage();
+        const session = await cdpSessionManager.getSession(page);
+        await session.send("Network.setBlockedURLs", { urls: [] });
+        await staticServer.stop();
+      }
     });
 
     it("emulates offline mode and restores", async () => {

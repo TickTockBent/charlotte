@@ -1,6 +1,6 @@
 {
   "name": "Charlotte",
   "command": "node",
-  "args": ["dist/index.js"],
+  "args": ["dist/index.js", "--no-sandbox"],
   "cwd": "../.."
 }

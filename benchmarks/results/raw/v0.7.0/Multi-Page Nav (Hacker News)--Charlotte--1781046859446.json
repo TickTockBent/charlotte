@@ -1,0 +1,52 @@
+{
+  "testName": "Multi-Page Nav (Hacker News)",
+  "serverName": "Charlotte",
+  "calls": [
+    {
+      "toolName": "charlotte_navigate",
+      "arguments": {
+        "url": "https://news.ycombinator.com"
+      },
+      "responseChars": 337,
+      "estimatedTokens": 85,
+      "wallTimeMs": 2297.145149,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte_observe",
+      "arguments": {
+        "detail": "summary"
+      },
+      "responseChars": 30702,
+      "estimatedTokens": 7676,
+      "wallTimeMs": 53.226786999999604,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte_find",
+      "arguments": {
+        "type": "link"
+      },
+      "responseChars": 30280,
+      "estimatedTokens": 7570,
+      "wallTimeMs": 48.37905300000057,
+      "isError": false
+    }
+  ],
+  "cumulative": {
+    "totalChars": 61319,
+    "totalEstimatedTokens": 15331,
+    "totalWallTimeMs": 2398.750989,
+    "totalCalls": 3
+  },
+  "toolDefinitions": {
+    "toolCount": 23,
+    "definitionChars": 16747,
+    "estimatedDefinitionTokens": 4785,
+    "cumulativeDefinitionTokens": 14355
+  },
+  "success": true,
+  "successCriteria": "Successfully observe the front page content.",
+  "notes": "Summary: 30702 chars; Find: 30280 chars",
+  "timestamp": 1781046859446
+}

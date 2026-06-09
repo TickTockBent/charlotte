@@ -1,6 +1,6 @@
 {
   "name": "Charlotte (browse)",
   "command": "node",
-  "args": ["dist/index.js", "--profile=browse"],
+  "args": ["dist/index.js", "--profile=browse", "--no-sandbox"],
   "cwd": "../.."
 }

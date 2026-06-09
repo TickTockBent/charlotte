@@ -1,0 +1,52 @@
+{
+  "testName": "Deep Navigation (GitHub Repo)",
+  "serverName": "Charlotte",
+  "calls": [
+    {
+      "toolName": "charlotte_navigate",
+      "arguments": {
+        "url": "https://github.com/anthropics/anthropic-cookbook"
+      },
+      "responseChars": 3559,
+      "estimatedTokens": 890,
+      "wallTimeMs": 10985.690143,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte_observe",
+      "arguments": {
+        "detail": "summary"
+      },
+      "responseChars": 38410,
+      "estimatedTokens": 9603,
+      "wallTimeMs": 93.31630399999995,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte_observe",
+      "arguments": {
+        "detail": "minimal"
+      },
+      "responseChars": 3562,
+      "estimatedTokens": 891,
+      "wallTimeMs": 69.83034800000314,
+      "isError": false
+    }
+  ],
+  "cumulative": {
+    "totalChars": 45531,
+    "totalEstimatedTokens": 11384,
+    "totalWallTimeMs": 11148.836795000003,
+    "totalCalls": 3
+  },
+  "toolDefinitions": {
+    "toolCount": 23,
+    "definitionChars": 16747,
+    "estimatedDefinitionTokens": 4785,
+    "cumulativeDefinitionTokens": 14355
+  },
+  "success": true,
+  "successCriteria": "Server can observe the repo page structure.",
+  "notes": "Summary: 38410 chars; Minimal: 3562 chars",
+  "timestamp": 1781046873280
+}

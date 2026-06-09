@@ -178,7 +178,9 @@ async function main() {
   if (suite === "detail-levels") {
     outputDir = join(import.meta.dirname, "results", "raw", "detail-levels-v1");
   } else if (suite === "profiles") {
-    outputDir = join(import.meta.dirname, "results", "raw", "tiered-profiles-v1");
+    outputDir = join(import.meta.dirname, "results", "raw", "v0.7.0", "profiles");
+  } else if (suite === "comparison") {
+    outputDir = join(import.meta.dirname, "results", "raw", "v0.7.0");
   }
 
   const allResults: TestRunResult[] = [];

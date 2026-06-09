@@ -1,0 +1,42 @@
+{
+  "testName": "Simple Page (example.com)",
+  "serverName": "Charlotte",
+  "calls": [
+    {
+      "toolName": "charlotte_navigate",
+      "arguments": {
+        "url": "https://example.com"
+      },
+      "responseChars": 388,
+      "estimatedTokens": 97,
+      "wallTimeMs": 1540.9843270000001,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte_observe",
+      "arguments": {
+        "detail": "minimal"
+      },
+      "responseChars": 388,
+      "estimatedTokens": 97,
+      "wallTimeMs": 13.156214999999975,
+      "isError": false
+    }
+  ],
+  "cumulative": {
+    "totalChars": 776,
+    "totalEstimatedTokens": 194,
+    "totalWallTimeMs": 1554.140542,
+    "totalCalls": 2
+  },
+  "toolDefinitions": {
+    "toolCount": 23,
+    "definitionChars": 16747,
+    "estimatedDefinitionTokens": 4785,
+    "cumulativeDefinitionTokens": 9570
+  },
+  "success": true,
+  "successCriteria": "Server identifies the page title, the heading, and the single link.",
+  "notes": "Title found: true, Heading found: true",
+  "timestamp": 1781046839854
+}

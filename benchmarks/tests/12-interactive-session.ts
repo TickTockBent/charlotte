@@ -42,8 +42,8 @@ export const interactiveSessionTest: BenchmarkTest = {
     const findText = responseText(findInputsResult.response);
 
     // Extract input IDs
-    const inputIdMatches = findText.match(/inp-[a-f0-9]{4}/g) ?? [];
-    const formIdMatches = observeText.match(/frm-[a-f0-9]{4}/g) ?? [];
+    const inputIdMatches = findText.match(/inp-[a-f0-9]{4,8}\b/g) ?? [];
+    const formIdMatches = observeText.match(/frm-[a-f0-9]{4,8}\b/g) ?? [];
 
     let filledCount = 0;
     const testValues = ["benchmark", "test-user", "test@example.com", "12345"];

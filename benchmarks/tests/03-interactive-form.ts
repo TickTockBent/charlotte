@@ -40,8 +40,8 @@ export const interactiveFormTest: BenchmarkTest = {
       const findText = responseText(findInputs.response);
 
       // Try to extract element IDs from the find response
-      const inputIdMatches = findText.match(/inp-[a-f0-9]{4}/g) ?? [];
-      const formIdMatches = observeText.match(/frm-[a-f0-9]{4}/g) ?? [];
+      const inputIdMatches = findText.match(/inp-[a-f0-9]{4,8}\b/g) ?? [];
+      const formIdMatches = observeText.match(/frm-[a-f0-9]{4,8}\b/g) ?? [];
 
       let filledAny = false;
 

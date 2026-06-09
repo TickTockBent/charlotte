@@ -8,7 +8,21 @@ function mockPage(): any {
 }
 
 function mockCDPSession(): any {
-  return { send: vi.fn().mockResolvedValue(undefined) };
+  // connection() returns a truthy object while attached; isSessionAlive() uses
+  // it to decide whether a cached session may be reused (#202).
+  const connection = {};
+  return {
+    send: vi.fn().mockResolvedValue(undefined),
+    connection: vi.fn(() => connection),
+  };
+}
+
+/** A detached session: connection() returns undefined (post frame-swap/crash). */
+function deadCDPSession(): any {
+  return {
+    send: vi.fn().mockResolvedValue(undefined),
+    connection: vi.fn(() => undefined),
+  };
 }
 
 function mockFrame(frameId: string, page: any, client?: any): any {
@@ -165,6 +179,78 @@ describe("CDPSessionManager", () => {
 
       const reacquired = await manager.getFrameSession(mockFrame("frame-1", page, clientB));
       expect(reacquired).toBe(clientB);
+    });
+  });
+
+  // #202: cached sessions must be re-validated for liveness/identity.
+  describe("session liveness and frame-swap staleness (issue #202)", () => {
+    it("recreates a page session when the cached one is detached", async () => {
+      const page = mockPage();
+      const dead = deadCDPSession();
+      const fresh = mockCDPSession();
+      page.createCDPSession.mockResolvedValueOnce(dead).mockResolvedValueOnce(fresh);
+
+      const first = await manager.getSession(page);
+      expect(first).toBe(dead);
+
+      // Cached session reports detached → must recreate rather than serve it.
+      const second = await manager.getSession(page);
+      expect(second).toBe(fresh);
+      expect(page.createCDPSession).toHaveBeenCalledTimes(2);
+    });
+
+    it("recreates a frame session after a frame swap (same _id, new client)", async () => {
+      const page = mockPage();
+      const oldClient = mockCDPSession();
+      const newClient = mockCDPSession();
+
+      // Same frameId, but a cross-origin navigation swapped the underlying
+      // client. framedetached did NOT fire, so the cache still holds oldClient.
+      const beforeSwap = mockFrame("frame-x", page, oldClient);
+      const afterSwap = mockFrame("frame-x", page, newClient);
+
+      const first = await manager.getFrameSession(beforeSwap);
+      expect(first).toBe(oldClient);
+
+      const second = await manager.getFrameSession(afterSwap);
+      expect(second).toBe(newClient);
+    });
+
+    it("recreates a frame session when the cached client is detached", async () => {
+      const page = mockPage();
+      const dead = deadCDPSession();
+      // The frame keeps the same client object, but it has detached.
+      const frame = mockFrame("frame-dead", page, dead);
+
+      const first = await manager.getFrameSession(frame);
+      expect(first).toBe(dead);
+
+      // Detached → recreate. Same object is re-enabled and re-cached.
+      await manager.getFrameSession(frame);
+      // enableDomains ran twice (3 domains each) because the cache was rejected.
+      expect(dead.send).toHaveBeenCalledTimes(6);
+    });
+  });
+
+  describe("clearAll (issue #201)", () => {
+    it("drops every cached page and frame session", async () => {
+      const pageA = mockPage();
+      const sessionA = mockCDPSession();
+      pageA.createCDPSession.mockResolvedValue(sessionA);
+      await manager.getSession(pageA);
+      await manager.getFrameSession(mockFrame("frame-1", pageA));
+      await manager.getFrameSession(mockFrame("frame-2", pageA));
+
+      expect(manager.frameSessionCount).toBe(2);
+
+      manager.clearAll();
+
+      expect(manager.frameSessionCount).toBe(0);
+      // The page session cache was cleared too: a fresh session is created.
+      const sessionB = mockCDPSession();
+      pageA.createCDPSession.mockResolvedValue(sessionB);
+      const reacquired = await manager.getSession(pageA);
+      expect(reacquired).toBe(sessionB);
     });
   });
 

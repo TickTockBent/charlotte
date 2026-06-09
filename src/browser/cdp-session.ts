@@ -19,12 +19,31 @@ export function frameClient(frame: Frame): CDPSession | undefined {
   return (frame as unknown as { client?: CDPSession }).client;
 }
 
-const REQUIRED_DOMAINS = ["Accessibility", "DOM", "CSS", "Page", "Network"] as const;
+// Domains actually consumed by the render pipeline and interaction helpers:
+// Accessibility.getFullAXTree, DOM.getBoxModel/describeNode, CSS getters.
+// Runtime is auto-enabled by Puppeteer. `Page` and `Network` were enabled here
+// but nothing on this session ever consumed them — dropped (#205). The
+// charlotte_network tool enables Network on its OWN dedicated session.
+const REQUIRED_DOMAINS = ["Accessibility", "DOM", "CSS"] as const;
 
-/** Domains needed for iframe frame sessions (subset — no Page/Network). */
+/** Domains needed for iframe frame sessions. */
 const FRAME_DOMAINS = ["Accessibility", "DOM", "CSS"] as const;
 
 type EnableableDomain = (typeof REQUIRED_DOMAINS)[number];
+
+/**
+ * A CDP session is alive only while attached to a transport connection.
+ * After detach (frame swap, page close, browser crash) `connection()` returns
+ * undefined; sending on it then rejects. Cached sessions must be re-validated
+ * before reuse (#202).
+ */
+function isSessionAlive(session: CDPSession): boolean {
+  try {
+    return session.connection() !== undefined;
+  } catch {
+    return false;
+  }
+}
 
 export class CDPSessionManager {
   private sessions: WeakMap<Page, CDPSession> = new WeakMap();
@@ -39,8 +58,14 @@ export class CDPSessionManager {
 
   async getSession(page: Page): Promise<CDPSession> {
     const existing = this.sessions.get(page);
-    if (existing) {
+    if (existing && isSessionAlive(existing)) {
       return existing;
+    }
+    if (existing) {
+      // Cached but detached (e.g. after a navigation that re-targeted the page);
+      // drop it and recreate rather than serving a dead session forever (#202).
+      logger.debug("Cached page CDP session is detached; recreating");
+      this.sessions.delete(page);
     }
 
     logger.debug("Creating new CDP session");
@@ -56,19 +81,29 @@ export class CDPSessionManager {
    */
   async getFrameSession(frame: Frame): Promise<CDPSession> {
     const frameId = this.getFrameId(frame);
-    const existing = this.frameSessions.get(frameId);
-    if (existing) {
-      return existing;
-    }
-
-    logger.debug("Creating CDP session for frame", { frameId, url: frame.url() });
-    const session = frameClient(frame);
-    if (!session || typeof session.send !== "function") {
+    const current = frameClient(frame);
+    if (!current || typeof current.send !== "function") {
       throw new Error(
         `Puppeteer Frame.client is unavailable or not a CDPSession. ` +
           `This Puppeteer version may have changed internal APIs. See issue #84.`,
       );
     }
+
+    const existing = this.frameSessions.get(frameId);
+    // A cross-origin navigation emits `frameswapped`: the Frame object and its
+    // _id are reused, but the underlying CDP target (and thus frame.client)
+    // changes. `framedetached` does NOT fire, so the old session would be served
+    // forever and the frame silently skipped. Validate the cached entry against
+    // the frame's CURRENT client identity, and that it is still attached (#202).
+    if (existing && existing === current && isSessionAlive(existing)) {
+      return existing;
+    }
+    if (existing) {
+      logger.debug("Cached frame session is stale (swapped/detached); recreating", { frameId });
+    }
+
+    logger.debug("Creating CDP session for frame", { frameId, url: frame.url() });
+    const session = current;
     await this.enableDomains(session, FRAME_DOMAINS);
     this.frameSessions.set(frameId, session);
 
@@ -145,6 +180,18 @@ export class CDPSessionManager {
     }
     logger.debug(`Cleared ${ids.size} frame session(s) for closed page`);
     this.pageFrameIds.delete(page);
+  }
+
+  /**
+   * Drop every cached session (page and frame). Called when the browser
+   * transport drops: all cached sessions are bound to the dead connection
+   * and must be recreated against the relaunched browser (#201/#202).
+   */
+  clearAll(): void {
+    this.sessions = new WeakMap();
+    this.frameSessions.clear();
+    this.pageFrameIds.clear();
+    logger.debug("Cleared all CDP session caches");
   }
 
   private async enableDomains(

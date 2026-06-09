@@ -294,7 +294,11 @@ export class PageManager {
     managedPage.page.removeAllListeners("framedetached");
     managedPage.page.removeAllListeners("popup");
     managedPage.page.removeAllListeners("close");
-    await managedPage.page.close();
+
+    // Remove from the map FIRST so cleanup always completes, even if the
+    // underlying connection is dead. page.close() throws on a crashed browser;
+    // if we awaited it before deleting, the tab could never be removed and the
+    // server would wedge until restart (#201).
     this.pages.delete(tabId);
 
     if (this.activeTabId === tabId) {
@@ -303,16 +307,54 @@ export class PageManager {
       this.activeTabId = remaining.done ? null : remaining.value;
     }
 
+    try {
+      await managedPage.page.close();
+    } catch (error) {
+      logger.warn(`page.close() failed for ${tabId} (already gone?)`, { error });
+    }
+
     logger.info(`Closed tab ${tabId}`);
+  }
+
+  /**
+   * Drop all per-session state. Called by BrowserManager's onDisconnected hook
+   * when the browser transport drops (crash/kill/remote disconnect): the cached
+   * Page objects are bound to the dead connection and every operation on them
+   * throws, so we clear them and let the next ensureReady() open a fresh blank
+   * tab against the relaunched browser (#201).
+   */
+  reset(): void {
+    const tabCount = this.pages.size;
+    this.pages.clear();
+    this.activeTabId = null;
+    this.newTabQueue = [];
+    if (this.cdpSessionManager) {
+      this.cdpSessionManager.clearAll();
+    }
+    logger.warn(`PageManager reset: cleared ${tabCount} dead tab(s) after browser disconnect`);
   }
 
   async listTabs(): Promise<TabInfo[]> {
     const tabs: TabInfo[] = [];
     for (const [id, managedPage] of this.pages) {
+      // A single dead/crashed page must not take down the whole tab list:
+      // page.title() rejects on a lost connection. Fall back gracefully (#202).
+      let url: string;
+      try {
+        url = managedPage.page.url();
+      } catch {
+        url = "about:blank";
+      }
+      let title: string;
+      try {
+        title = await managedPage.page.title();
+      } catch {
+        title = "(unavailable)";
+      }
       tabs.push({
         id,
-        url: managedPage.page.url(),
-        title: await managedPage.page.title(),
+        url,
+        title,
         active: id === this.activeTabId,
       });
     }

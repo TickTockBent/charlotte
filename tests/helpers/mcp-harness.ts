@@ -31,6 +31,7 @@ import { ElementIdGenerator } from "../../src/renderer/element-id-generator.js";
 import { SnapshotStore } from "../../src/state/snapshot-store.js";
 import { ArtifactStore } from "../../src/state/artifact-store.js";
 import { StaticServer } from "../../src/dev/static-server.js";
+import { DevModeState } from "../../src/dev/dev-mode-state.js";
 import { createDefaultConfig } from "../../src/types/config.js";
 import type { CharlotteConfig } from "../../src/types/config.js";
 
@@ -116,6 +117,11 @@ export async function setupMcpHarness(options: HarnessOptions = {}): Promise<Mcp
   const artifactStore = new ArtifactStore(artifactDirectory);
   await artifactStore.initialize();
 
+  // Wire DevModeState like src/index.ts so dev_mode tools (dev_serve, dev_inject,
+  // dev_audit) are exercisable through the harness rather than hitting the
+  // "Dev mode is not available" guard.
+  const devModeState = new DevModeState(config);
+
   const deps: ServerDeps = {
     browserManager,
     pageManager,
@@ -125,6 +131,7 @@ export async function setupMcpHarness(options: HarnessOptions = {}): Promise<Mcp
     snapshotStore: new SnapshotStore(config.snapshotDepth),
     artifactStore,
     config,
+    devModeState,
   };
 
   let staticServer: StaticServer | undefined;
@@ -155,6 +162,7 @@ export async function setupMcpHarness(options: HarnessOptions = {}): Promise<Mcp
   const teardown = async () => {
     await client.close().catch(() => {});
     await server.close().catch(() => {});
+    await devModeState.stopAll().catch(() => {});
     if (staticServer) await staticServer.stop().catch(() => {});
     await browserManager.close().catch(() => {});
     await fs.rm(artifactDirectory, { recursive: true, force: true }).catch(() => {});

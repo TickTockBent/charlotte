@@ -51,7 +51,7 @@ export function registerDevModeTools(
           directoryStats = fs.statSync(absoluteDirectoryPath);
         } catch {
           throw new CharlotteError(
-            CharlotteErrorCode.SESSION_ERROR,
+            CharlotteErrorCode.INVALID_ARGUMENT,
             `Path does not exist: ${absoluteDirectoryPath}`,
             "Provide a valid directory path.",
           );
@@ -59,7 +59,7 @@ export function registerDevModeTools(
 
         if (!directoryStats.isDirectory()) {
           throw new CharlotteError(
-            CharlotteErrorCode.SESSION_ERROR,
+            CharlotteErrorCode.INVALID_ARGUMENT,
             `Path is not a directory: ${absoluteDirectoryPath}`,
             "Provide a path to a directory, not a file.",
           );
@@ -124,7 +124,7 @@ export function registerDevModeTools(
 
         if (!css && !js) {
           throw new CharlotteError(
-            CharlotteErrorCode.SESSION_ERROR,
+            CharlotteErrorCode.INVALID_ARGUMENT,
             "At least one of 'css' or 'js' must be provided.",
             "Provide CSS to inject, JS to execute, or both.",
           );

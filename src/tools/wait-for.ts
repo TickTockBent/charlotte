@@ -47,8 +47,18 @@ export function registerWaitForTools(
         // Validate that at least one condition is provided
         if (!element_id && !text && !selector && !js) {
           throw new CharlotteError(
-            CharlotteErrorCode.SESSION_ERROR,
+            CharlotteErrorCode.INVALID_ARGUMENT,
             "At least one wait condition is required (element_id, text, selector, or js).",
+          );
+        }
+
+        // `state` only applies to an element target. Without element_id it is
+        // silently ignored, which masks caller mistakes — reject it (#204).
+        if (state && !element_id) {
+          throw new CharlotteError(
+            CharlotteErrorCode.INVALID_ARGUMENT,
+            "'state' requires 'element_id' — it describes the target element's state.",
+            "Provide an element_id, or drop 'state' and wait on text/selector/js instead.",
           );
         }
 

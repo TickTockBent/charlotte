@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Boundless reference filter</title>
+  </head>
+  <body>
+    <!--
+      A `display: contents` button is exposed in the accessibility tree but has
+      no box model, so the renderer records bounds: null for it. Used to prove
+      that charlotte_find rejects a spatial filter anchored to a boundsless
+      reference element instead of silently returning the unfiltered set (#204a).
+    -->
+    <button id="ghost-ref" style="display: contents">Ghost reference</button>
+
+    <button id="real-a">Real button A</button>
+    <button id="real-b">Real button B</button>
+    <a id="real-link" href="#x">A link</a>
+  </body>
+</html>

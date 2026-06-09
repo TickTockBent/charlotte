@@ -350,40 +350,59 @@ export function registerObservationTools(
 
         // Spatial filter: near
         if (near) {
-          const { backendNodeId: _nearNodeId } = await resolveElement(deps, near);
+          await resolveElement(deps, near);
           // Find the reference element in the interactive list
           const referenceElement = representation.interactive.find(
             (element) => element.id === near,
           );
 
-          if (referenceElement?.bounds) {
-            matchingElements = matchingElements
-              .filter((element) => {
-                if (!element.bounds || element.id === near) return false;
-                const distance = centerDistance(element.bounds, referenceElement.bounds!);
-                return distance <= NEAR_THRESHOLD_PX;
-              })
-              .sort((elementA, elementB) => {
-                const distanceA = centerDistance(elementA.bounds!, referenceElement.bounds!);
-                const distanceB = centerDistance(elementB.bounds!, referenceElement.bounds!);
-                return distanceA - distanceB;
-              });
+          // A reference with no bounds can't anchor a spatial filter. Silently
+          // skipping it would return the UNFILTERED set with no indication —
+          // reject so the caller knows the filter didn't apply (#204).
+          if (!referenceElement?.bounds) {
+            throw new CharlotteError(
+              CharlotteErrorCode.INVALID_ARGUMENT,
+              `Reference element '${near}' has no bounds; cannot apply spatial filter.`,
+              "Pick a reference element that is laid out on the page (has bounds), or drop the 'near' filter.",
+            );
           }
+
+          const referenceBounds = referenceElement.bounds;
+          matchingElements = matchingElements
+            .filter((element) => {
+              if (!element.bounds || element.id === near) return false;
+              const distance = centerDistance(element.bounds, referenceBounds);
+              return distance <= NEAR_THRESHOLD_PX;
+            })
+            .sort((elementA, elementB) => {
+              const distanceA = centerDistance(elementA.bounds!, referenceBounds);
+              const distanceB = centerDistance(elementB.bounds!, referenceBounds);
+              return distanceA - distanceB;
+            });
         }
 
         // Spatial filter: within
         if (within) {
-          const { backendNodeId: _withinNodeId } = await resolveElement(deps, within);
+          await resolveElement(deps, within);
           const containerElement = representation.interactive.find(
             (element) => element.id === within,
           );
 
-          if (containerElement?.bounds) {
-            matchingElements = matchingElements.filter((element) => {
-              if (!element.bounds || element.id === within) return false;
-              return isContainedWithin(element.bounds, containerElement.bounds!);
-            });
+          // Same rationale as 'near': a boundsless container can't contain
+          // anything, so reject instead of silently returning everything (#204).
+          if (!containerElement?.bounds) {
+            throw new CharlotteError(
+              CharlotteErrorCode.INVALID_ARGUMENT,
+              `Reference element '${within}' has no bounds; cannot apply spatial filter.`,
+              "Pick a container element that is laid out on the page (has bounds), or drop the 'within' filter.",
+            );
           }
+
+          const containerBounds = containerElement.bounds;
+          matchingElements = matchingElements.filter((element) => {
+            if (!element.bounds || element.id === within) return false;
+            return isContainedWithin(element.bounds, containerBounds);
+          });
         }
 
         if (output_file) {
@@ -425,13 +444,19 @@ export function registerObservationTools(
           .describe(
             "Write screenshot to this file path instead of returning base64 inline. Relative paths resolve against output_dir (see charlotte_configure). Returns only a confirmation with the file path and size.",
           ),
+        full_page: z
+          .boolean()
+          .optional()
+          .describe(
+            "Capture the entire scrollable page (default: true). Set false to capture only the current viewport — much smaller output for long pages. Ignored when 'selector' is provided.",
+          ),
       },
     },
-    async ({ selector, format, quality, save, output_file }) => {
+    async ({ selector, format, quality, save, output_file, full_page }) => {
       try {
         if (save && output_file) {
           throw new CharlotteError(
-            CharlotteErrorCode.SESSION_ERROR,
+            CharlotteErrorCode.INVALID_ARGUMENT,
             "Cannot use both 'save' and 'output_file' on the same screenshot call.",
             "Use 'save: true' to persist as an artifact, or 'output_file' to write to a specific path — not both.",
           );
@@ -452,6 +477,7 @@ export function registerObservationTools(
           format: screenshotFormat,
           quality,
           save,
+          full_page: full_page ?? true,
         });
 
         let screenshotBase64: string;
@@ -478,7 +504,7 @@ export function registerObservationTools(
             type: screenshotFormat,
             quality: screenshotFormat !== "png" ? quality : undefined,
             encoding: "base64",
-            fullPage: true,
+            fullPage: full_page ?? true,
           })) as string;
         }
 

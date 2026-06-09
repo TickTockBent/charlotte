@@ -207,15 +207,22 @@ export class InteractiveExtractor {
       const formFieldIds: string[] = [];
       let submitButtonId: string | null = null;
 
+      // Pre-build a Map for O(1) reverse lookup using backendDOMNodeId
+      const elementsMap = new Map<number, typeof interactiveElements[0]>();
+      for (const el of interactiveElements) {
+        const backendNodeId = idGenerator.resolveId(el.id);
+        if (backendNodeId !== null) {
+          elementsMap.set(backendNodeId, el);
+        }
+      }
+
       const collectFields = (node: ParsedAXNode) => {
         if (isInteractiveRole(node.role)) {
-          // Find the matching interactive element by backendDOMNodeId
-          const matchingElement = interactiveElements.find((el) => {
-            if (node.backendDOMNodeId === null) return false;
-            const resolvedId = idGenerator.resolveId(el.id);
-            if (resolvedId === null) return false;
-            return resolvedId === node.backendDOMNodeId;
-          });
+          // Find the matching interactive element by backendDOMNodeId in O(1)
+          let matchingElement: typeof interactiveElements[0] | undefined;
+          if (node.backendDOMNodeId !== null) {
+             matchingElement = elementsMap.get(node.backendDOMNodeId);
+          }
 
           if (matchingElement) {
             if (

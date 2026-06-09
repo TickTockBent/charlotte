@@ -13,25 +13,35 @@ import { createDefaultConfig } from "./types/config.js";
 import { createServer } from "./server.js";
 import { DevModeState } from "./dev/dev-mode-state.js";
 import { logger } from "./utils/logger.js";
-import { parseCliArgs } from "./cli.js";
+import { loadStartupConfig } from "./config/index.js";
 
 async function main(): Promise<void> {
-  let cliOptions;
+  let resolved;
   try {
-    cliOptions = parseCliArgs();
+    resolved = loadStartupConfig();
   } catch (error) {
+    // stdout is reserved for the MCP transport — config errors go to stderr.
     logger.error((error as Error).message);
     process.exit(1);
   }
   logger.info("Charlotte starting", {
-    profile: cliOptions.profile ?? "browse",
-    toolGroups: cliOptions.toolGroups,
+    profile: resolved.profile ?? (resolved.toolGroups ? undefined : "browse"),
+    toolGroups: resolved.toolGroups,
+    noSandbox: resolved.noSandbox,
   });
 
-  // Initialize config first (needed by PageManager for dialog handling)
+  // Initialize config first (needed by PageManager for dialog handling).
+  // Config-file tunables (snapshot depth, dialog handling, iframe rendering)
+  // override the built-in defaults; CLI/env precedence is already resolved.
   const config = createDefaultConfig();
-  if (cliOptions.outputDir) {
-    const resolvedOutputDir = path.resolve(cliOptions.outputDir);
+  if (resolved.snapshotDepth !== undefined) config.snapshotDepth = resolved.snapshotDepth;
+  if (resolved.autoSnapshot !== undefined) config.autoSnapshot = resolved.autoSnapshot;
+  if (resolved.dialogAutoDismiss !== undefined)
+    config.dialogAutoDismiss = resolved.dialogAutoDismiss;
+  if (resolved.includeIframes !== undefined) config.includeIframes = resolved.includeIframes;
+  if (resolved.iframeDepth !== undefined) config.iframeDepth = resolved.iframeDepth;
+  if (resolved.outputDir) {
+    const resolvedOutputDir = path.resolve(resolved.outputDir);
     config.outputDir = resolvedOutputDir;
     await fs.mkdir(resolvedOutputDir, { recursive: true });
   }
@@ -43,9 +53,9 @@ async function main(): Promise<void> {
   const pageManager = new PageManager(config, cdpSessionManager);
   const browserManager = new BrowserManager(
     config,
-    { headless: cliOptions.headless },
-    cliOptions.cdpEndpoint,
-    cliOptions.cdpEndpoint
+    { headless: resolved.headless, noSandbox: resolved.noSandbox },
+    resolved.cdpEndpoint,
+    resolved.cdpEndpoint
       ? async (browser) => {
           await pageManager.adoptExistingPages(browser);
         }
@@ -77,7 +87,7 @@ async function main(): Promise<void> {
       config,
       devModeState,
     },
-    cliOptions,
+    { profile: resolved.profile, toolGroups: resolved.toolGroups },
   );
 
   // Connect stdio transport

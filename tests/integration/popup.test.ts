@@ -47,7 +47,7 @@ describe("Popup tab capture", () => {
     const addr = server.address() as { port: number };
     baseUrl = `http://127.0.0.1:${addr.port}`;
 
-    browserManager = new BrowserManager();
+    browserManager = new BrowserManager(undefined, { noSandbox: true });
     await browserManager.launch();
     pageManager = new PageManager();
     await pageManager.openTab(browserManager);

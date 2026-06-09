@@ -11,6 +11,20 @@ import type { CharlotteConfig } from "../types/config.js";
 
 export type OnFirstConnect = (browser: Browser) => Promise<void> | void;
 
+/**
+ * Browser launch tunables resolved from config/CLI (issues #19, #184).
+ */
+export interface BrowserLaunchConfig extends LaunchOptions {
+  /**
+   * Disable the Chromium sandbox. Default false — the sandbox is ON.
+   * The sandbox is the primary defense between a hostile page and the
+   * invoking user, so it is only disabled when explicitly requested
+   * (CLI --no-sandbox, env CHARLOTTE_NO_SANDBOX, or config file). Real
+   * containers usually need this; bare-metal installs should not.
+   */
+  noSandbox?: boolean;
+}
+
 export class BrowserManager {
   private browser: Browser | null = null;
   private launchOptions: LaunchOptions = {};
@@ -22,7 +36,7 @@ export class BrowserManager {
 
   constructor(
     config?: CharlotteConfig,
-    launchOptions?: LaunchOptions,
+    launchOptions?: BrowserLaunchConfig,
     cdpEndpoint?: string,
     onFirstConnect?: OnFirstConnect,
   ) {
@@ -30,23 +44,39 @@ export class BrowserManager {
     this.config = config ?? createDefaultConfig();
     this.cdpEndpoint = cdpEndpoint;
     this.onFirstConnect = onFirstConnect;
+
+    // Sandbox is ON by default (issue #184). It is only disabled when the
+    // caller explicitly opts out via noSandbox; in that case we add the two
+    // Chromium flags that disable it. Bare-metal installs keep the sandbox;
+    // containers pass noSandbox explicitly.
+    const { noSandbox, ...puppeteerLaunchOptions } = launchOptions ?? {};
+    const baseArgs = ["--disable-gpu", "--disable-dev-shm-usage"];
+    if (noSandbox) {
+      baseArgs.unshift("--no-sandbox", "--disable-setuid-sandbox");
+    }
+
     // Set launch defaults once — ensureConnected() and launch() both use these.
     this.launchOptions = {
       headless: true,
       defaultViewport: this.config.defaultViewport,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-gpu",
-        "--disable-dev-shm-usage",
-      ],
-      ...launchOptions,
+      args: baseArgs,
+      ...puppeteerLaunchOptions,
     };
   }
 
-  async launch(options?: LaunchOptions): Promise<void> {
+  async launch(options?: BrowserLaunchConfig): Promise<void> {
     if (options) {
-      this.launchOptions = { ...this.launchOptions, ...options };
+      const { noSandbox, ...puppeteerLaunchOptions } = options;
+      if (noSandbox !== undefined) {
+        const args = [...(this.launchOptions.args ?? [])].filter(
+          (arg) => arg !== "--no-sandbox" && arg !== "--disable-setuid-sandbox",
+        );
+        if (noSandbox) {
+          args.unshift("--no-sandbox", "--disable-setuid-sandbox");
+        }
+        this.launchOptions.args = args;
+      }
+      this.launchOptions = { ...this.launchOptions, ...puppeteerLaunchOptions };
     }
     if (this.cdpEndpoint) {
       await this.doConnect();

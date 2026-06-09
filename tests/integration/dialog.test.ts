@@ -33,7 +33,7 @@ describe("Dialog integration", () => {
   let deps: ToolDependencies;
 
   beforeAll(async () => {
-    browserManager = new BrowserManager();
+    browserManager = new BrowserManager(undefined, { noSandbox: true });
     await browserManager.launch();
     config = createDefaultConfig();
     pageManager = new PageManager(config);

@@ -8,7 +8,10 @@ describe("PageManager", () => {
   let browserManager: BrowserManager;
 
   beforeAll(async () => {
-    browserManager = new BrowserManager();
+    // This test launches a real Chromium. The sandbox is ON by default
+    // (issue #184), so opt out here to keep it portable across CI/dev hosts
+    // where the kernel sandbox is unavailable.
+    browserManager = new BrowserManager(undefined, { noSandbox: true });
     await browserManager.launch();
   });
 

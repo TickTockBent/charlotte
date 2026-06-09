@@ -14,7 +14,7 @@ describe("Monitoring integration", () => {
   let pageManager: PageManager;
 
   beforeAll(async () => {
-    browserManager = new BrowserManager();
+    browserManager = new BrowserManager(undefined, { noSandbox: true });
     await browserManager.launch();
     config = createDefaultConfig();
     pageManager = new PageManager(config);

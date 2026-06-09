@@ -23,7 +23,7 @@ describe("MCP protocol end-to-end", () => {
   let closeTransport: () => Promise<void>;
 
   beforeAll(async () => {
-    browserManager = new BrowserManager();
+    browserManager = new BrowserManager(undefined, { noSandbox: true });
     await browserManager.launch();
 
     const config = createDefaultConfig();

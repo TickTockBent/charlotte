@@ -48,6 +48,50 @@ describe("BrowserManager", () => {
     });
   });
 
+  // Issue #184: sandbox is ON by default; --no-sandbox only added on opt-out.
+  describe("Chromium sandbox (issue #184)", () => {
+    function launchedArgs(): string[] {
+      const call = (puppeteer.launch as ReturnType<typeof vi.fn>).mock.calls[0];
+      return (call?.[0]?.args ?? []) as string[];
+    }
+
+    it("does NOT pass --no-sandbox by default (sandbox enabled)", async () => {
+      const manager = new BrowserManager();
+      await manager.launch();
+
+      const args = launchedArgs();
+      expect(args).not.toContain("--no-sandbox");
+      expect(args).not.toContain("--disable-setuid-sandbox");
+    });
+
+    it("passes --no-sandbox when noSandbox opt-out is set in constructor", async () => {
+      const manager = new BrowserManager(undefined, { noSandbox: true });
+      await manager.launch();
+
+      const args = launchedArgs();
+      expect(args).toContain("--no-sandbox");
+      expect(args).toContain("--disable-setuid-sandbox");
+    });
+
+    it("passes --no-sandbox when noSandbox opt-out is set in launch()", async () => {
+      const manager = new BrowserManager();
+      await manager.launch({ noSandbox: true });
+
+      const args = launchedArgs();
+      expect(args).toContain("--no-sandbox");
+      expect(args).toContain("--disable-setuid-sandbox");
+    });
+
+    it("retains other hardening args regardless of sandbox setting", async () => {
+      const manager = new BrowserManager();
+      await manager.launch();
+
+      const args = launchedArgs();
+      expect(args).toContain("--disable-gpu");
+      expect(args).toContain("--disable-dev-shm-usage");
+    });
+  });
+
   describe("CDP connected mode", () => {
     it("calls puppeteer.connect with browserURL for HTTP endpoint", async () => {
       const manager = new BrowserManager(undefined, undefined, "http://localhost:9222");

@@ -89,7 +89,9 @@ export interface McpHarness {
  * `resolveElement` and rendering see consistent state.
  */
 export async function setupMcpHarness(options: HarnessOptions = {}): Promise<McpHarness> {
-  const browserManager = new BrowserManager();
+  // Tests opt out of the Chromium sandbox: CI hosts and AppArmor-restricted
+  // dev machines cannot launch the sandboxed browser (see #184).
+  const browserManager = new BrowserManager(undefined, { noSandbox: true });
   await browserManager.launch();
 
   const config = createDefaultConfig();

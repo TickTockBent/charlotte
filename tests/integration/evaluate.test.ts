@@ -10,7 +10,7 @@ describe("Evaluate via CDP Runtime.evaluate", () => {
   let pageManager: PageManager;
 
   beforeAll(async () => {
-    browserManager = new BrowserManager();
+    browserManager = new BrowserManager(undefined, { noSandbox: true });
     await browserManager.launch();
     pageManager = new PageManager();
     await pageManager.openTab(browserManager);

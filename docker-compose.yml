@@ -9,12 +9,17 @@ services:
     stdin_open: true
     # Shared memory size for Chromium
     shm_size: '2gb'
-    # Security options for Chromium in container
-    security_opt:
-      - seccomp=unconfined
-    # Environment variables (optional overrides)
+    # Security hardening (issue #184):
+    #   The Dockerfiles set CHARLOTTE_NO_SANDBOX=1, so Chromium runs without
+    #   its own kernel sandbox inside the container. We therefore KEEP Docker's
+    #   default seccomp syscall filter (no `seccomp=unconfined`) so the
+    #   container is not left with neither layer of protection. If you instead
+    #   want Chromium's own sandbox, supply its documented seccomp profile via
+    #   `security_opt: [seccomp=./chrome.json]` and set CHARLOTTE_NO_SANDBOX=0.
     environment:
       - NODE_ENV=production
+      # Sandbox disabled in-container by default (also set in the Dockerfile).
+      - CHARLOTTE_NO_SANDBOX=1
       # Uncomment to use a specific Chromium path
       # - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
@@ -27,9 +32,8 @@ services:
     container_name: charlotte-mcp-debian
     stdin_open: true
     shm_size: '2gb'
-    security_opt:
-      - seccomp=unconfined
     environment:
       - NODE_ENV=production
+      - CHARLOTTE_NO_SANDBOX=1
     profiles:
       - debian  # Only starts with: docker compose --profile debian up

@@ -41,7 +41,7 @@ describe("Iframe content extraction", () => {
     const serverInfo = await staticServer.start({ directoryPath: FIXTURES_DIR });
     baseUrl = serverInfo.url;
 
-    browserManager = new BrowserManager();
+    browserManager = new BrowserManager(undefined, { noSandbox: true });
     await browserManager.launch();
     cdpSessionManager = new CDPSessionManager();
     pageManager = new PageManager(undefined, cdpSessionManager);

@@ -86,6 +86,10 @@ export function registerNavigationTools(
           );
         }
 
+        // dom- selector registrations are scoped to the document they were
+        // created against; drop them on cross-document navigation (#191).
+        deps.elementIdGenerator.clearDomQueryIds();
+
         const detailLevel: DetailLevel = detail ?? "minimal";
         const representation = await renderActivePage(deps, {
           detail: detailLevel,
@@ -126,6 +130,8 @@ export function registerNavigationTools(
           );
         }
 
+        deps.elementIdGenerator.clearDomQueryIds();
+
         const detailLevel: DetailLevel = detail ?? "minimal";
         const representation = await renderActivePage(deps, {
           detail: detailLevel,
@@ -165,6 +171,8 @@ export function registerNavigationTools(
             "No forward page in history.",
           );
         }
+
+        deps.elementIdGenerator.clearDomQueryIds();
 
         const detailLevel: DetailLevel = detail ?? "minimal";
         const representation = await renderActivePage(deps, {

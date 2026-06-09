@@ -1,6 +1,6 @@
 # Charlotte Technical Specification
 
-**Version:** 0.6.2
+**Version:** 0.7.0
 
 Charlotte is an MCP server that renders web pages into structured, agent-readable `PageRepresentation` objects using headless Chromium and Puppeteer. It communicates over stdio using the Model Context Protocol.
 
@@ -119,7 +119,7 @@ interface PageStructure {
 
 ```typescript
 interface Landmark {
-  id: string;            // Stable hash-based ID (e.g., "rgn-e0d2")
+  id: string;            // Stable hash-based ID (e.g., "rgn-e0d2a8")
   role: string;          // ARIA landmark role (banner, main, navigation, contentinfo, etc.)
   label: string;         // Accessible name, or role as fallback
   bounds: Bounds;
@@ -132,7 +132,7 @@ interface Landmark {
 interface Heading {
   level: 1 | 2 | 3 | 4 | 5 | 6;
   text: string;
-  id: string;            // Stable element ID (e.g., "hdg-a3f1")
+  id: string;            // Stable element ID (e.g., "hdg-a3f1c2")
 }
 ```
 
@@ -151,7 +151,7 @@ interface Bounds {
 
 ```typescript
 interface InteractiveElement {
-  id: string;            // Stable hash-based ID (e.g., "btn-a3f1")
+  id: string;            // Stable hash-based ID (e.g., "btn-a3f1c2")
   type: InteractiveElementType;
   label: string;         // Accessible name or visible text
   bounds: Bounds | null; // null if hidden or zero-sized
@@ -247,20 +247,30 @@ Interaction tools (click, type, select, toggle, submit, scroll, hover, key, wait
 ### ID Format
 
 ```
-{prefix}-{hex4}[-{disambiguator}]
+{prefix}-{hex6}
 ```
 
-Examples: `btn-a3f1`, `inp-c7e2`, `lnk-d4b9`, `btn-a3f1-2` (collision)
+Examples: `btn-a3f1c2`, `inp-c7e29b`, `lnk-d4b910`
+
+As of v0.7.0 the hash is **6 hex characters** (was 4), reducing cross-element
+collisions on large pages. Collisions are disambiguated by salting an extra
+component into the hash itself — there is no longer a traversal-order
+`-{disambiguator}` suffix, which previously could migrate onto the base ID
+across renders.
 
 ### Hash Function
 
-MD5 of a composite key, truncated to 4 hex characters:
+MD5 of a composite key, truncated to 6 hex characters:
 
 ```typescript
-hashToHex4(input: string): string {
-  return createHash("md5").update(input).digest("hex").substring(0, 4);
+const HASH_HEX_LENGTH = 6;
+function hashToHex(input: string): string {
+  return createHash("md5").update(input).digest("hex").substring(0, HASH_HEX_LENGTH);
 }
 ```
+
+On collision, the generator re-hashes `${compositeKey}#${disambiguator}` so the
+salted ID is still a `{prefix}-{hex6}` value, not a suffixed one.
 
 ### Composite Key
 
@@ -925,7 +935,7 @@ Default viewport: 1280x720 (desktop preset).
 {
   "error": {
     "code": "ELEMENT_NOT_FOUND",
-    "message": "No element found with ID 'btn-a3f1'",
+    "message": "No element found with ID 'btn-a3f1c2'",
     "suggestion": "The page may have changed. Try observe() to get current element IDs."
   }
 }

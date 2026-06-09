@@ -2,11 +2,67 @@
 
 All notable changes to Charlotte will be documented in this file.
 
-## [Unreleased]
+## [0.7.0] - 2026-06-09
+
+This release hardens Charlotte for untrusted pages, fixes a long tail of silent-failure and lifecycle bugs, cuts per-render overhead, and adds a JSON configuration file. Read the **Behavior changes** below before upgrading — two of them (sandbox default, element-ID format) can affect existing setups.
+
+### Behavior changes
+
+- **The Chromium sandbox is now ON by default.** Earlier releases baked `--no-sandbox` into every launch; the sandbox is the primary defense between an untrusted page and the account Charlotte runs as, so it is now enabled by default. Disable it explicitly with the `--no-sandbox` flag, `CHARLOTTE_NO_SANDBOX=1`, or `browser.noSandbox` in the config file. The provided Dockerfiles set `CHARLOTTE_NO_SANDBOX=1` (containers usually cannot set up the kernel sandbox), and `docker-compose.yml` no longer runs `seccomp=unconfined` — Docker's default syscall filter is restored. **Bare-metal-as-root users:** Chromium refuses to launch with the sandbox enabled when running as root; run as a non-root user or opt out explicitly. (#184)
+- **Element-ID hashes are now 6 hex characters** (e.g. `btn-a3f1c2`), up from 4, drastically reducing cross-element collisions on large pages. This is a deliberate ID format change — re-`find` elements rather than reusing IDs cached from a pre-0.7.0 session. (#190)
+- **`charlotte_fill_form` checkbox/radio/toggle now use set-semantics:** the desired state is expressed via `value` (`"true"`/`"false"`) and the element is only clicked when its current state differs, making fills idempotent. (#204)
+- **Response-shape changes:** `charlotte_tab_open`, `charlotte_dev_serve`, and dialog responses now use the standard stripped, size-capped page format; the dialog page payload is no longer nested under a `page` key. (#204)
+- **The dev static server now reports `127.0.0.1`** in its URL to match the address it actually binds. (#203)
 
 ### Added
 
-- **Slow-typing duration guard** — `charlotte_type` now rejects slow-typing requests whose estimated duration would risk an MCP tool timeout, failing fast with an `INVALID_ARGUMENT` error instead of starting to type and timing out partway. The estimate (`text.length * character_delay`) is capped at 30s and includes a margin for per-keystroke overhead. The `character_delay` schema description documents the ceiling so callers see it upfront. Fixes #127. (#174, #180)
+- **JSON configuration file** via `--config <path>` (and an auto-loaded `charlotte.config.json` in the working directory). Settings resolve with precedence **CLI args > env vars > config file > defaults**, validated with zod; an invalid config produces a clear startup error on stderr and a non-zero exit. New env vars: `CHARLOTTE_NO_SANDBOX`, `CHARLOTTE_OUTPUT_DIR`, `CHARLOTTE_CDP_ENDPOINT`. See [docs/configuration.md](docs/configuration.md). (#19)
+- **Configurable output-size caps** (`limits.maxInteractiveElements`, `limits.maxFullContentChars`, `limits.maxResponseBytes`, `limits.maxEvaluateBytes`) so large or adversarial pages can no longer overflow the client's context window. Page responses now carry a `truncation` marker and degrade to a compact summary (with an `output_file` suggestion) above the byte ceiling; `charlotte_evaluate` results are capped independently. (#188)
+- **`output_file` support in `charlotte_find`** for large selector/match result sets. (#72)
+- **`charlotte_screenshot` `full_page` option** (default true) for viewport-only capture. (#204)
+- **Slow-typing duration guard** — `charlotte_type` now rejects slow-typing requests whose estimated duration would risk an MCP tool timeout, failing fast with `INVALID_ARGUMENT` instead of typing partway and timing out. The estimate (`text.length * character_delay`) is capped at 30s with a per-keystroke margin, and the `character_delay` schema description documents the ceiling. Fixes #127. (#174, #180)
+- **Server instructions now advertise partially-enabled tool groups** (e.g. "interaction (7/13 enabled)"). (#204)
+- **Tri-state checkbox state** — indeterminate checkboxes now report `state.checked: "mixed"` instead of collapsing to `true`. (#190)
+
+### Changed
+
+- **Crash recovery** — a Chromium crash no longer permanently wedges the server. The next tool call relaunches the browser, clears the dead tab and CDP-session caches, and opens a fresh blank tab automatically. (#201)
+- **Render performance** — cut per-render CDP round-trips: file-input reclassification probes button candidates concurrently instead of one blocking `DOM.describeNode` per button; form-field association uses an O(1) reverse lookup instead of an O(forms x descendants x elements) scan; layout extraction deduplicates backend node IDs before issuing `DOM.getBoxModel` calls. (#194, #196, #199, #213)
+- **`charlotte_key` sequences and full-speed `charlotte_type`** are now bounded by the typing-duration guard, preventing MCP timeouts on huge payloads. (#204)
+- **`detail=minimal` interactive summary** now preserves per-landmark grouping for elements inside iframes instead of collapsing them into a single `(iframe)` bucket; main-frame landmark grouping is also retained when iframes are present. (#68)
+- **Interaction helpers reuse the cached per-page CDP session** instead of creating and detaching their own. (#202)
+- Centralized Puppeteer internal frame-session access behind a documented `frameClient()` helper, with smoke tests guarding against Puppeteer upgrades removing the internals it depends on (`Frame.client` / frame `_id` remain internal in puppeteer 24.x). (#84)
+
+### Fixed
+
+- **`charlotte_select`** now errors (`ELEMENT_NOT_FOUND`, listing valid options) instead of silently succeeding when the requested option does not exist. (#186)
+- **`charlotte_submit`** performs a real native form submission via `form.requestSubmit()` for forms without a submit button, so plain server-rendered forms actually submit. (#189)
+- **Dialog-race hangs** — `charlotte_type` (with `press_enter`), `charlotte_toggle`, `charlotte_select`, `charlotte_key`, `charlotte_fill_form`, and `charlotte_drag` no longer hang when an action triggers a JavaScript dialog; they surface `pending_dialog` like the click/submit tools. (#182)
+- **`charlotte_drag`** now works when source and target are far apart: it scrolls the target into view mid-drag instead of pressing on stale source coordinates. (#185)
+- **Same-origin iframe bounds** were double-offset by the iframe's position, making `charlotte_click_at` and reported bounds wrong; same-process iframes now share the main-frame coordinate space and only out-of-process (cross-origin) iframes get the content offset. (#183)
+- **Collision-disambiguated element IDs** no longer migrate onto a base ID between renders (a salted hash replaces the traversal-order `-N` suffix), so cached IDs no longer resolve to the wrong element and the differ no longer reports phantom add/remove pairs. (#191)
+- **Selector-mode (`dom-`) IDs from `charlotte_find`** are now durable: they survive subsequent renders/interactions, work with `fill_form`, and are re-resolved against the live DOM by re-running their selector; they are cleared on cross-document navigation. (#191)
+- **`charlotte_find` reclassified file inputs** now carry the correct `inp-` prefix (was `btn-`), so `findSimilar` and prefix-based reasoning work. (#190)
+- **Content summary** no longer reports a self-referential "1 forms" on the form you are viewing. (#190)
+- **`charlotte_diff`** no longer reports spurious `content_summary` changes when comparing snapshots of different detail levels, truncates very long summary values, and keys landmark diffs by ID so duplicate unnamed landmarks are tracked independently. (#190)
+- **`charlotte_wait_for` `state:"exists"`** no longer polls a frozen element-ID map; the `exists` and `removed` branches re-render on every poll so newly-appearing and truly-gone elements are detected. (#193)
+- **`charlotte_wait_for` JS conditions** — a lambda (`() => ...`) instead of an expression now returns `INVALID_ARGUMENT` immediately; expression exceptions during polling are surfaced in the `TIMEOUT` response instead of being folded into "condition not met"; the timeout response now strips empty fields like the success path. The same function-type detection was applied to `pollUntilCondition` in `src/utils/wait.ts`. (#198)
+- **Lifecycle / CDP resilience:** closing a tab whose page is already dead no longer hangs or leaks the entry; `charlotte_reload --hard` no longer times out on fast local pages or leaks its CDP session; `charlotte_back`/`charlotte_forward` correctly traverse same-URL history entries (e.g. SPA `pushState`); listing tabs no longer fails entirely when one tab's page is dead; concurrent page renders are serialized per page; cross-origin iframe navigations (OOPIF swaps) and detached CDP sessions are detected and refreshed. (#201, #202, #205)
+- **`charlotte_network` URL blocking** was a no-op — `setBlockedURLs` now runs on the cached CDP session with Network explicitly enabled. (#192)
+- **Argument-validation failures** across interaction/observation/dev tools now return `INVALID_ARGUMENT` instead of `SESSION_ERROR`, giving agents the correct "fixable by caller" recovery signal. (#187)
+- **`charlotte_find` `near`/`within` filters** now error instead of silently returning unfiltered results when the reference element has no bounds. (#204)
+- **`charlotte_type` `clear_first`** now reliably replaces existing text on macOS-hosted Chromium (was prepending due to Ctrl+A vs Cmd+A); selection now happens in page context, platform-independent. (#204)
+- **`charlotte_toggle`** now rejects non-toggleable elements, pointing callers to `charlotte_click`. (#204)
+- **`charlotte_wait_for`** now rejects `state` supplied without `element_id`. (#204)
+- **Dev-mode hardening:** static-server path boundary uses a separator-anchored check (was bare `startsWith`, allowing prefix-match escapes); `express.static` no longer serves dotfiles (e.g. `.git/config`); `dev_audit` link checks filter private/loopback/link-local ranges to block SSRF via page-supplied hrefs; `charlotte_configure` validates `screenshot_dir`/`output_dir` against the workspace root; `resolveOutputPath` lstat-checks for pre-planted leaf symlinks; the artifact index validates IDs and writes atomically; `FileWatcher` post-ready errors are no longer swallowed and mid-reload changes schedule a trailing reload. (#203)
+
+### Internal
+
+- **Test infrastructure:** added a shared in-memory MCP harness (`tests/helpers/mcp-harness.ts`) and `pollUntil` waiter (`tests/helpers/poll.ts`); the integration suite now exercises tools through their real MCP handlers via `callTool` instead of reimplementing handler logic with raw CDP/Puppeteer. Eliminated fixed-sleep timing races in dialog, popup, monitoring, and keyboard tests by polling on observable state; capped the vitest fork pool to bound concurrent Chromium instances; fixed a stale-`ElementHandle` leak in `dialog.test.ts`. (#195, #206, #166)
+- **New tests:** `tests/integration/agent-flow.test.ts` (end-to-end navigate→observe→find→click→type→fill_form→submit→back→forward→diff through MCP handlers); `tests/integration/handler-smoke.test.ts` (screenshot, monitoring, dev_mode); unit suites for the `content-extractor`, `layout-extractor`, `accessibility-extractor`, and `frame-discovery` renderer modules (99 new tests), pinning documented invariants (Chromium AX uses role `"image"` not `"img"`; null `backendDOMNodeId` skips layout extraction). vitest now excludes `.claude/**` worktrees from collection. (#195, #209)
+- **CI:** coverage thresholds enforced by a new coverage job (global + stricter on `src/tools`); Puppeteer Chromium cached between runs (keyed on `package-lock.json`); test matrix on Node 20 and 22; the docker-publish workflow now builds the image, runs `tests/docker-smoke-test.mjs` against it, and only pushes on success; added an `npm audit --audit-level=high` job. (#207)
+- Replaced CDP `send()` `as any` casts with proper types. (#171)
+- Removed unused `Page`/`Network` CDP domain enables and a duplicated interactive-role set from the render session; made the `ZERO_BOUNDS` layout sentinel genuinely immutable; extracted a shared `clickAtCoordinates()` so click_at and element clicks share one implementation. (#204, #205)
 
 ## [0.6.3] - 2026-04-17
 

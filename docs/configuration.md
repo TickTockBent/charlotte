@@ -52,6 +52,12 @@ Every section is optional. An empty `{}` is valid.
   },
   "output": {
     "dir": "./charlotte-output"
+  },
+  "limits": {
+    "maxInteractiveElements": 2000,
+    "maxFullContentChars": 200000,
+    "maxResponseBytes": 1000000,
+    "maxEvaluateBytes": 256000
   }
 }
 ```
@@ -69,6 +75,21 @@ Every section is optional. An empty `{}` is valid.
 | `rendering.iframeDepth` | int > 0 | Max iframe nesting depth. |
 | `dialog.autoDismiss` | enum | `none`, `accept_alerts`, `accept_all`, `dismiss_all`. |
 | `output.dir` | string | Directory for large tool output files. |
+| `limits.maxInteractiveElements` | int > 0 | Max interactive elements serialized before the list is truncated. Default `2000`. |
+| `limits.maxFullContentChars` | int > 0 | Max characters of `full_content` text before truncation. Default `200000`. |
+| `limits.maxResponseBytes` | int > 0 | Total byte ceiling for a formatted page response; above this the response degrades to a compact summary with an `output_file` suggestion. Default `1000000`. |
+| `limits.maxEvaluateBytes` | int > 0 | Byte ceiling for a `charlotte_evaluate` result before it is truncated. Default `256000`. |
+
+### Output-size limits (`limits`)
+
+These caps (issue #188) bound how much a single tool response can return so a
+pathological page — 100k links, an infinite-scroll feed, a giant document body
+— cannot blow the MCP client's context window. All are optional; omitted keys
+fall through to the built-in defaults above. When a page response exceeds
+`maxResponseBytes` it degrades to a compact summary and suggests writing the
+full result to a file via `output_file`; `charlotte_evaluate` results are capped
+independently by `maxEvaluateBytes`. Truncated responses carry a `truncation`
+marker so agents can tell the output was clipped.
 
 ## Environment variables
 

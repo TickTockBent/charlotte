@@ -8,7 +8,7 @@ Charlotte is an MCP server that gives AI agents structured, token-efficient acce
 Instead of dumping the full accessibility tree on every call, Charlotte returns only what
 the agent needs: a compact page summary on arrival, targeted queries for specific elements,
 and full detail only when explicitly requested. The result is 25-182x less data per page
-compared to [Playwright MCP](https://github.com/anthropics/playwright-mcp), saving thousands of dollars across production workloads.
+compared to [Playwright MCP](https://github.com/microsoft/playwright-mcp), saving thousands of dollars across production workloads.
 
 ## Why Charlotte?
 
@@ -69,7 +69,7 @@ Agents receive landmarks, headings, interactive elements with typed metadata, bo
 
 **Navigation** — `navigate`, `back`, `forward`, `reload`
 
-**Observation** — `observe` (3 detail levels, structural tree view), `find` (spatial + semantic search, CSS selector mode), `screenshot` (with persistent artifact management), `screenshots`, `screenshot_get`, `screenshot_delete`, `diff` (structural comparison against snapshots)
+**Observation** — `observe` (3 detail levels, structural tree view), `find` (spatial + semantic search, CSS selector mode, `output_file` for large result sets), `screenshot` (with persistent artifact management), `screenshots`, `screenshot_get`, `screenshot_delete`, `diff` (structural comparison against snapshots)
 
 **Interaction** (iframe-aware) — `click`, `click_at` (coordinate-based), `type` (with slow typing support), `select`, `toggle`, `submit`, `scroll`, `hover`, `drag`, `key` (single/sequence with element targeting), `wait_for` (async condition polling), `upload` (file input), `fill_form` (batch form fill), `dialog` (accept/dismiss JS dialogs)
 
@@ -266,6 +266,55 @@ Add to `~/.amp/settings.json`:
 
 See [docs/mcp-setup.md](docs/mcp-setup.md) for the full setup guide, including development mode, generic MCP clients, verification steps, and troubleshooting.
 
+## Configuration
+
+Charlotte resolves settings from four sources, highest precedence first: **CLI arguments → environment variables → config file → built-in defaults**. See [docs/configuration.md](docs/configuration.md) for the complete reference.
+
+### Config file
+
+Pass a JSON config file with `--config`, or drop a `charlotte.config.json` in the working directory and Charlotte loads it automatically:
+
+```bash
+charlotte --config charlotte.config.json
+```
+
+```json
+{
+  "browser": { "headless": true, "noSandbox": false },
+  "tools": { "profile": "browse" },
+  "rendering": { "includeIframes": false, "iframeDepth": 3 },
+  "output": { "dir": "./charlotte-output" },
+  "limits": {
+    "maxInteractiveElements": 2000,
+    "maxFullContentChars": 200000,
+    "maxResponseBytes": 1000000,
+    "maxEvaluateBytes": 256000
+  }
+}
+```
+
+Every section is optional; an empty `{}` is valid. The file is validated with zod — unknown keys, wrong types, or invalid enum values produce a clear startup error on stderr and Charlotte exits non-zero. Three settings also have environment variables: `CHARLOTTE_NO_SANDBOX`, `CHARLOTTE_OUTPUT_DIR`, and `CHARLOTTE_CDP_ENDPOINT`.
+
+### The Chromium sandbox is on by default
+
+> **v0.7.0 behavior change:** Earlier releases baked `--no-sandbox` into every Chromium launch. As of v0.7.0 the **Chromium sandbox is enabled by default** — the primary defense between an untrusted page and the account Charlotte runs as. You must opt out explicitly where the kernel sandbox is unavailable.
+
+```bash
+charlotte --no-sandbox                  # CLI flag
+CHARLOTTE_NO_SANDBOX=1 charlotte        # environment variable
+# or "browser": { "noSandbox": true }   in the config file
+```
+
+**Migration note (Docker / bare-metal):** Containers usually cannot set up the kernel sandbox, so the provided Dockerfiles set `CHARLOTTE_NO_SANDBOX=1` for you, and `docker-compose.yml` now keeps Docker's default seccomp filter (it no longer runs `seccomp=unconfined`). If you run Charlotte **bare-metal as root**, Chromium refuses to launch with the sandbox enabled — run as a non-root user (recommended) or pass `--no-sandbox`. Existing setups that previously relied on the implicit `--no-sandbox` and run in an environment where the sandbox can't initialize must now set `CHARLOTTE_NO_SANDBOX=1` (or the flag/config equivalent) to keep working.
+
+### Output-size limits
+
+The `limits.*` keys bound how much a single tool response can return so a pathological page (100k links, an infinite-scroll feed, a giant document body) cannot overflow the agent's context window. When a page response exceeds `maxResponseBytes` it degrades to a compact summary and suggests writing the full result to disk via `output_file`; `charlotte_evaluate` results are capped independently by `maxEvaluateBytes`. Truncated responses carry a `truncation` marker. See [docs/configuration.md](docs/configuration.md#output-size-limits-limits) for the keys and defaults.
+
+### Crash recovery
+
+A Chromium crash no longer wedges the server. The next tool call automatically relaunches the browser, clears the dead tab and CDP-session caches, and opens a fresh blank tab — so an agent can keep working after a renderer crash without restarting the MCP server.
+
 ## Usage Examples
 
 Once connected, an agent can use Charlotte's tools:
@@ -279,7 +328,7 @@ navigate({ url: "https://example.com" })
 find({ type: "link", text: "More information" })
 // → just the matching element with its ID
 
-click({ element_id: "lnk-a3f1" })
+click({ element_id: "lnk-a3f1c2" })
 ```
 
 ### Fill out a form
@@ -287,9 +336,9 @@ click({ element_id: "lnk-a3f1" })
 ```
 navigate({ url: "https://httpbin.org/forms/post" })
 find({ type: "text_input" })
-type({ element_id: "inp-c7e2", text: "hello@example.com" })
-select({ element_id: "sel-e8a3", value: "option-2" })
-submit({ form_id: "frm-b1d4" })
+type({ element_id: "inp-c7e29b", text: "hello@example.com" })
+select({ element_id: "sel-e8a3f5", value: "option-2" })
+submit({ form_id: "frm-b1d4e7" })
 ```
 
 ### Local development feedback loop
@@ -315,7 +364,7 @@ Landmarks, headings, and interactive element counts grouped by page region. Desi
   "title": "Hacker News",
   "viewport": { "width": 1280, "height": 720 },
   "structure": {
-    "headings": [{ "level": 1, "text": "Hacker News", "id": "h-a1b2" }]
+    "headings": [{ "level": 1, "text": "Hacker News", "id": "hdg-a1b2c3" }]
   },
   "interactive_summary": {
     "total": 93,
@@ -337,15 +386,15 @@ Full interactive element list with typed metadata, form structures, and content 
   "viewport": { "width": 1280, "height": 720 },
   "structure": {
     "landmarks": [
-      { "id": "rgn-b2c1", "role": "banner", "label": "Site header", "bounds": { "x": 0, "y": 0, "w": 1280, "h": 64 } },
-      { "id": "rgn-d4e5", "role": "main", "label": "Content", "bounds": { "x": 240, "y": 64, "w": 1040, "h": 656 } }
+      { "id": "rgn-b2c1d0", "role": "banner", "label": "Site header", "bounds": { "x": 0, "y": 0, "w": 1280, "h": 64 } },
+      { "id": "rgn-d4e5f6", "role": "main", "label": "Content", "bounds": { "x": 240, "y": 64, "w": 1040, "h": 656 } }
     ],
-    "headings": [{ "level": 1, "text": "Dashboard", "id": "h-1a2b" }],
+    "headings": [{ "level": 1, "text": "Dashboard", "id": "hdg-1a2b3c" }],
     "content_summary": "main: 2 headings, 5 links, 1 form"
   },
   "interactive": [
     {
-      "id": "btn-a3f1",
+      "id": "btn-a3f1c2",
       "type": "button",
       "label": "Create Project",
       "bounds": { "x": 960, "y": 80, "w": 160, "h": 40 },
@@ -375,12 +424,14 @@ Navigation tools default to `minimal`. The `observe` tool defaults to `summary`.
 Element IDs are stable across minor DOM mutations. They're generated by hashing a composite key of element type, ARIA role, accessible name, and DOM path signature:
 
 ```
-btn-a3f1  (button)    inp-c7e2  (text input)
-lnk-d4b9  (link)      sel-e8a3  (select)
-chk-f1a2  (checkbox)  frm-b1d4  (form)
-rgn-e0d2  (landmark)  hdg-0f40  (heading)
-dom-b2c3  (DOM element, from CSS selector queries)
+btn-a3f1c2  (button)    inp-c7e29b  (text input)
+lnk-d4b910  (link)      sel-e8a3f5  (select)
+chk-f1a204  (checkbox)  frm-b1d4e7  (form)
+rgn-e0d2a8  (landmark)  hdg-0f4063  (heading)
+dom-b2c3d9  (DOM element, from CSS selector queries)
 ```
+
+> **v0.7.0 ID format change:** element-ID hashes are now **6 hex characters** (e.g. `btn-a3f1c2`), up from 4 in earlier releases. This drastically reduces cross-element hash collisions on large pages. Agents that hard-coded or pattern-matched 4-character IDs should re-`find` elements rather than reuse cached IDs across the upgrade.
 
 IDs survive unrelated DOM changes and element reordering within the same container. When an agent navigates at minimal detail (no individual element IDs), it uses `find` to locate elements by text, type, or spatial proximity — the returned elements include IDs ready for interaction.
 
@@ -451,8 +502,6 @@ Five pages cover navigation, forms, interactive elements, popups, delayed conten
 
 **Persistent Init Scripts** — Add a `--init-script` CLI argument to inject JavaScript on every page load via `page.evaluateOnNewDocument()`. Charlotte's `dev_inject` currently applies CSS/JS once and does not persist across navigations.
 
-**Configuration File** — Support a `--config` CLI argument to load settings from a JSON file, simplifying repeatable setups and CI/CD integration.
-
 **Full Device Emulation** — Extend `charlotte_viewport` to accept named devices (e.g., "iPhone 15") and configure user agent, touch support, and device pixel ratio via CDP, not just viewport dimensions.
 
 ### Feature Roadmap
@@ -482,6 +531,7 @@ See [docs/CHARLOTTE_SPEC.md](docs/CHARLOTTE_SPEC.md) for the complete specificat
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
 ---
 
 *Part of a growing suite of literary-named MCP servers. See more at [github.com/TickTockBent](https://github.com/TickTockBent).*

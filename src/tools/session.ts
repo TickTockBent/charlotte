@@ -617,13 +617,14 @@ export function registerSessionTools(
       try {
         await ensureReady(deps);
         const page = deps.pageManager.getActivePage();
-        // Use the cached long-lived CDP session (Network domain already enabled) rather than
-        // creating a fresh session. A fresh session would require a separate Network.enable call
-        // before setBlockedURLs / emulateNetworkConditions would take effect, and the session
-        // would be leaked (never detached). The cached session lives as long as the page lives,
-        // which is the correct lifetime for blocking rules — the rules are lost when the page
-        // (and its session) are closed, but that is the expected browser behaviour.
+        // Use the cached long-lived CDP session rather than creating a fresh one: blocking
+        // rules die with their session, so the cached session (which lives as long as the
+        // page) is the correct lifetime — and a fresh session would be leaked (never
+        // detached). Network is NOT pre-enabled on this session (the render path doesn't
+        // need it), so enable it here explicitly; without it setBlockedURLs and
+        // emulateNetworkConditions are silent no-ops (#192). Idempotent per session.
         const session = await deps.cdpSessionManager.getSession(page);
+        await session.send("Network.enable");
 
         const appliedSettings: {
           throttle?: string;

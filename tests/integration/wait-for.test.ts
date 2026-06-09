@@ -41,7 +41,7 @@ describe("charlotte_wait_for integration", () => {
   let waitForTool: ReturnType<typeof registerWaitForTools>["charlotte_wait_for"];
 
   beforeAll(async () => {
-    browserManager = new BrowserManager();
+    browserManager = new BrowserManager(undefined, { noSandbox: true });
     await browserManager.launch();
     pageManager = new PageManager();
     await pageManager.openTab(browserManager);

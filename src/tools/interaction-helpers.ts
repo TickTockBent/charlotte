@@ -44,6 +44,21 @@ export const MAX_TYPING_DURATION_MS = 30000; // 30 seconds
  */
 const TYPING_OVERHEAD_FACTOR = 1.15;
 
+/** Default inter-keystroke delay applied when `slowly` is requested without an explicit delay. */
+export const DEFAULT_SLOW_TYPING_DELAY_MS = 50;
+
+/**
+ * Resolve the effective inter-keystroke delay for a type operation.
+ * An explicit `characterDelay` always wins; otherwise `slowly: true` implies
+ * {@link DEFAULT_SLOW_TYPING_DELAY_MS}, and full-speed typing returns undefined.
+ */
+export function resolveCharacterDelay(
+  slowly: boolean | undefined,
+  characterDelay: number | undefined,
+): number | undefined {
+  return characterDelay ?? (slowly ? DEFAULT_SLOW_TYPING_DELAY_MS : undefined);
+}
+
 /**
  * Guard against slow-typing operations that would run long enough to risk an
  * MCP tool timeout. Throws a CharlotteError with INVALID_ARGUMENT when the

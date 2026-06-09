@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { pollUntilCondition } from "../../../src/utils/wait.js";
+import { CharlotteError, CharlotteErrorCode } from "../../../src/types/errors.js";
 
 // Create a mock page object for testing
 function createMockPage(behavior: {
@@ -95,10 +96,10 @@ describe("pollUntilCondition", () => {
     expect(result).toBe(true);
   });
 
-  it("treats JS evaluation exceptions as falsy", async () => {
+  it("treats JS evaluation exceptions as falsy (condition not met, polls until timeout)", async () => {
     const mockCdpSession = {
       send: vi.fn().mockResolvedValue({
-        result: {},
+        result: { type: "undefined" },
         exceptionDetails: { text: "ReferenceError: foo is not defined" },
       }),
       detach: vi.fn().mockResolvedValue(undefined),
@@ -115,7 +116,58 @@ describe("pollUntilCondition", () => {
       { timeout: 200, pollInterval: 50 },
     );
 
+    // Exceptions fold into "not met" — no immediate INVALID_ARGUMENT, just a false timeout
     expect(result).toBe(false);
+  });
+
+  it("throws INVALID_ARGUMENT immediately when JS expression evaluates to a function", async () => {
+    const mockCdpSession = {
+      send: vi.fn().mockResolvedValue({
+        result: { type: "function" },
+      }),
+      detach: vi.fn().mockResolvedValue(undefined),
+    };
+    const mockPage = {
+      $: vi.fn(),
+      createCDPSession: vi.fn().mockResolvedValue(mockCdpSession),
+      evaluate: vi.fn(),
+    } as any;
+
+    // Must reject immediately, not timeout
+    await expect(
+      pollUntilCondition(mockPage, { js: "() => document.title === 'x'" }, { timeout: 5000 }),
+    ).rejects.toThrow(CharlotteError);
+
+    await expect(
+      pollUntilCondition(mockPage, { js: "() => document.title === 'x'" }, { timeout: 5000 }),
+    ).rejects.toMatchObject({ code: CharlotteErrorCode.INVALID_ARGUMENT });
+
+    // Should have only called send once (immediate failure, not polling)
+    expect(mockCdpSession.send).toHaveBeenCalledTimes(2);
+  });
+
+  it("treats truthy non-boolean JS result as satisfied (non-serializable object → {})", async () => {
+    // returnByValue: true on a DOM node returns type: "object", no value (or empty object)
+    // The condition should still be considered truthy (object exists, subtype not "null")
+    const mockCdpSession = {
+      send: vi.fn().mockResolvedValue({
+        result: { type: "object", subtype: undefined, value: undefined },
+      }),
+      detach: vi.fn().mockResolvedValue(undefined),
+    };
+    const mockPage = {
+      $: vi.fn(),
+      createCDPSession: vi.fn().mockResolvedValue(mockCdpSession),
+      evaluate: vi.fn(),
+    } as any;
+
+    const result = await pollUntilCondition(
+      mockPage,
+      { js: "document.querySelector('h1')" },
+      { timeout: 1000 },
+    );
+
+    expect(result).toBe(true);
   });
 
   it("requires all conditions to be true (AND logic)", async () => {

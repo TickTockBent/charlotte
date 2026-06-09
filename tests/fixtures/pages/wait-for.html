@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wait For Test Page</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: sans-serif; padding: 20px; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <main role="main" aria-label="Wait for test content">
+    <h1>Wait For Tests</h1>
+
+    <div id="status">Ready</div>
+
+    <!-- Used for testing element appearance after delay -->
+    <button id="add-button-btn" onclick="addDelayedButton()">Add Button After Delay</button>
+    <div id="dynamic-container">
+      <!-- Buttons are added here dynamically -->
+    </div>
+  </main>
+
+  <script>
+    function addDelayedButton() {
+      setTimeout(function() {
+        const container = document.getElementById('dynamic-container');
+        const btn = document.createElement('button');
+        btn.id = 'late-appearing-btn';
+        btn.textContent = 'Late Button';
+        container.appendChild(btn);
+        document.getElementById('status').textContent = 'Button added';
+      }, 400);
+    }
+  </script>
+</body>
+</html>

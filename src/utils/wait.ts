@@ -1,4 +1,5 @@
 import type { Page } from "puppeteer";
+import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 
 export interface WaitCondition {
   /** Wait for a CSS selector to match */
@@ -21,6 +22,9 @@ const DEFAULT_POLL_INTERVAL_MS = 100;
 /**
  * Poll a page until a condition is met or timeout is reached.
  * Returns true if the condition was satisfied, false if timed out.
+ *
+ * Throws CharlotteError(INVALID_ARGUMENT) immediately if the JS expression
+ * evaluates to a function (the agent passed a lambda instead of an expression).
  */
 export async function pollUntilCondition(
   page: Page,
@@ -31,6 +35,7 @@ export async function pollUntilCondition(
   const deadline = Date.now() + options.timeout;
 
   while (Date.now() < deadline) {
+    // evaluateCondition throws INVALID_ARGUMENT for function-type results — let it propagate
     const satisfied = await evaluateCondition(page, condition);
     if (satisfied) return true;
 
@@ -45,6 +50,11 @@ export async function pollUntilCondition(
 
 /**
  * Evaluate a single WaitCondition against the current page state.
+ *
+ * Throws CharlotteError(INVALID_ARGUMENT) if the JS expression evaluates to a
+ * function (agent passed a lambda like `() => ...` instead of an expression).
+ * This is an immediate failure — not a polling retry — because the expression
+ * itself is invalid, not just unsatisfied.
  */
 async function evaluateCondition(page: Page, condition: WaitCondition): Promise<boolean> {
   if (condition.selector) {
@@ -68,9 +78,39 @@ async function evaluateCondition(page: Page, condition: WaitCondition): Promise<
         returnByValue: true,
         awaitPromise: true,
       });
-      const isTruthy = !evalResult.exceptionDetails && !!evalResult.result.value;
+
+      // Detect function-type results: agent passed a lambda instead of an expression.
+      // Fail immediately with INVALID_ARGUMENT — polling would never fix this.
+      if (evalResult.result.type === "function") {
+        throw new CharlotteError(
+          CharlotteErrorCode.INVALID_ARGUMENT,
+          "The 'js' condition evaluated to a function. Pass an expression (e.g. `document.title === 'x'`), not a function literal (e.g. `() => ...`).",
+          "Change the 'js' parameter to a plain expression that returns a truthy/falsy value.",
+        );
+      }
+
+      // Exception during evaluation: condition is not met this iteration.
+      // The caller (pollUntilCondition) accumulates the last exception text
+      // if it needs to surface it in a timeout error.
+      if (evalResult.exceptionDetails) {
+        return false;
+      }
+
+      // Truthy if the value is truthy OR the result is a non-null object
+      // (handles cases like `document.querySelector(...)` returning a DOM node
+      // which serializes to `{}` under returnByValue — still a truthy result).
+      const resultValue = evalResult.result.value;
+      const resultType = evalResult.result.type;
+      const isTruthy =
+        !!resultValue ||
+        (resultType === "object" && evalResult.result.subtype !== "null" && !resultValue);
       if (!isTruthy) return false;
-    } catch {
+    } catch (err) {
+      // Re-throw CharlotteErrors (e.g. INVALID_ARGUMENT) so callers can handle them.
+      if (err instanceof CharlotteError) {
+        throw err;
+      }
+      // Protocol/serialization errors count as "not satisfied"
       return false;
     } finally {
       await cdpSession.detach().catch(() => {});

@@ -11,6 +11,9 @@ export default defineConfig({
   test: {
     globals: true,
     testTimeout: 30000,
+    // Git worktrees (agent sandboxes, .claude/worktrees/) live inside the
+    // repo and contain full copies of tests/ — never collect from them.
+    exclude: ["**/node_modules/**", "**/.claude/**", "**/dist/**"],
     pool: "forks",
     poolOptions: {
       forks: {

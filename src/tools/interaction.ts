@@ -86,7 +86,9 @@ export function registerInteractionTools(
         );
 
         const representation = await renderAfterAction(deps);
-        return formatPageResponse(representation);
+        return formatPageResponse(representation, {
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }
@@ -159,7 +161,9 @@ export function registerInteractionTools(
         });
 
         const representation = await renderAfterAction(deps);
-        return formatPageResponse(representation);
+        return formatPageResponse(representation, {
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }
@@ -203,9 +207,11 @@ export function registerInteractionTools(
         const shouldPressEnter = press_enter ?? false;
         const delayMs = resolveCharacterDelay(slowly, character_delay);
 
-        // Pure argument validation — guard against slow-typing operations long
-        // enough to risk an MCP tool timeout before doing any browser work.
-        assertTypingDurationWithinLimit(text.length, delayMs);
+        // Pure argument validation — guard against typing operations long enough
+        // to risk an MCP tool timeout before doing any browser work. Floor the
+        // effective per-character delay at 2ms so even *full-speed* typing of a
+        // ~100KB payload (delayMs undefined) is bounded, not just slow typing (#204).
+        assertTypingDurationWithinLimit(text.length, Math.max(delayMs ?? 0, 2));
 
         await ensureReady(deps);
         const resolved = await resolveElement(deps, element_id);
@@ -234,7 +240,9 @@ export function registerInteractionTools(
         );
 
         const representation = await renderAfterAction(deps);
-        return formatPageResponse(representation);
+        return formatPageResponse(representation, {
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }
@@ -267,7 +275,9 @@ export function registerInteractionTools(
         );
 
         const representation = await renderAfterAction(deps);
-        return formatPageResponse(representation);
+        return formatPageResponse(representation, {
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }
@@ -299,7 +309,9 @@ export function registerInteractionTools(
         );
 
         const representation = await renderAfterAction(deps);
-        return formatPageResponse(representation);
+        return formatPageResponse(representation, {
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }
@@ -463,7 +475,9 @@ export function registerInteractionTools(
         await new Promise((resolve) => setTimeout(resolve, 50));
 
         const representation = await renderAfterAction(deps);
-        return formatPageResponse(representation);
+        return formatPageResponse(representation, {
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }
@@ -491,7 +505,9 @@ export function registerInteractionTools(
         await hoverElementByBackendNodeId(resolved.page, resolved.backendNodeId, session);
 
         const representation = await renderAfterAction(deps);
-        return formatPageResponse(representation);
+        return formatPageResponse(representation, {
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }
@@ -543,7 +559,9 @@ export function registerInteractionTools(
         );
 
         const representation = await renderAfterAction(deps);
-        return formatPageResponse(representation);
+        return formatPageResponse(representation, {
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }
@@ -592,9 +610,6 @@ export function registerInteractionTools(
     },
     async ({ key, keys, modifiers, element_id, delay }) => {
       try {
-        await ensureReady(deps);
-        const page = deps.pageManager.getActivePage();
-
         // Validate: exactly one of key or keys must be provided
         if (key && keys) {
           throw new CharlotteError(
@@ -608,6 +623,17 @@ export function registerInteractionTools(
             "Provide either key (single) or keys (sequence).",
           );
         }
+
+        // Guard long key sequences the same way charlotte_type guards slow typing:
+        // keys:[500 items] with delay:200 would run 100s into the MCP timeout (#180,
+        // #204). Each press also has a small fixed per-key cost, so floor the
+        // effective delay at 2ms so even a full-speed mega-sequence is bounded.
+        if (keys) {
+          assertTypingDurationWithinLimit(keys.length, Math.max(delay ?? 0, 2));
+        }
+
+        await ensureReady(deps);
+        const page = deps.pageManager.getActivePage();
 
         // Focus target element if specified
         if (element_id) {
@@ -653,7 +679,9 @@ export function registerInteractionTools(
         });
 
         const representation = await renderAfterAction(deps);
-        return formatPageResponse(representation);
+        return formatPageResponse(representation, {
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }
@@ -695,7 +723,9 @@ export function registerInteractionTools(
         await setFileInputFiles(resolved.page, resolved.backendNodeId, paths, session);
 
         const representation = await renderAfterAction(deps);
-        return formatPageResponse(representation);
+        return formatPageResponse(representation, {
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }
@@ -719,7 +749,7 @@ export function registerInteractionTools(
     "charlotte_fill_form",
     {
       description:
-        "Fill multiple form fields in a single call. Auto-detects element types (text input, select, checkbox, etc.) and applies the appropriate action. Returns a single page representation with delta covering all changes. Validates all fields before mutating any — if one field is invalid, no fields are changed.",
+        "Fill multiple form fields in a single call. Auto-detects element types (text input, select, checkbox, etc.) and applies the appropriate action. Returns a single page representation with delta covering all changes. All fields are validated up front before any field is mutated; if validation fails, no fields are changed. Note: if a field action fails mid-list (e.g. a handler throws after earlier fields succeeded), earlier fields remain applied.",
       inputSchema: {
         fields: z
           .array(
@@ -728,7 +758,10 @@ export function registerInteractionTools(
               value: z
                 .string()
                 .describe(
-                  "Value to set: text for inputs/textareas, option value or text for selects. For checkbox/radio/toggle the element is clicked (toggling its state) and value is ignored.",
+                  "Value to set: text for inputs/textareas, option value or text for selects. " +
+                    'For checkbox/radio/toggle, pass the DESIRED state as "true" (checked) or "false" (unchecked) — ' +
+                    "the element is clicked only when its current state differs, so re-filling is idempotent. " +
+                    'Any non-"false" value is treated as "true".',
                 ),
             }),
           )
@@ -749,6 +782,8 @@ export function registerInteractionTools(
           frameId: string | null;
           type: string;
           value: string;
+          /** Current checked state for checkbox/radio/toggle, captured at validation time. */
+          currentlyChecked: boolean;
           page: import("puppeteer").Page;
         }> = [];
 
@@ -784,6 +819,9 @@ export function registerInteractionTools(
             frameId: resolved.frameId,
             type: element.type,
             value: field.value,
+            // "mixed" (indeterminate) counts as not-checked so an explicit
+            // value: "true" forces it on.
+            currentlyChecked: element.state.checked === true,
             page: resolved.page,
           });
         }
@@ -833,17 +871,24 @@ export function registerInteractionTools(
               break;
             case "checkbox":
             case "radio":
-            case "toggle":
-              await waitForPossibleNavigation(field.page, () =>
-                clickElementByBackendNodeId(
-                  field.page,
-                  field.backendNodeId,
-                  "left",
-                  [],
-                  fieldSession,
-                ),
-              );
+            case "toggle": {
+              // Set-semantics, not toggle: the value expresses the DESIRED state.
+              // Only click when the current state differs, so value: "true" on an
+              // already-checked box is a no-op instead of unchecking it (#204).
+              const desiredChecked = field.value.toLowerCase() !== "false";
+              if (desiredChecked !== field.currentlyChecked) {
+                await waitForPossibleNavigation(field.page, () =>
+                  clickElementByBackendNodeId(
+                    field.page,
+                    field.backendNodeId,
+                    "left",
+                    [],
+                    fieldSession,
+                  ),
+                );
+              }
               break;
+            }
           }
         }
 

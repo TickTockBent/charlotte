@@ -88,26 +88,19 @@ export function registerDevModeTools(
           source: "action",
         });
 
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: JSON.stringify(
-                {
-                  ...representation,
-                  dev_server: {
-                    url: serverInfo.url,
-                    port: serverInfo.port,
-                    directory: serverInfo.directoryPath,
-                    watching: shouldWatch,
-                  },
-                },
-                null,
-                2,
-              ),
+        // Route through formatPageResponse so the page payload is stripped and
+        // size-capped, with the dev_server metadata merged in (#188, #204).
+        return formatPageResponse(representation, {
+          extra: {
+            dev_server: {
+              url: serverInfo.url,
+              port: serverInfo.port,
+              directory: serverInfo.directoryPath,
+              watching: shouldWatch,
             },
-          ],
-        };
+          },
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }

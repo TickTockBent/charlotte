@@ -44,3 +44,41 @@ describe("ContentExtractor.extractSummary", () => {
     expect(summary).not.toContain("forms");
   });
 });
+
+describe("ContentExtractor.extractFullContent caps (#188)", () => {
+  const extractor = new ContentExtractor();
+
+  it("returns full text and totalChars with no truncation when under the cap", () => {
+    const root = node("main", "", [node("paragraph", "Hello world")]);
+    const result = extractor.extractFullContent([root], 1000);
+    expect(result.text).toBe("Hello world");
+    expect(result.truncated).toBe(false);
+    expect(result.totalChars).toBe("Hello world".length);
+  });
+
+  it("treats an undefined cap as unbounded", () => {
+    const big = "x".repeat(5000);
+    const root = node("main", "", [node("paragraph", big)]);
+    const result = extractor.extractFullContent([root]);
+    expect(result.truncated).toBe(false);
+    expect(result.text).toBe(big);
+  });
+
+  it("truncates with an explicit marker once the cap is exceeded", () => {
+    // Many paragraphs, each contributing text, far past a tiny cap.
+    const paragraphs = Array.from({ length: 200 }, (_, i) =>
+      node("paragraph", `line ${i} content`),
+    );
+    const root = node("main", "", paragraphs);
+
+    const cap = 100;
+    const result = extractor.extractFullContent([root], cap);
+
+    expect(result.truncated).toBe(true);
+    expect(result.totalChars).toBeGreaterThan(cap);
+    expect(result.text).toContain("[...full_content truncated at 100 characters.");
+    // The non-marker prefix never exceeds the cap.
+    const markerStart = result.text.indexOf("\n\n[...full_content truncated");
+    expect(markerStart).toBeLessThanOrEqual(cap);
+  });
+});

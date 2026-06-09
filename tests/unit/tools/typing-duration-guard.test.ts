@@ -61,4 +61,29 @@ describe("assertTypingDurationWithinLimit", () => {
     const delayMs = resolveCharacterDelay(true, undefined);
     expect(() => assertTypingDurationWithinLimit(2000, delayMs)).toThrow(CharlotteError);
   });
+
+  it("bounds full-speed typing via the handler's 2ms floor (#204)", () => {
+    // charlotte_type passes Math.max(delayMs ?? 0, 2) so even full-speed typing
+    // of a huge payload is bounded. Mirror that with delayMs undefined.
+    const fullSpeedDelay: number | undefined = undefined;
+    const flooredDelay = Math.max(fullSpeedDelay ?? 0, 2);
+
+    // 100k chars * 2ms = 200s, far over the cap.
+    expect(() => assertTypingDurationWithinLimit(100_000, flooredDelay)).toThrow(CharlotteError);
+    // A small full-speed payload still passes under the floor.
+    expect(() => assertTypingDurationWithinLimit(100, flooredDelay)).not.toThrow();
+  });
+
+  it("bounds a long charlotte_key sequence (#204)", () => {
+    // keys:[500] with delay:200 → 100s of presses, far over the cap. The handler
+    // applies Math.max(delay ?? 0, 2) before the same guard.
+    const sequenceDelay: number | undefined = 200;
+    expect(() => assertTypingDurationWithinLimit(500, Math.max(sequenceDelay ?? 0, 2))).toThrow(
+      CharlotteError,
+    );
+
+    // A modest sequence at full speed is allowed.
+    const fastDelay: number | undefined = undefined;
+    expect(() => assertTypingDurationWithinLimit(10, Math.max(fastDelay ?? 0, 2))).not.toThrow();
+  });
 });

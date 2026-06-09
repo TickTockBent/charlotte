@@ -383,22 +383,111 @@ export function stripEmptyFields(representation: PageRepresentation): Record<str
     delete cleaned.opened_tabs;
   }
 
+  // Strip absent truncation marker (#188)
+  if (!representation.truncation) {
+    delete cleaned.truncation;
+  }
+
   return cleaned;
+}
+
+/**
+ * Byte ceiling used by {@link formatPageResponse} when the caller does not
+ * supply config-driven limits. Mirrors {@link DEFAULT_OUTPUT_LIMITS.maxResponseBytes}.
+ */
+const FALLBACK_MAX_RESPONSE_BYTES = 1_000_000;
+
+/**
+ * Degrade an over-large serialized page response (#188).
+ *
+ * When the compact JSON exceeds `maxBytes`, we drop the heavy fields
+ * (`interactive`, `forms`, `structure.full_content`) and return a compact
+ * summary instead: landmark/heading counts, the interactive_summary (computed
+ * here if the render didn't already produce one), and an explicit truncation
+ * marker steering the agent toward `output_file` or a narrower detail level.
+ */
+function degradeOversizedResponse(
+  cleaned: Record<string, unknown>,
+  representation: PageRepresentation,
+  maxBytes: number,
+): Record<string, unknown> {
+  const summary: Record<string, unknown> = {
+    url: representation.url,
+    title: representation.title,
+    viewport: representation.viewport,
+    snapshot_id: representation.snapshot_id,
+    timestamp: representation.timestamp,
+    structure: {
+      landmarks_count: representation.structure.landmarks.length,
+      headings_count: representation.structure.headings.length,
+      ...(representation.structure.content_summary
+        ? { content_summary: representation.structure.content_summary }
+        : {}),
+    },
+    interactive_count: representation.interactive.length,
+    forms_count: representation.forms.length,
+    response_truncated: {
+      reason: `Full response exceeded ${maxBytes} bytes and was replaced with this summary.`,
+      suggestion:
+        "Re-run with output_file to write the full page representation to disk, " +
+        "or use a narrower detail level / selector (e.g. charlotte_find for specific elements).",
+    },
+  };
+
+  // Preserve any errors and pending dialog — these are small and high-signal.
+  if (cleaned.errors) summary.errors = cleaned.errors;
+  if (cleaned.pending_dialog) summary.pending_dialog = cleaned.pending_dialog;
+  if (cleaned.truncation) summary.truncation = cleaned.truncation;
+
+  return summary;
+}
+
+export interface FormatPageResponseOptions {
+  /**
+   * Extra top-level keys merged into the serialized payload alongside the
+   * stripped page representation (#204). Lets tools like tab_open, dev_serve,
+   * and dialog attach their metadata without hand-rolling pretty-printed,
+   * unstripped JSON (which roughly doubles token cost).
+   */
+  extra?: Record<string, unknown>;
+  /**
+   * Byte ceiling before the response degrades to a compact summary (#188).
+   * Pass `deps.config.limits.maxResponseBytes`; defaults to
+   * {@link FALLBACK_MAX_RESPONSE_BYTES} when omitted.
+   */
+  maxResponseBytes?: number;
 }
 
 /**
  * Format a PageRepresentation as an MCP tool response.
  * Uses compact JSON (no indentation) with empty fields stripped.
+ *
+ * Enforces a total byte ceiling (#188): if the serialized payload would exceed
+ * `maxResponseBytes`, the heavy fields are dropped and a compact summary with a
+ * truncation marker + output_file suggestion is returned instead.
  */
-export function formatPageResponse(representation: PageRepresentation): {
+export function formatPageResponse(
+  representation: PageRepresentation,
+  options: FormatPageResponseOptions = {},
+): {
   content: Array<{ type: "text"; text: string }>;
 } {
+  const { extra, maxResponseBytes = FALLBACK_MAX_RESPONSE_BYTES } = options;
   const cleaned = stripEmptyFields(representation);
+  const payload = extra ? { ...extra, ...cleaned } : cleaned;
+
+  let text = JSON.stringify(payload);
+  if (Buffer.byteLength(text, "utf-8") > maxResponseBytes) {
+    const degraded = degradeOversizedResponse(cleaned, representation, maxResponseBytes);
+    const degradedPayload = extra ? { ...extra, ...degraded } : degraded;
+    text = JSON.stringify(degradedPayload);
+  }
+
   return {
     content: [
       {
         type: "text" as const,
-        text: JSON.stringify(cleaned),
+        text,
       },
     ],
   };

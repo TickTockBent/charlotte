@@ -108,7 +108,9 @@ export async function setupMcpHarness(options: HarnessOptions = {}): Promise<Mcp
   });
 
   const elementIdGenerator = new ElementIdGenerator();
-  const rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator);
+  // Pass the (possibly overridden) config so render-pipeline tunables like the
+  // output-size caps (#188) and iframe settings honor configOverrides.
+  const rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator, config);
 
   const artifactDirectory = await fs.mkdtemp(path.join(os.tmpdir(), "charlotte-harness-"));
   const artifactStore = new ArtifactStore(artifactDirectory);

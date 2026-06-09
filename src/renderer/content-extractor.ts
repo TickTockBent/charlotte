@@ -149,41 +149,91 @@ export class ContentExtractor {
     return formatCounts(topLevelCounts);
   }
 
-  extractFullContent(rootNodes: ParsedAXNode[]): string {
+  /**
+   * Concatenate page text content from the AX tree.
+   *
+   * `maxChars`, when provided, bounds the result: traversal stops accumulating
+   * once the running character count reaches the cap, and the returned string is
+   * hard-truncated with an explicit marker so a 100k-element document body can't
+   * blow the response size (issue #188). The total character count (pre-cap) is
+   * returned so callers can surface a truncation indicator.
+   *
+   * A depth guard (`MAX_TRAVERSAL_DEPTH`) prevents a stack overflow on
+   * pathological/deeply-nested DOMs.
+   */
+  extractFullContent(
+    rootNodes: ParsedAXNode[],
+    maxChars?: number,
+  ): { text: string; totalChars: number; truncated: boolean } {
     const textParts: string[] = [];
+    let totalChars = 0;
+    // Once we cross the cap we stop collecting further text but keep walking is
+    // pointless — bail out of traversal entirely via this flag.
+    let capReached = false;
 
-    const traverse = (node: ParsedAXNode) => {
+    const traverse = (node: ParsedAXNode, depth: number) => {
+      if (capReached) return;
+      if (depth > MAX_TRAVERSAL_DEPTH) return;
+
+      const push = (text: string) => {
+        textParts.push(text);
+        // +1 accounts for the "\n" join separator between parts.
+        totalChars += text.length + 1;
+        if (maxChars !== undefined && totalChars >= maxChars) {
+          capReached = true;
+        }
+      };
+
       // Include text from nodes that represent content.
       // For content-role nodes (headings, paragraphs, etc.), the AX tree `name`
       // already includes all descendant text including CSS pseudo-element content.
       // We emit the name and skip children to avoid duplicating that text.
       if (node.name && isContentRole(node.role)) {
-        textParts.push(node.name);
+        push(node.name);
         return;
       }
 
       // For StaticText/text nodes not under a content-role parent (which would
       // have returned above), include the text directly.
       if (node.role === "StaticText" || node.role === "text") {
-        if (node.name) textParts.push(node.name);
+        if (node.name) push(node.name);
       }
 
       for (const child of node.children) {
-        traverse(child);
+        if (capReached) return;
+        traverse(child, depth + 1);
       }
     };
 
     for (const root of rootNodes) {
+      if (capReached) break;
       try {
-        traverse(root);
+        traverse(root, 0);
       } catch (error) {
         logger.warn("Skipping malformed AX node during content extraction", error);
       }
     }
 
-    return textParts.join("\n");
+    const joined = textParts.join("\n");
+
+    if (maxChars !== undefined && joined.length > maxChars) {
+      const truncatedText =
+        joined.slice(0, maxChars) +
+        `\n\n[...full_content truncated at ${maxChars} characters. ` +
+        `Use a narrower selector or output_file to retrieve the complete text.]`;
+      return { text: truncatedText, totalChars: joined.length, truncated: true };
+    }
+
+    return { text: joined, totalChars: joined.length, truncated: false };
   }
 }
+
+/**
+ * Maximum AX-tree recursion depth. Real pages nest a few dozen levels deep at
+ * most; a depth far beyond that signals a pathological/adversarial DOM, and we
+ * stop rather than risk a stack overflow (issue #188).
+ */
+const MAX_TRAVERSAL_DEPTH = 5000;
 
 function isContentRole(role: string): boolean {
   return (

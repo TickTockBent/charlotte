@@ -37,6 +37,11 @@ export interface ResolvedOptions {
   includeIframes?: boolean;
   iframeDepth?: number;
   dialogAutoDismiss?: DialogAutoDismiss;
+  /** Output-size caps (issue #188). */
+  maxInteractiveElements?: number;
+  maxFullContentChars?: number;
+  maxResponseBytes?: number;
+  maxEvaluateBytes?: number;
 }
 
 /**
@@ -124,5 +129,9 @@ export function resolveOptions(
     includeIframes: file.rendering?.includeIframes,
     iframeDepth: file.rendering?.iframeDepth,
     dialogAutoDismiss: file.dialog?.autoDismiss,
+    maxInteractiveElements: file.limits?.maxInteractiveElements,
+    maxFullContentChars: file.limits?.maxFullContentChars,
+    maxResponseBytes: file.limits?.maxResponseBytes,
+    maxEvaluateBytes: file.limits?.maxEvaluateBytes,
   };
 }

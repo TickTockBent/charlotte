@@ -158,5 +158,26 @@ describe("resolveOptions precedence (issue #19)", () => {
       expect(result.iframeDepth).toBe(5);
       expect(result.dialogAutoDismiss).toBe("accept_all");
     });
+
+    it("passes through output-size limits (issue #188)", () => {
+      const result = resolveOptions(noCli, noEnv, {
+        limits: {
+          maxInteractiveElements: 500,
+          maxFullContentChars: 1000,
+          maxResponseBytes: 50_000,
+          maxEvaluateBytes: 10_000,
+        },
+      });
+      expect(result.maxInteractiveElements).toBe(500);
+      expect(result.maxFullContentChars).toBe(1000);
+      expect(result.maxResponseBytes).toBe(50_000);
+      expect(result.maxEvaluateBytes).toBe(10_000);
+    });
+
+    it("leaves limits undefined when no limits section is present", () => {
+      const result = resolveOptions(noCli, noEnv, noFile);
+      expect(result.maxInteractiveElements).toBeUndefined();
+      expect(result.maxResponseBytes).toBeUndefined();
+    });
   });
 });

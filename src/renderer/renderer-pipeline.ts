@@ -27,6 +27,7 @@ import type {
   Landmark,
   Heading,
   Bounds,
+  TruncationInfo,
 } from "../types/page-representation.js";
 import { createDefaultConfig } from "../types/config.js";
 import type { CharlotteConfig } from "../types/config.js";
@@ -128,13 +129,25 @@ export class RendererPipeline {
     // Step 8: Extract content based on detail level
     let contentSummary: string | undefined;
     let fullContent: string | undefined;
+    // Tracks any output cap that fired so we can attach a truncation marker (#188).
+    let fullContentTruncation: { total_chars: number; returned_chars: number } | undefined;
 
     if (options.detail !== "minimal") {
       contentSummary = this.contentExtractor.extractSummary(rootNodes);
     }
 
     if (options.detail === "full") {
-      fullContent = this.contentExtractor.extractFullContent(rootNodes);
+      const extracted = this.contentExtractor.extractFullContent(
+        rootNodes,
+        this.config.limits.maxFullContentChars,
+      );
+      fullContent = extracted.text;
+      if (extracted.truncated) {
+        fullContentTruncation = {
+          total_chars: extracted.totalChars,
+          returned_chars: this.config.limits.maxFullContentChars,
+        };
+      }
     }
 
     // Step 8.5: Generate interactive summary for minimal detail
@@ -179,6 +192,18 @@ export class RendererPipeline {
       }
     }
 
+    // Step 9.5: Cap the interactive element list so an adversarial page (100k
+    // links) cannot produce a multi-MB response. The full set is kept long
+    // enough to register every ID with the generator above; we truncate only
+    // the serialized array and record how many were dropped (#188).
+    const maxInteractive = this.config.limits.maxInteractiveElements;
+    let interactiveTruncation: { total: number; returned: number } | undefined;
+    let cappedElements = elements;
+    if (elements.length > maxInteractive) {
+      interactiveTruncation = { total: elements.length, returned: maxInteractive };
+      cappedElements = elements.slice(0, maxInteractive);
+    }
+
     // Step 10: Atomically replace the shared ID generator
     this.elementIdGenerator.replaceWith(freshIdGenerator);
 
@@ -186,6 +211,8 @@ export class RendererPipeline {
     const url = page.url();
     const title = await page.title();
     const viewport = page.viewport() ?? this.config.defaultViewport;
+
+    const truncation = this.buildTruncationInfo(interactiveTruncation, fullContentTruncation);
 
     const representation: PageRepresentation = {
       url,
@@ -199,7 +226,7 @@ export class RendererPipeline {
         ...(contentSummary !== undefined ? { content_summary: contentSummary } : {}),
         ...(fullContent !== undefined ? { full_content: fullContent } : {}),
       },
-      interactive: elements,
+      interactive: cappedElements,
       forms,
       ...(interactiveSummary ? { interactive_summary: interactiveSummary } : {}),
       ...(iframeInfos ? { iframes: iframeInfos } : {}),
@@ -207,6 +234,7 @@ export class RendererPipeline {
         console: [],
         network: [],
       },
+      ...(truncation ? { truncation } : {}),
     };
 
     logger.debug("Render pipeline complete", {
@@ -375,9 +403,12 @@ export class RendererPipeline {
     }
 
     if (options.detail === "full") {
-      const frameFullContent = this.contentExtractor.extractFullContent(frameRootNodes);
-      if (frameFullContent) {
-        fullContents.push(`--- iframe: ${frameUrl} ---\n${frameFullContent}`);
+      const frameFullContent = this.contentExtractor.extractFullContent(
+        frameRootNodes,
+        this.config.limits.maxFullContentChars,
+      );
+      if (frameFullContent.text) {
+        fullContents.push(`--- iframe: ${frameUrl} ---\n${frameFullContent.text}`);
       }
     }
 
@@ -553,6 +584,37 @@ export class RendererPipeline {
     }
 
     return { total, by_landmark: landmarkCounts };
+  }
+
+  /**
+   * Assemble the optional `truncation` block from whichever caps fired during
+   * render (#188). Returns undefined when nothing was truncated so a clean page
+   * never carries the field.
+   */
+  private buildTruncationInfo(
+    interactive: { total: number; returned: number } | undefined,
+    fullContent: { total_chars: number; returned_chars: number } | undefined,
+  ): TruncationInfo | undefined {
+    if (!interactive && !fullContent) return undefined;
+
+    const suggestions: string[] = [];
+    if (interactive) {
+      suggestions.push(
+        "Use charlotte_find to query a narrower set of interactive elements, " +
+          "or scope observation with a selector.",
+      );
+    }
+    if (fullContent) {
+      suggestions.push(
+        "Use a narrower selector or observe with output_file to retrieve the full text.",
+      );
+    }
+
+    return {
+      ...(interactive ? { interactive } : {}),
+      ...(fullContent ? { full_content: fullContent } : {}),
+      suggestion: suggestions.join(" "),
+    };
   }
 
   private getHeadingLevel(node: ParsedAXNode): 1 | 2 | 3 | 4 | 5 | 6 {

@@ -27,6 +27,23 @@ export default defineConfig({
       reportsDirectory: "coverage",
       include: ["src/**/*.ts"],
       exclude: ["src/index.ts"],
+      // Thresholds set slightly below actuals (measured 2026-06-09) so CI
+      // catches regressions but passes today.
+      // Overall: stmts 81.62%, branches 73.68%, fns 84.36%, lines 82.32%
+      thresholds: {
+        statements: 80,
+        branches: 72,
+        functions: 83,
+        lines: 81,
+        // Protect src/tools especially — it has the lowest coverage.
+        // Actuals: stmts 65.83%, branches 53.57%, fns 69.04%, lines 66.3%
+        "src/tools/**": {
+          statements: 64,
+          branches: 52,
+          functions: 67,
+          lines: 65,
+        },
+      },
     },
   },
 });

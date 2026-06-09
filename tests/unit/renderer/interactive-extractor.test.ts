@@ -113,4 +113,39 @@ describe("InteractiveExtractor", () => {
       expect(selectElement.options![50]).toBe("... and 10 more options");
     });
   });
+
+  describe("tri-state checkbox", () => {
+    it("preserves checked: 'mixed' for indeterminate checkboxes", () => {
+      const node = createMockNode({
+        role: "checkbox",
+        name: "Select all",
+        properties: { checked: "mixed" },
+      });
+
+      const result = extractor.extractInteractiveElements([node], boundsMap, idGenerator);
+      expect(result.elements[0].state.checked).toBe("mixed");
+    });
+
+    it("maps checked: true for fully-checked checkboxes", () => {
+      const node = createMockNode({
+        role: "checkbox",
+        name: "Agree",
+        properties: { checked: "true" },
+      });
+
+      const result = extractor.extractInteractiveElements([node], boundsMap, idGenerator);
+      expect(result.elements[0].state.checked).toBe(true);
+    });
+
+    it("omits checked for unchecked checkboxes", () => {
+      const node = createMockNode({
+        role: "checkbox",
+        name: "Subscribe",
+        properties: { checked: "false" },
+      });
+
+      const result = extractor.extractInteractiveElements([node], boundsMap, idGenerator);
+      expect(result.elements[0].state.checked).toBeUndefined();
+    });
+  });
 });

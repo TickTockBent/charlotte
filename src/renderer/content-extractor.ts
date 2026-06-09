@@ -32,7 +32,20 @@ function createEmptyCounts(role: string, label: string): LandmarkCounts {
   };
 }
 
-function countElements(node: ParsedAXNode, counts: LandmarkCounts): void {
+function countElements(node: ParsedAXNode, counts: LandmarkCounts, isRoot = false): void {
+  // Skip counting the traversal root itself. Otherwise a form landmark counts
+  // itself ("1 forms" on the very form you're looking at), while containing
+  // landmarks never count nested forms (form is a landmark, so recursion stops
+  // at it). Net result: the forms count was self-referential and useless.
+  if (isRoot) {
+    for (const child of node.children) {
+      if (!isLandmarkRole(child.role)) {
+        countElements(child, counts);
+      }
+    }
+    return;
+  }
+
   switch (node.role) {
     case "heading":
       counts.headings++;
@@ -106,7 +119,7 @@ export class ContentExtractor {
     const findLandmarks = (node: ParsedAXNode): void => {
       if (isLandmarkRole(node.role)) {
         const counts = createEmptyCounts(node.role, node.name || node.role);
-        countElements(node, counts);
+        countElements(node, counts, /* isRoot */ true);
         landmarkSummaries.push(formatCounts(counts));
         // Don't recurse into landmark children here — countElements
         // already skips nested landmarks, which get found by continued traversal
@@ -123,7 +136,7 @@ export class ContentExtractor {
 
       // Count non-landmark content at root level (for fallback summary)
       if (!isLandmarkRole(root.role)) {
-        countElements(root, topLevelCounts);
+        countElements(root, topLevelCounts, /* isRoot */ true);
       }
     }
 

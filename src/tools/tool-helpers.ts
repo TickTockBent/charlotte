@@ -5,7 +5,7 @@ import type { PageManager } from "../browser/page-manager.js";
 import type { BrowserManager } from "../browser/browser-manager.js";
 import type { CDPSessionManager } from "../browser/cdp-session.js";
 import type { RendererPipeline } from "../renderer/renderer-pipeline.js";
-import type { ElementIdGenerator } from "../renderer/element-id-generator.js";
+import type { ElementIdGenerator, DomQueryRegistration } from "../renderer/element-id-generator.js";
 import type { SnapshotStore } from "../state/snapshot-store.js";
 import type { ArtifactStore } from "../state/artifact-store.js";
 import type { CharlotteConfig } from "../types/config.js";
@@ -181,6 +181,24 @@ export async function resolveElement(
 ): Promise<ResolvedElement> {
   const page = deps.pageManager.getActivePage();
 
+  // Step 0: Selector-mode (dom-) IDs re-resolve against the live DOM. The
+  // stored backend node ID can go stale (DOM mutation, partial re-render), so
+  // re-run the originating selector to get a fresh node ID. This is also what
+  // keeps dom- IDs working after fill_form's pre-render (issue #191).
+  const domRegistration = deps.elementIdGenerator.getDomQueryRegistration(elementId);
+  if (domRegistration) {
+    const reResolved = await reResolveDomQueryId(deps, elementId, domRegistration);
+    if (reResolved) {
+      return reResolved;
+    }
+    // Selector no longer matches — element is genuinely gone.
+    throw new CharlotteError(
+      CharlotteErrorCode.ELEMENT_NOT_FOUND,
+      `Element '${elementId}' not found on page.`,
+      `The selector '${domRegistration.selector}' that produced '${elementId}' no longer matches that element. Re-run charlotte_find with the selector to get a current ID.`,
+    );
+  }
+
   // Step 1: Check current map
   let backendNodeId = deps.elementIdGenerator.resolveId(elementId);
   if (backendNodeId !== null) {
@@ -208,6 +226,50 @@ export async function resolveElement(
     `Element '${elementId}' not found on page.`,
     suggestion,
   );
+}
+
+/**
+ * Re-resolve a selector-mode (`dom-`) element ID by re-running its originating
+ * CSS selector against the live DOM. Returns the resolved element with a fresh
+ * backend node ID, or null if the selector no longer matches that index.
+ *
+ * Updates the durable registration so subsequent lookups stay cheap.
+ */
+async function reResolveDomQueryId(
+  deps: ToolDependencies,
+  elementId: string,
+  registration: DomQueryRegistration,
+): Promise<ResolvedElement | null> {
+  const page = deps.pageManager.getActivePage();
+  const cdpSession = await page.createCDPSession();
+  try {
+    const { root } = await cdpSession.send("DOM.getDocument", { depth: 0 });
+    const { nodeIds } = await cdpSession.send("DOM.querySelectorAll", {
+      nodeId: root.nodeId,
+      selector: registration.selector,
+    });
+
+    const nodeId = nodeIds[registration.matchIndex];
+    if (nodeId === undefined) {
+      return null;
+    }
+
+    const { node } = await cdpSession.send("DOM.describeNode", { nodeId });
+    const freshBackendNodeId = node.backendNodeId;
+
+    // Refresh the durable registration so the per-render maps and the stored
+    // backend node ID stay in sync after DOM mutations.
+    deps.elementIdGenerator.registerDomQueryId(elementId, {
+      ...registration,
+      backendDOMNodeId: freshBackendNodeId,
+    });
+
+    return { page, backendNodeId: freshBackendNodeId, frameId: registration.frameId };
+  } catch {
+    return null;
+  } finally {
+    await cdpSession.detach();
+  }
 }
 
 /**

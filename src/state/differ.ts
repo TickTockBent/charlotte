@@ -59,20 +59,20 @@ export function diffRepresentations(
 
 // ─── Landmark diffing ────────────────────────────────────────────────
 
-function landmarkKey(landmark: Landmark): string {
-  return `${landmark.role}:${landmark.label}`;
-}
-
 function diffLandmarks(fromLandmarks: Landmark[], toLandmarks: Landmark[]): DiffChange[] {
   const changes: DiffChange[] = [];
-  const fromByKey = new Map(fromLandmarks.map((landmark) => [landmarkKey(landmark), landmark]));
-  const toByKey = new Map(toLandmarks.map((landmark) => [landmarkKey(landmark), landmark]));
+  // Key by the landmark's hash ID, not role:label. Keying by role:label
+  // collapses two unnamed `navigation` landmarks into one (so a removal
+  // produces no diff) and ignores the stable IDs the landmarks already carry.
+  const fromByKey = new Map(fromLandmarks.map((landmark) => [landmark.id, landmark]));
+  const toByKey = new Map(toLandmarks.map((landmark) => [landmark.id, landmark]));
 
   // Removed landmarks
   for (const [key, landmark] of fromByKey) {
     if (!toByKey.has(key)) {
       changes.push({
         type: "removed",
+        element: landmark.id,
         detail: `Landmark removed: ${landmark.role} "${landmark.label}"`,
       });
     }
@@ -83,6 +83,7 @@ function diffLandmarks(fromLandmarks: Landmark[], toLandmarks: Landmark[]): Diff
     if (!fromByKey.has(key)) {
       changes.push({
         type: "added",
+        element: landmark.id,
         detail: `Landmark added: ${landmark.role} "${landmark.label}"`,
       });
     }
@@ -94,6 +95,7 @@ function diffLandmarks(fromLandmarks: Landmark[], toLandmarks: Landmark[]): Diff
     if (fromLandmark && !boundsEqual(fromLandmark.bounds, toLandmark.bounds)) {
       changes.push({
         type: "moved",
+        element: toLandmark.id,
         detail: `Landmark moved: ${toLandmark.role} "${toLandmark.label}"`,
         from: fromLandmark.bounds,
         to: toLandmark.bounds,
@@ -321,12 +323,18 @@ function diffContent(
 ): DiffChange[] {
   const changes: DiffChange[] = [];
 
-  if (fromRepresentation.structure.content_summary !== toRepresentation.structure.content_summary) {
+  const fromSummary = fromRepresentation.structure.content_summary;
+  const toSummary = toRepresentation.structure.content_summary;
+  // Skip when either side is undefined — diffing a `minimal` snapshot (no
+  // content_summary) against a `summary` one otherwise reports the entire
+  // summary as a spurious undefined→"…" change. Truncate reported values so a
+  // genuine change doesn't dump a multi-KB string into the diff.
+  if (fromSummary !== undefined && toSummary !== undefined && fromSummary !== toSummary) {
     changes.push({
       type: "changed",
       property: "content_summary",
-      from: fromRepresentation.structure.content_summary,
-      to: toRepresentation.structure.content_summary,
+      from: truncateForDiff(fromSummary),
+      to: truncateForDiff(toSummary),
     });
   }
 
@@ -352,6 +360,13 @@ function diffContent(
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────
+
+/** Cap a string reported in a diff so large content summaries don't bloat output. */
+const DIFF_VALUE_MAX_LENGTH = 200;
+function truncateForDiff(value: string): string {
+  if (value.length <= DIFF_VALUE_MAX_LENGTH) return value;
+  return `${value.slice(0, DIFF_VALUE_MAX_LENGTH)}… (${value.length} chars)`;
+}
 
 function boundsEqual(boundsA: Bounds, boundsB: Bounds): boolean {
   return (

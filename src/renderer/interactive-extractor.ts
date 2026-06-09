@@ -3,6 +3,7 @@ import type { ParsedAXNode } from "./accessibility-extractor.js";
 import { isInteractiveRole } from "./accessibility-extractor.js";
 import type { ElementIdGenerator } from "./element-id-generator.js";
 import { computeDOMPathSignature } from "./dom-path.js";
+import { TYPE_PREFIX_MAP } from "../types/element-id.js";
 import type {
   Bounds,
   InteractiveElement,
@@ -47,7 +48,11 @@ function extractElementState(node: ParsedAXNode): ElementState {
   if (props["focused"] === true) {
     state.focused = true;
   }
-  if (props["checked"] === "true" || props["checked"] === true || props["checked"] === "mixed") {
+  // Preserve the tri-state (indeterminate) value so "mixed" checkboxes are
+  // distinguishable from checked ones, and mixed→checked transitions diff.
+  if (props["checked"] === "mixed") {
+    state.checked = "mixed";
+  } else if (props["checked"] === "true" || props["checked"] === true) {
     state.checked = true;
   }
   if (props["expanded"] !== undefined) {
@@ -270,6 +275,11 @@ export async function reclassifyFileInputs(
         for (let i = 0; i < attrs.length; i += 2) {
           if (attrs[i] === "type" && attrs[i + 1] === "file") {
             element.type = "file_input";
+            // Re-key the ID so its prefix matches TYPE_PREFIX_MAP.file_input
+            // ("inp"). Leaving the btn- prefix breaks prefix-driven findSimilar
+            // and misleads prefix-based agent reasoning.
+            const filePrefix = TYPE_PREFIX_MAP["file_input"] ?? "inp";
+            element.id = idGenerator.reassignPrefix(element.id, filePrefix);
             break;
           }
         }

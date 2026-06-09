@@ -27,6 +27,7 @@ import {
   submitFormByBackendNodeId,
   setFileInputFiles,
   waitForPossibleNavigation,
+  assertTypingDurationWithinLimit,
 } from "./interaction-helpers.js";
 import { registerWaitForTools } from "./wait-for.js";
 
@@ -189,7 +190,8 @@ export function registerInteractionTools(
           .min(1)
           .optional()
           .describe(
-            "Milliseconds between keystrokes (implies slowly: true). Default when slowly is true: 50ms",
+            "Milliseconds between keystrokes (implies slowly: true). Default when slowly is true: 50ms. " +
+              "Total typing time is capped at 30s — text.length * character_delay must stay under that ceiling or the call is rejected.",
           ),
       },
     },
@@ -202,19 +204,8 @@ export function registerInteractionTools(
         const shouldPressEnter = press_enter ?? false;
         const delayMs = character_delay ?? (slowly ? 50 : undefined);
 
-        // Guard against excessively long typing duration
-        const MAX_TYPING_DURATION_MS = 30000; // 30 seconds
-        if (delayMs !== undefined) {
-          const estimatedDuration = text.length * delayMs;
-          if (estimatedDuration > MAX_TYPING_DURATION_MS) {
-            throw new CharlotteError(
-              CharlotteErrorCode.INVALID_ARGUMENT,
-              `Typing would take too long (${Math.round(estimatedDuration / 1000)}s). ` +
-                `Reduce text length (${text.length} chars) or character_delay (${delayMs}ms). ` +
-                `Maximum allowed duration: ${MAX_TYPING_DURATION_MS / 1000}s.`,
-            );
-          }
-        }
+        // Guard against slow-typing operations long enough to risk an MCP tool timeout.
+        assertTypingDurationWithinLimit(text.length, delayMs);
 
         logger.info("Typing into element", {
           element_id,

@@ -29,6 +29,47 @@ export async function scrollAndGetCenter(
   };
 }
 
+/**
+ * Maximum total wall-clock duration we allow a slow-typing operation to take.
+ * Kept under common MCP tool timeout defaults (often 30–60s) so the guard
+ * fails fast with a helpful error instead of letting the tool call time out.
+ */
+export const MAX_TYPING_DURATION_MS = 30000; // 30 seconds
+
+/**
+ * Multiplier applied to the naive `text.length * characterDelayMs` estimate to
+ * account for per-keystroke overhead that the estimate ignores: Puppeteer's
+ * event dispatch, any clear_first keystrokes, and CDP round-trips. Without this
+ * margin a 29s estimate can tip over 30s in practice and still time out.
+ */
+const TYPING_OVERHEAD_FACTOR = 1.15;
+
+/**
+ * Guard against slow-typing operations that would run long enough to risk an
+ * MCP tool timeout. Throws a CharlotteError with INVALID_ARGUMENT when the
+ * estimated duration (with overhead margin) exceeds {@link MAX_TYPING_DURATION_MS}.
+ *
+ * No-op when `characterDelayMs` is undefined (full-speed typing is effectively
+ * instant and has no meaningful upper bound).
+ */
+export function assertTypingDurationWithinLimit(
+  textLength: number,
+  characterDelayMs: number | undefined,
+): void {
+  if (characterDelayMs === undefined) return;
+
+  const estimatedDurationMs = Math.round(textLength * characterDelayMs * TYPING_OVERHEAD_FACTOR);
+  if (estimatedDurationMs > MAX_TYPING_DURATION_MS) {
+    throw new CharlotteError(
+      CharlotteErrorCode.INVALID_ARGUMENT,
+      `Typing would take too long (~${Math.round(estimatedDurationMs / 1000)}s). ` +
+        `Maximum allowed duration: ${MAX_TYPING_DURATION_MS / 1000}s.`,
+      `Reduce text length (currently ${textLength} chars) or character_delay (currently ${characterDelayMs}ms), ` +
+        `or type at full speed by omitting slowly/character_delay.`,
+    );
+  }
+}
+
 /** Maps short modifier names to Puppeteer KeyInput values. */
 export const MODIFIER_KEY_MAP: Record<string, KeyInput> = {
   ctrl: "Control" as KeyInput,

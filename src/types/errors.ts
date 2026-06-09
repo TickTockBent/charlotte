@@ -6,6 +6,7 @@ export enum CharlotteErrorCode {
   EVALUATION_ERROR = "EVALUATION_ERROR",
   SESSION_ERROR = "SESSION_ERROR",
   SNAPSHOT_EXPIRED = "SNAPSHOT_EXPIRED",
+  INVALID_ARGUMENT = "INVALID_ARGUMENT",
 }
 
 export class CharlotteError extends Error {

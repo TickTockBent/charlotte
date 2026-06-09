@@ -567,7 +567,7 @@ export async function resolveOutputPath(
   const normalized = path.resolve(resolved);
   if (!normalized.startsWith(baseDir + path.sep) && normalized !== baseDir) {
     throw new CharlotteError(
-      CharlotteErrorCode.SESSION_ERROR,
+      CharlotteErrorCode.INVALID_ARGUMENT,
       `Output path '${outputFile}' resolves outside the allowed directory '${baseDir}'.`,
       "Use a relative path or configure output_dir to an appropriate directory.",
     );
@@ -586,7 +586,7 @@ export async function resolveOutputPath(
 
   if (!realResolved.startsWith(realBase + path.sep) && realResolved !== realBase) {
     throw new CharlotteError(
-      CharlotteErrorCode.SESSION_ERROR,
+      CharlotteErrorCode.INVALID_ARGUMENT,
       `Output path '${outputFile}' resolves outside the allowed directory '${baseDir}'.`,
       "Use a relative path or configure output_dir to an appropriate directory.",
     );
@@ -600,7 +600,7 @@ export async function resolveOutputPath(
     const leafStat = await fs.lstat(realResolved);
     if (leafStat.isSymbolicLink()) {
       throw new CharlotteError(
-        CharlotteErrorCode.SESSION_ERROR,
+        CharlotteErrorCode.INVALID_ARGUMENT,
         `Output path '${outputFile}' is a symbolic link. Writing through symlinks is not allowed.`,
         "Remove the symlink or use a different filename.",
       );

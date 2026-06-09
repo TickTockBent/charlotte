@@ -152,7 +152,24 @@ export async function clickElementByBackendNodeId(
   session: CDPSession,
 ): Promise<void> {
   const { x: centerX, y: centerY } = await scrollAndGetCenter(session, backendNodeId);
+  await clickAtCoordinates(page, centerX, centerY, clickType, modifiers);
+}
 
+/**
+ * Click at viewport coordinates while holding the given modifier keys.
+ *
+ * Single source of truth for the modifier-down → click-variant → modifier-up
+ * sequence shared by `charlotte_click` (via {@link clickElementByBackendNodeId})
+ * and `charlotte_click_at` (raw coordinates) — previously duplicated byte-for-byte
+ * (#204). Modifiers are always released in reverse order, even if the click throws.
+ */
+export async function clickAtCoordinates(
+  page: Page,
+  x: number,
+  y: number,
+  clickType: "left" | "right" | "double" = "left",
+  modifiers: Array<"ctrl" | "shift" | "alt" | "meta"> = [],
+): Promise<void> {
   // Hold down modifier keys before the click
   for (const modifier of modifiers) {
     const modifierKey = MODIFIER_KEY_MAP[modifier];
@@ -161,11 +178,11 @@ export async function clickElementByBackendNodeId(
 
   try {
     if (clickType === "right") {
-      await page.mouse.click(centerX, centerY, { button: "right" });
+      await page.mouse.click(x, y, { button: "right" });
     } else if (clickType === "double") {
-      await page.mouse.click(centerX, centerY, { clickCount: 2 });
+      await page.mouse.click(x, y, { clickCount: 2 });
     } else {
-      await page.mouse.click(centerX, centerY);
+      await page.mouse.click(x, y);
     }
   } finally {
     // Release modifier keys in reverse order (always release even if click fails)
@@ -333,6 +350,51 @@ export async function dragElementToElement(
 }
 
 /**
+ * Select all editable content of an element in page context, platform-independently.
+ *
+ * For native form fields (`<input>`/`<textarea>`) this calls `.select()`. For
+ * contenteditable hosts it builds a Range over the element's children and applies
+ * it to the document Selection. This avoids the Ctrl+A vs Meta+A accelerator
+ * difference between Linux/Windows and macOS Chromium (#204).
+ *
+ * The caller supplies the cached {@link CDPSession} (#202).
+ */
+export async function selectAllContentByBackendNodeId(
+  page: Page,
+  backendNodeId: number,
+  session: CDPSession,
+): Promise<void> {
+  const { object } = await session.send("DOM.resolveNode", { backendNodeId });
+  if (!object?.objectId) {
+    throw new CharlotteError(
+      CharlotteErrorCode.ELEMENT_NOT_FOUND,
+      "Could not resolve element to clear.",
+    );
+  }
+
+  const callResult = await session.send("Runtime.callFunctionOn", {
+    objectId: object.objectId,
+    functionDeclaration: `function() {
+      if (typeof this.select === 'function' && (this.tagName === 'INPUT' || this.tagName === 'TEXTAREA')) {
+        this.select();
+        return;
+      }
+      // contenteditable / rich-text hosts: select the element's contents.
+      const selection = (this.ownerDocument || document).getSelection();
+      if (selection) {
+        const range = (this.ownerDocument || document).createRange();
+        range.selectNodeContents(this);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+    }`,
+  });
+
+  // Surface in-page exceptions instead of silently leaving content unselected.
+  assertNoInPageException(callResult, { code: CharlotteErrorCode.SESSION_ERROR });
+}
+
+/**
  * Type text into an input element. Uses CDP to focus, optionally clears, then types via keyboard.
  * The caller supplies the cached {@link CDPSession} used for the focus step (#202).
  */
@@ -349,10 +411,19 @@ export async function typeIntoElement(
   await focusElementByBackendNodeId(page, backendNodeId, session);
 
   if (clearFirst) {
-    // Select all text then delete — works cross-platform
-    await page.keyboard.down("Control");
-    await page.keyboard.press("a");
-    await page.keyboard.up("Control");
+    // Select all existing content, then delete it.
+    //
+    // The old approach pressed Ctrl+A, but on macOS-hosted Chromium the
+    // select-all accelerator is Meta+A (Cmd+A) — Ctrl+A there moves the caret
+    // to line start, so typing PREPENDED instead of replacing for macOS users
+    // of the published package (#204). Rather than branch on process.platform
+    // (which describes the *server* host, not necessarily where Chromium runs),
+    // we select via the DOM in page context, which is platform-independent:
+    //   - <input>/<textarea> expose .select()
+    //   - contenteditable hosts use the Selection/Range API
+    // We then press Backspace to delete the selection through normal key events
+    // so input/change handlers fire as a user would trigger them.
+    await selectAllContentByBackendNodeId(page, backendNodeId, session);
     await page.keyboard.press("Backspace");
   }
 
@@ -500,7 +571,7 @@ export async function setFileInputFiles(
     );
   if (!isFileInput) {
     throw new CharlotteError(
-      CharlotteErrorCode.SESSION_ERROR,
+      CharlotteErrorCode.ELEMENT_NOT_INTERACTIVE,
       "Element is not a file input.",
       "Use charlotte_find to locate file_input elements.",
     );

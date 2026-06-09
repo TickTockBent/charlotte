@@ -18,6 +18,7 @@ import {
 } from "./tool-helpers.js";
 import {
   MODIFIER_KEY_MAP,
+  clickAtCoordinates,
   clickElementByBackendNodeId,
   focusElementByBackendNodeId,
   hoverElementByBackendNodeId,
@@ -34,6 +35,9 @@ import { registerWaitForTools } from "./wait-for.js";
 
 // Re-export for backward compatibility (used by dialog and popup integration tests)
 export { waitForPossibleNavigation } from "./interaction-helpers.js";
+
+/** Element types charlotte_toggle accepts (checkbox/radio/switch roles). */
+const TOGGLEABLE_TYPES = new Set(["checkbox", "radio", "toggle"]);
 
 export function registerInteractionTools(
   server: McpServer,
@@ -137,27 +141,7 @@ export function registerInteractionTools(
         await new Promise((resolve) => setTimeout(resolve, 50));
 
         await waitForPossibleNavigation(page, async () => {
-          // Hold down modifier keys
-          for (const modifier of activeModifiers) {
-            const modifierKey = MODIFIER_KEY_MAP[modifier];
-            await page.keyboard.down(modifierKey);
-          }
-
-          try {
-            if (clickVariant === "right") {
-              await page.mouse.click(x, y, { button: "right" });
-            } else if (clickVariant === "double") {
-              await page.mouse.click(x, y, { clickCount: 2 });
-            } else {
-              await page.mouse.click(x, y);
-            }
-          } finally {
-            // Release modifier keys in reverse order
-            for (const modifier of [...activeModifiers].reverse()) {
-              const modifierKey = MODIFIER_KEY_MAP[modifier];
-              await page.keyboard.up(modifierKey);
-            }
-          }
+          await clickAtCoordinates(page, x, y, clickVariant, activeModifiers);
         });
 
         const representation = await renderAfterAction(deps);
@@ -297,6 +281,23 @@ export function registerInteractionTools(
     async ({ element_id }) => {
       try {
         await ensureReady(deps);
+
+        // Validate the target is actually a toggleable control before clicking.
+        // charlotte_toggle is otherwise an unvalidated left click on any element,
+        // so a misrouted call (e.g. a link/button) would fire its real action
+        // with no error. Restrict to checkbox/radio/switch roles (#204).
+        const preToggleRepresentation = await renderActivePage(deps, { detail: "minimal" });
+        const targetElement = preToggleRepresentation.interactive.find(
+          (el) => el.id === element_id,
+        );
+        if (targetElement && !TOGGLEABLE_TYPES.has(targetElement.type)) {
+          throw new CharlotteError(
+            CharlotteErrorCode.INVALID_ARGUMENT,
+            `Element '${element_id}' is a ${targetElement.type}, not a checkbox/radio/switch — charlotte_toggle only operates on toggleable controls.`,
+            "Use charlotte_click for buttons, links, and other elements.",
+          );
+        }
+
         const resolved = await resolveElement(deps, element_id);
         const session = await getSessionForElement(deps, resolved);
 
@@ -421,7 +422,7 @@ export function registerInteractionTools(
           pixelDistance = parseInt(scrollAmount, 10);
           if (isNaN(pixelDistance)) {
             throw new CharlotteError(
-              CharlotteErrorCode.SESSION_ERROR,
+              CharlotteErrorCode.INVALID_ARGUMENT,
               `Invalid scroll amount: "${scrollAmount}". Use "page", "half", or a pixel value.`,
             );
           }
@@ -613,13 +614,13 @@ export function registerInteractionTools(
         // Validate: exactly one of key or keys must be provided
         if (key && keys) {
           throw new CharlotteError(
-            CharlotteErrorCode.SESSION_ERROR,
+            CharlotteErrorCode.INVALID_ARGUMENT,
             "Provide either key or keys, not both.",
           );
         }
         if (!key && !keys) {
           throw new CharlotteError(
-            CharlotteErrorCode.SESSION_ERROR,
+            CharlotteErrorCode.INVALID_ARGUMENT,
             "Provide either key (single) or keys (sequence).",
           );
         }
@@ -711,7 +712,7 @@ export function registerInteractionTools(
             await fs.access(filePath);
           } catch {
             throw new CharlotteError(
-              CharlotteErrorCode.SESSION_ERROR,
+              CharlotteErrorCode.INVALID_ARGUMENT,
               `File not found: ${filePath}`,
               "Provide absolute paths to files that exist on disk.",
             );

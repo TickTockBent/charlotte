@@ -1,253 +1,108 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import * as path from "node:path";
-import * as os from "node:os";
-import { BrowserManager } from "../../src/browser/browser-manager.js";
-import { PageManager } from "../../src/browser/page-manager.js";
-import { CDPSessionManager } from "../../src/browser/cdp-session.js";
-import { RendererPipeline } from "../../src/renderer/renderer-pipeline.js";
-import { ElementIdGenerator } from "../../src/renderer/element-id-generator.js";
-import { SnapshotStore } from "../../src/state/snapshot-store.js";
-import { ArtifactStore } from "../../src/state/artifact-store.js";
-import { createDefaultConfig } from "../../src/types/config.js";
-import type { ToolDependencies } from "../../src/tools/tool-helpers.js";
-import { renderActivePage, resolveElement } from "../../src/tools/tool-helpers.js";
+import { setupMcpHarness, parseToolJson, type McpHarness } from "../helpers/mcp-harness.js";
 
 const MODIFIER_CLICK_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/modifier-click.html")}`;
 
-describe("Modifier click integration", () => {
-  let browserManager: BrowserManager;
-  let pageManager: PageManager;
-  let cdpSessionManager: CDPSessionManager;
-  let elementIdGenerator: ElementIdGenerator;
-  let rendererPipeline: RendererPipeline;
-  let deps: ToolDependencies;
+/**
+ * Exercises the real `charlotte_click` handler's modifier + click-type support
+ * (src/tools/interaction.ts → clickElementByBackendNodeId).
+ *
+ * Previously this file declared a `clickWithModifiers` helper documented as
+ * "Mirrors the production clickElementByBackendNodeId function" and asserted
+ * the *mirror* worked — the handler itself was never invoked (#195). Here the
+ * same behaviors (single modifiers, combined modifiers, modifiers with
+ * right/double click) are pinned by calling charlotte_click and reading the
+ * fixture's #result via charlotte_evaluate.
+ */
+describe("charlotte_click modifier + click-type handling", () => {
+  let harness: McpHarness;
 
   beforeAll(async () => {
-    browserManager = new BrowserManager(undefined, { noSandbox: true });
-    await browserManager.launch();
-    pageManager = new PageManager();
-    await pageManager.openTab(browserManager);
-    cdpSessionManager = new CDPSessionManager();
-    elementIdGenerator = new ElementIdGenerator();
-    rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator);
-    const config = createDefaultConfig();
-    const artifactStore = new ArtifactStore(
-      path.join(os.tmpdir(), "charlotte-modifier-click-test-artifacts"),
-    );
-    await artifactStore.initialize();
-    deps = {
-      browserManager,
-      pageManager,
-      cdpSessionManager,
-      rendererPipeline,
-      elementIdGenerator,
-      snapshotStore: new SnapshotStore(config.snapshotDepth),
-      artifactStore,
-      config,
-    };
+    harness = await setupMcpHarness({ profile: "full" });
   });
 
   afterAll(async () => {
-    await browserManager.close();
+    await harness.teardown();
   });
 
-  /**
-   * Helper: get the text content of the #result div
-   */
-  async function getResultText(): Promise<string> {
-    const page = pageManager.getActivePage();
-    return page.evaluate(() => {
-      return document.getElementById("result")?.textContent ?? "";
-    });
-  }
+  beforeEach(async () => {
+    await harness.callTool("charlotte_navigate", { url: MODIFIER_CLICK_FIXTURE });
+  });
 
-  /**
-   * Helper: find the modifier test button element
-   */
-  function findModifierButton(representation: Awaited<ReturnType<typeof renderActivePage>>) {
-    return representation.interactive.find((el) =>
-      el.label.toLowerCase().includes("modifier test button"),
+  /** Resolve the modifier test button's Charlotte element ID via charlotte_find. */
+  async function modifierButtonId(): Promise<string> {
+    const matches = parseToolJson<Array<{ id: string; label: string }>>(
+      await harness.callTool("charlotte_find", { text: "modifier test button" }),
     );
+    expect(matches.length).toBeGreaterThan(0);
+    return matches[0].id;
   }
 
-  /**
-   * Helper: click an element by backend node ID via CDP with optional modifier keys.
-   * Mirrors the production clickElementByBackendNodeId function.
-   */
-  async function clickWithModifiers(
-    backendNodeId: number,
-    clickType: "left" | "right" | "double" = "left",
-    modifiers: Array<"ctrl" | "shift" | "alt" | "meta"> = [],
-  ): Promise<void> {
-    const page = pageManager.getActivePage();
-    const cdpSession = await page.createCDPSession();
-    try {
-      await cdpSession.send("DOM.scrollIntoViewIfNeeded", { backendNodeId });
-      const { model } = await cdpSession.send("DOM.getBoxModel", {
-        backendNodeId,
-      });
-      if (!model) throw new Error("No box model");
-      const contentQuad = model.content;
-      const centerX = (contentQuad[0] + contentQuad[2] + contentQuad[4] + contentQuad[6]) / 4;
-      const centerY = (contentQuad[1] + contentQuad[3] + contentQuad[5] + contentQuad[7]) / 4;
+  /** Read the fixture's #result text via the evaluate handler. */
+  async function resultText(): Promise<string> {
+    const parsed = parseToolJson<{ value: string }>(
+      await harness.callTool("charlotte_evaluate", {
+        expression: "document.getElementById('result')?.textContent ?? ''",
+      }),
+    );
+    return parsed.value;
+  }
 
-      const modifierKeyMap: Record<string, string> = {
-        ctrl: "Control",
-        shift: "Shift",
-        alt: "Alt",
-        meta: "Meta",
-      };
-
-      // Hold down modifier keys
-      for (const modifier of modifiers) {
-        await page.keyboard.down(modifierKeyMap[modifier] as import("puppeteer").KeyInput);
-      }
-
-      try {
-        if (clickType === "right") {
-          await page.mouse.click(centerX, centerY, { button: "right" });
-        } else if (clickType === "double") {
-          await page.mouse.click(centerX, centerY, { clickCount: 2 });
-        } else {
-          await page.mouse.click(centerX, centerY);
-        }
-      } finally {
-        // Release modifier keys in reverse order
-        for (const modifier of [...modifiers].reverse()) {
-          await page.keyboard.up(modifierKeyMap[modifier] as import("puppeteer").KeyInput);
-        }
-      }
-    } finally {
-      await cdpSession.detach();
-    }
+  async function clickButton(args: Record<string, unknown>): Promise<void> {
+    const elementId = await modifierButtonId();
+    const result = await harness.callTool("charlotte_click", { element_id: elementId, ...args });
+    expect(result.isError).toBeFalsy();
   }
 
   describe("single modifier clicks", () => {
-    beforeEach(async () => {
-      const page = pageManager.getActivePage();
-      await page.goto(MODIFIER_CLICK_FIXTURE, { waitUntil: "load" });
-    });
-
     it("clicks without modifiers and reports none", async () => {
-      const representation = await renderActivePage(deps, { detail: "minimal" });
-      const modifierButton = findModifierButton(representation);
-      expect(modifierButton).toBeDefined();
-
-      const { backendNodeId } = await resolveElement(deps, modifierButton!.id);
-      await clickWithModifiers(backendNodeId);
-
-      const resultText = await getResultText();
-      expect(resultText).toBe("clicked:none");
+      await clickButton({});
+      expect(await resultText()).toBe("clicked:none");
     });
 
     it("ctrl+click sets ctrlKey on the event", async () => {
-      const representation = await renderActivePage(deps, { detail: "minimal" });
-      const modifierButton = findModifierButton(representation);
-      expect(modifierButton).toBeDefined();
-
-      const { backendNodeId } = await resolveElement(deps, modifierButton!.id);
-      await clickWithModifiers(backendNodeId, "left", ["ctrl"]);
-
-      const resultText = await getResultText();
-      expect(resultText).toBe("clicked:ctrl");
+      await clickButton({ modifiers: ["ctrl"] });
+      expect(await resultText()).toBe("clicked:ctrl");
     });
 
     it("shift+click sets shiftKey on the event", async () => {
-      const representation = await renderActivePage(deps, { detail: "minimal" });
-      const modifierButton = findModifierButton(representation);
-      expect(modifierButton).toBeDefined();
-
-      const { backendNodeId } = await resolveElement(deps, modifierButton!.id);
-      await clickWithModifiers(backendNodeId, "left", ["shift"]);
-
-      const resultText = await getResultText();
-      expect(resultText).toBe("clicked:shift");
+      await clickButton({ modifiers: ["shift"] });
+      expect(await resultText()).toBe("clicked:shift");
     });
 
     it("alt+click sets altKey on the event", async () => {
-      const representation = await renderActivePage(deps, { detail: "minimal" });
-      const modifierButton = findModifierButton(representation);
-      expect(modifierButton).toBeDefined();
-
-      const { backendNodeId } = await resolveElement(deps, modifierButton!.id);
-      await clickWithModifiers(backendNodeId, "left", ["alt"]);
-
-      const resultText = await getResultText();
-      expect(resultText).toBe("clicked:alt");
+      await clickButton({ modifiers: ["alt"] });
+      expect(await resultText()).toBe("clicked:alt");
     });
 
     it("meta+click sets metaKey on the event", async () => {
-      const representation = await renderActivePage(deps, { detail: "minimal" });
-      const modifierButton = findModifierButton(representation);
-      expect(modifierButton).toBeDefined();
-
-      const { backendNodeId } = await resolveElement(deps, modifierButton!.id);
-      await clickWithModifiers(backendNodeId, "left", ["meta"]);
-
-      const resultText = await getResultText();
-      expect(resultText).toBe("clicked:meta");
+      await clickButton({ modifiers: ["meta"] });
+      expect(await resultText()).toBe("clicked:meta");
     });
   });
 
   describe("combined modifier clicks", () => {
-    beforeEach(async () => {
-      const page = pageManager.getActivePage();
-      await page.goto(MODIFIER_CLICK_FIXTURE, { waitUntil: "load" });
-    });
-
     it("ctrl+shift+click sets both modifier keys", async () => {
-      const representation = await renderActivePage(deps, { detail: "minimal" });
-      const modifierButton = findModifierButton(representation);
-      expect(modifierButton).toBeDefined();
-
-      const { backendNodeId } = await resolveElement(deps, modifierButton!.id);
-      await clickWithModifiers(backendNodeId, "left", ["ctrl", "shift"]);
-
-      const resultText = await getResultText();
-      expect(resultText).toBe("clicked:ctrl+shift");
+      await clickButton({ modifiers: ["ctrl", "shift"] });
+      expect(await resultText()).toBe("clicked:ctrl+shift");
     });
 
     it("alt+shift+click sets both modifier keys", async () => {
-      const representation = await renderActivePage(deps, { detail: "minimal" });
-      const modifierButton = findModifierButton(representation);
-      expect(modifierButton).toBeDefined();
-
-      const { backendNodeId } = await resolveElement(deps, modifierButton!.id);
-      await clickWithModifiers(backendNodeId, "left", ["alt", "shift"]);
-
-      const resultText = await getResultText();
-      expect(resultText).toBe("clicked:alt+shift");
+      await clickButton({ modifiers: ["alt", "shift"] });
+      expect(await resultText()).toBe("clicked:alt+shift");
     });
   });
 
   describe("modifiers with different click types", () => {
-    beforeEach(async () => {
-      const page = pageManager.getActivePage();
-      await page.goto(MODIFIER_CLICK_FIXTURE, { waitUntil: "load" });
-    });
-
     it("ctrl+right-click sets ctrlKey on contextmenu event", async () => {
-      const representation = await renderActivePage(deps, { detail: "minimal" });
-      const modifierButton = findModifierButton(representation);
-      expect(modifierButton).toBeDefined();
-
-      const { backendNodeId } = await resolveElement(deps, modifierButton!.id);
-      await clickWithModifiers(backendNodeId, "right", ["ctrl"]);
-
-      const resultText = await getResultText();
-      expect(resultText).toBe("rightclicked:ctrl");
+      await clickButton({ click_type: "right", modifiers: ["ctrl"] });
+      expect(await resultText()).toBe("rightclicked:ctrl");
     });
 
     it("shift+double-click sets shiftKey on dblclick event", async () => {
-      const representation = await renderActivePage(deps, { detail: "minimal" });
-      const modifierButton = findModifierButton(representation);
-      expect(modifierButton).toBeDefined();
-
-      const { backendNodeId } = await resolveElement(deps, modifierButton!.id);
-      await clickWithModifiers(backendNodeId, "double", ["shift"]);
-
-      const resultText = await getResultText();
-      expect(resultText).toBe("dblclicked:shift");
+      await clickButton({ click_type: "double", modifiers: ["shift"] });
+      expect(await resultText()).toBe("dblclicked:shift");
     });
   });
 });

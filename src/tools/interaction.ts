@@ -39,6 +39,65 @@ export { waitForPossibleNavigation } from "./interaction-helpers.js";
 /** Element types charlotte_toggle accepts (checkbox/radio/switch roles). */
 const TOGGLEABLE_TYPES = new Set(["checkbox", "radio", "toggle"]);
 
+/**
+ * Classify a resolved DOM node into a fill_form element type and capture its
+ * current checked state, by inspecting the live element via CDP.
+ *
+ * Selector-mode (`dom-`) IDs never appear in `representation.interactive` (that
+ * array is built from the accessibility tree), so fill_form cannot read their
+ * type from the interactive list. This derives the same `{ type, checked }`
+ * classification directly from the DOM element instead (#191).
+ *
+ * Returns null when the node cannot be resolved or is not a fillable form field.
+ */
+async function classifyFillableNode(
+  deps: ToolDependencies,
+  resolved: import("./tool-helpers.js").ResolvedElement,
+): Promise<{ type: string; currentlyChecked: boolean } | null> {
+  const session = await getSessionForElement(deps, resolved);
+  const { object } = await session.send("DOM.resolveNode", {
+    backendNodeId: resolved.backendNodeId,
+  });
+  if (!object?.objectId) {
+    return null;
+  }
+
+  const callResult = await session.send("Runtime.callFunctionOn", {
+    objectId: object.objectId,
+    returnByValue: true,
+    functionDeclaration: `function() {
+      const tag = (this.tagName || '').toLowerCase();
+      const role = (this.getAttribute && this.getAttribute('role')) || '';
+      if (tag === 'textarea') return { type: 'textarea', checked: false };
+      if (tag === 'select') return { type: 'select', checked: false };
+      if (tag === 'input') {
+        const inputType = (this.type || 'text').toLowerCase();
+        if (inputType === 'checkbox') return { type: 'checkbox', checked: !!this.checked };
+        if (inputType === 'radio') return { type: 'radio', checked: !!this.checked };
+        if (inputType === 'date' || inputType === 'datetime-local' || inputType === 'month' || inputType === 'week' || inputType === 'time') {
+          return { type: 'date_input', checked: false };
+        }
+        if (inputType === 'color') return { type: 'color_input', checked: false };
+        if (inputType === 'file') return { type: 'file_input', checked: false };
+        // text, search, email, url, tel, number, password, etc. — all text-like.
+        return { type: 'text_input', checked: false };
+      }
+      // ARIA switch / role-based toggles.
+      if (role === 'switch') {
+        return { type: 'toggle', checked: this.getAttribute('aria-checked') === 'true' };
+      }
+      if (this.isContentEditable) return { type: 'text_input', checked: false };
+      return { type: null, checked: false };
+    }`,
+  });
+
+  const value = callResult.result?.value as { type: string | null; checked: boolean } | undefined;
+  if (!value || value.type === null) {
+    return null;
+  }
+  return { type: value.type, currentlyChecked: value.checked };
+}
+
 export function registerInteractionTools(
   server: McpServer,
   deps: ToolDependencies,
@@ -533,8 +592,10 @@ export function registerInteractionTools(
         const targetResolved = await resolveElement(deps, target_id);
 
         if (sourceResolved.frameId !== targetResolved.frameId) {
+          // Caller-fixable (pick elements in the same frame), so INVALID_ARGUMENT
+          // rather than SESSION_ERROR (#187).
           throw new CharlotteError(
-            CharlotteErrorCode.SESSION_ERROR,
+            CharlotteErrorCode.INVALID_ARGUMENT,
             "Cannot drag between different frames — source and target must be in the same frame.",
             "Use charlotte_find to locate elements within the same frame.",
           );
@@ -789,6 +850,42 @@ export function registerInteractionTools(
         }> = [];
 
         for (const field of fields) {
+          // Selector-mode (dom-) IDs never appear in representation.interactive
+          // (that array comes from the AX tree). Resolve them against the live
+          // DOM and derive their type/state from the resolved node instead, so
+          // the CHANGELOG claim that dom- IDs work with fill_form holds (#191).
+          if (field.element_id.startsWith("dom-")) {
+            const resolved = await resolveElement(deps, field.element_id);
+            const classified = await classifyFillableNode(deps, resolved);
+            if (!classified) {
+              throw new CharlotteError(
+                CharlotteErrorCode.ELEMENT_NOT_INTERACTIVE,
+                `Element '${field.element_id}' is not a fillable form field.`,
+                "fill_form supports: text_input, textarea, select, checkbox, radio, toggle, date_input, color_input.",
+              );
+            }
+            if (!FILLABLE_TYPES.has(classified.type)) {
+              const hint =
+                classified.type === "file_input"
+                  ? "Use charlotte_upload for file inputs."
+                  : "fill_form supports: text_input, textarea, select, checkbox, radio, toggle, date_input, color_input.";
+              throw new CharlotteError(
+                CharlotteErrorCode.ELEMENT_NOT_INTERACTIVE,
+                `Element '${field.element_id}' is type '${classified.type}' which cannot be filled.`,
+                hint,
+              );
+            }
+            resolvedFields.push({
+              backendNodeId: resolved.backendNodeId,
+              frameId: resolved.frameId,
+              type: classified.type,
+              value: field.value,
+              currentlyChecked: classified.currentlyChecked,
+              page: resolved.page,
+            });
+            continue;
+          }
+
           // Check type before resolving — gives better errors for non-fillable elements
           const element = representation.interactive.find((el) => el.id === field.element_id);
           if (!element) {

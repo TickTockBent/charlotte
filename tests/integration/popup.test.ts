@@ -3,6 +3,7 @@ import * as http from "node:http";
 import * as path from "node:path";
 import * as os from "node:os";
 import * as fs from "node:fs";
+import * as fsp from "node:fs/promises";
 import { BrowserManager } from "../../src/browser/browser-manager.js";
 import { PageManager } from "../../src/browser/page-manager.js";
 import { CDPSessionManager } from "../../src/browser/cdp-session.js";
@@ -27,6 +28,7 @@ describe("Popup tab capture", () => {
   let deps: ToolDependencies;
   let server: http.Server;
   let baseUrl: string;
+  let artifactDirectory: string;
 
   beforeAll(async () => {
     // HTTP server required — target="_blank" doesn't work with file:// URLs
@@ -56,9 +58,8 @@ describe("Popup tab capture", () => {
     elementIdGenerator = new ElementIdGenerator();
     rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator);
     const config = createDefaultConfig();
-    const artifactStore = new ArtifactStore(
-      path.join(os.tmpdir(), "charlotte-popup-test-artifacts"),
-    );
+    artifactDirectory = await fsp.mkdtemp(path.join(os.tmpdir(), "charlotte-popup-test-"));
+    const artifactStore = new ArtifactStore(artifactDirectory);
     await artifactStore.initialize();
     deps = {
       browserManager,
@@ -75,6 +76,7 @@ describe("Popup tab capture", () => {
   afterAll(async () => {
     await browserManager.close();
     server.close();
+    await fsp.rm(artifactDirectory, { recursive: true, force: true }).catch(() => {});
   });
 
   beforeEach(async () => {

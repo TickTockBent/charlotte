@@ -1,8 +1,9 @@
-import { describe, it, expect, afterEach, beforeEach } from "vitest";
+import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 import { FileWatcher } from "../../../src/dev/file-watcher.js";
+import { logger } from "../../../src/utils/logger.js";
 
 // Use polling to avoid inotify watch limits in CI/dev environments
 const POLLING_OPTIONS = { usePolling: true };
@@ -155,6 +156,33 @@ describe("FileWatcher", () => {
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     expect(callbackCalled).toBe(false);
+  }, 10000);
+
+  it("logs (does not crash) on a post-ready chokidar error", async () => {
+    // The 'ready'-phase handler rejects start(); a SEPARATE persistent handler
+    // attached after ready must log post-startup errors (e.g. inotify limit hit
+    // after launch, unmounted volume) rather than letting them become an
+    // unhandled 'error' EventEmitter throw (#203, file-watcher.ts:66-68).
+    const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
+    try {
+      await watcher.start({
+        directoryPath: tempDir,
+        onFilesChanged: () => {},
+        ...POLLING_OPTIONS,
+      });
+
+      // Reach the underlying chokidar watcher and emit an error AFTER ready.
+      // Without the persistent handler this would throw (Node EventEmitter
+      // rethrows 'error' events with no listener).
+      const underlying = (watcher as unknown as { watcher: NodeJS.EventEmitter }).watcher;
+      expect(() => underlying.emit("error", new Error("inotify limit reached"))).not.toThrow();
+
+      expect(warnSpy).toHaveBeenCalled();
+      const loggedMessage = warnSpy.mock.calls[0][0];
+      expect(loggedMessage).toContain("File watcher error");
+    } finally {
+      warnSpy.mockRestore();
+    }
   }, 10000);
 
   it("restarts when start is called while already watching", async () => {

@@ -15,6 +15,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import * as path from "node:path";
 import * as os from "node:os";
+import * as fs from "node:fs/promises";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { BrowserManager } from "../../src/browser/browser-manager.js";
 import { PageManager } from "../../src/browser/page-manager.js";
@@ -39,6 +40,7 @@ describe("charlotte_wait_for integration", () => {
   let rendererPipeline: RendererPipeline;
   let deps: ToolDependencies;
   let waitForTool: ReturnType<typeof registerWaitForTools>["charlotte_wait_for"];
+  let artifactDirectory: string;
 
   beforeAll(async () => {
     browserManager = new BrowserManager(undefined, { noSandbox: true });
@@ -49,9 +51,8 @@ describe("charlotte_wait_for integration", () => {
     elementIdGenerator = new ElementIdGenerator();
     rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator);
     const config = createDefaultConfig();
-    const artifactStore = new ArtifactStore(
-      path.join(os.tmpdir(), "charlotte-wait-for-test-artifacts"),
-    );
+    artifactDirectory = await fs.mkdtemp(path.join(os.tmpdir(), "charlotte-wait-for-test-"));
+    const artifactStore = new ArtifactStore(artifactDirectory);
     await artifactStore.initialize();
     deps = {
       browserManager,
@@ -72,6 +73,7 @@ describe("charlotte_wait_for integration", () => {
 
   afterAll(async () => {
     await browserManager.close();
+    await fs.rm(artifactDirectory, { recursive: true, force: true }).catch(() => {});
   });
 
   beforeEach(async () => {
@@ -203,6 +205,43 @@ describe("charlotte_wait_for integration", () => {
     // The final expression is a function reference — must be INVALID_ARGUMENT
     expect(parsed.error.code).toBe("INVALID_ARGUMENT");
     // Must fail fast, not wait the full timeout
+    expect(elapsed).toBeLessThan(3000);
+  }, 15000);
+
+  // ─── Issue #198: non-serializable/cyclic js result fails fast ────────────────
+
+  it("#198: returns INVALID_ARGUMENT immediately for a cyclic/non-serializable js result", async () => {
+    const startTime = Date.now();
+    // A self-referential object cannot be returned by value — CDP raises a
+    // protocol/serialization error. Before the fix this was folded into "not
+    // satisfied" and polled to TIMEOUT; now it surfaces immediately.
+    const result = await (waitForTool as any).handler({
+      js: "(window.__cyclic = {}, window.__cyclic.self = window.__cyclic, window.__cyclic)",
+      timeout: 10000, // large timeout — must NOT actually wait
+    });
+
+    const elapsed = Date.now() - startTime;
+
+    expect(result.isError).toBe(true);
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.error.code).toBe("INVALID_ARGUMENT");
+    expect(parsed.error.code).not.toBe("TIMEOUT");
+    // Failed fast — well under the 10s timeout.
+    expect(elapsed).toBeLessThan(3000);
+  }, 15000);
+
+  it("#198: returns INVALID_ARGUMENT immediately when js result is `window`", async () => {
+    const startTime = Date.now();
+    const result = await (waitForTool as any).handler({
+      js: "window",
+      timeout: 10000,
+    });
+
+    const elapsed = Date.now() - startTime;
+
+    expect(result.isError).toBe(true);
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.error.code).toBe("INVALID_ARGUMENT");
     expect(elapsed).toBeLessThan(3000);
   }, 15000);
 

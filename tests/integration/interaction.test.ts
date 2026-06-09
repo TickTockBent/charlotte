@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import * as path from "node:path";
 import * as os from "node:os";
 import * as fs from "node:fs";
+import * as fsp from "node:fs/promises";
 import { BrowserManager } from "../../src/browser/browser-manager.js";
 import { PageManager } from "../../src/browser/page-manager.js";
 import { CDPSessionManager } from "../../src/browser/cdp-session.js";
@@ -31,6 +32,7 @@ describe("Interaction integration", () => {
   let elementIdGenerator: ElementIdGenerator;
   let rendererPipeline: RendererPipeline;
   let deps: ToolDependencies;
+  let artifactDirectory: string;
 
   // Shared MCP harness so interaction tools are exercised through their real
   // registered handlers over the in-memory transport (#195) rather than via
@@ -48,9 +50,8 @@ describe("Interaction integration", () => {
     elementIdGenerator = new ElementIdGenerator();
     rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator);
     const config = createDefaultConfig();
-    const artifactStore = new ArtifactStore(
-      path.join(os.tmpdir(), "charlotte-interact-test-artifacts"),
-    );
+    artifactDirectory = await fsp.mkdtemp(path.join(os.tmpdir(), "charlotte-interact-test-"));
+    const artifactStore = new ArtifactStore(artifactDirectory);
     await artifactStore.initialize();
     deps = {
       browserManager,
@@ -69,6 +70,7 @@ describe("Interaction integration", () => {
   afterAll(async () => {
     await browserManager.close();
     await harness.teardown();
+    await fsp.rm(artifactDirectory, { recursive: true, force: true }).catch(() => {});
   });
 
   /** Navigate the harness page to a fixture via the real navigate handler. */
@@ -624,29 +626,24 @@ describe("Interaction integration", () => {
 
   describe("upload", () => {
     const tempFiles: string[] = [];
+    let uploadDir: string;
 
-    beforeAll(() => {
-      // Create temp files for upload tests
-      const tempDir = os.tmpdir();
-      const singleFile = path.join(tempDir, "charlotte-test-upload.txt");
+    beforeAll(async () => {
+      // Create temp files in a unique per-run dir so parallel runs never collide.
+      uploadDir = await fsp.mkdtemp(path.join(os.tmpdir(), "charlotte-upload-test-"));
+      const singleFile = path.join(uploadDir, "charlotte-test-upload.txt");
       fs.writeFileSync(singleFile, "test content");
       tempFiles.push(singleFile);
 
-      const multiFile1 = path.join(tempDir, "charlotte-test-upload-1.txt");
-      const multiFile2 = path.join(tempDir, "charlotte-test-upload-2.txt");
+      const multiFile1 = path.join(uploadDir, "charlotte-test-upload-1.txt");
+      const multiFile2 = path.join(uploadDir, "charlotte-test-upload-2.txt");
       fs.writeFileSync(multiFile1, "file 1");
       fs.writeFileSync(multiFile2, "file 2");
       tempFiles.push(multiFile1, multiFile2);
     });
 
-    afterAll(() => {
-      for (const filePath of tempFiles) {
-        try {
-          fs.unlinkSync(filePath);
-        } catch {
-          /* ignore */
-        }
-      }
+    afterAll(async () => {
+      await fsp.rm(uploadDir, { recursive: true, force: true }).catch(() => {});
     });
 
     // The renderer-classification tests below drive `deps` directly (they probe
@@ -869,6 +866,48 @@ describe("Interaction integration", () => {
       expect(values.firstName).toBe("Alice");
       expect(values.country).toBe("ca");
       expect(values.newsletter).toBe(true);
+    });
+
+    it("#191: fills a text field via a dom- ID obtained from charlotte_find(selector)", async () => {
+      // charlotte_find with a CSS selector returns a durable dom- ID that never
+      // appears in representation.interactive (that array comes from the AX
+      // tree). Before the fix fill_form rejected dom- IDs with ELEMENT_NOT_FOUND
+      // before resolveElement ran; the CHANGELOG claims they work — verify it.
+      const matches = parseToolJson<Array<{ id: string }>>(
+        await harness.callTool("charlotte_find", { selector: "#first-name" }),
+      );
+      expect(matches.length).toBeGreaterThan(0);
+      const domId = matches[0].id;
+      expect(domId.startsWith("dom-")).toBe(true);
+
+      const result = await harness.callTool("charlotte_fill_form", {
+        fields: [{ element_id: domId, value: "FromDomId" }],
+      });
+
+      expect(result.isError).toBeFalsy();
+
+      const page = harness.pageManager.getActivePage();
+      const value = await page.evaluate(
+        () => (document.getElementById("first-name") as HTMLInputElement).value,
+      );
+      expect(value).toBe("FromDomId");
+    });
+
+    it("#191: rejects a dom- ID pointing at a non-fillable element", async () => {
+      const matches = parseToolJson<Array<{ id: string }>>(
+        await harness.callTool("charlotte_find", { selector: "#submit-btn" }),
+      );
+      expect(matches.length).toBeGreaterThan(0);
+      const domId = matches[0].id;
+      expect(domId.startsWith("dom-")).toBe(true);
+
+      const result = await harness.callTool("charlotte_fill_form", {
+        fields: [{ element_id: domId, value: "nope" }],
+      });
+
+      expect(result.isError).toBe(true);
+      const text = (result.content as Array<{ type: string; text: string }>)[0].text;
+      expect(text).toContain("ELEMENT_NOT_INTERACTIVE");
     });
 
     it("returns error for unsupported element types", async () => {

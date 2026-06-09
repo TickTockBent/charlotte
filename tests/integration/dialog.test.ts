@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from "vitest";
 import * as path from "node:path";
 import * as os from "node:os";
+import * as fs from "node:fs/promises";
 import { BrowserManager } from "../../src/browser/browser-manager.js";
 import { PageManager } from "../../src/browser/page-manager.js";
 import { CDPSessionManager } from "../../src/browser/cdp-session.js";
@@ -33,6 +34,7 @@ describe("Dialog integration", () => {
   let elementIdGenerator: ElementIdGenerator;
   let rendererPipeline: RendererPipeline;
   let deps: ToolDependencies;
+  let artifactDirectory: string;
 
   beforeAll(async () => {
     browserManager = new BrowserManager(undefined, { noSandbox: true });
@@ -43,9 +45,8 @@ describe("Dialog integration", () => {
     cdpSessionManager = new CDPSessionManager();
     elementIdGenerator = new ElementIdGenerator();
     rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator);
-    const artifactStore = new ArtifactStore(
-      path.join(os.tmpdir(), "charlotte-dialog-test-artifacts"),
-    );
+    artifactDirectory = await fs.mkdtemp(path.join(os.tmpdir(), "charlotte-dialog-test-"));
+    const artifactStore = new ArtifactStore(artifactDirectory);
     await artifactStore.initialize();
     deps = {
       browserManager,
@@ -61,6 +62,7 @@ describe("Dialog integration", () => {
 
   afterAll(async () => {
     await browserManager.close();
+    await fs.rm(artifactDirectory, { recursive: true, force: true }).catch(() => {});
   });
 
   /**

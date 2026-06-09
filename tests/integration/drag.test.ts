@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import * as path from "node:path";
 import * as os from "node:os";
+import * as fs from "node:fs/promises";
 import { BrowserManager } from "../../src/browser/browser-manager.js";
 import { PageManager } from "../../src/browser/page-manager.js";
 import { CDPSessionManager } from "../../src/browser/cdp-session.js";
@@ -12,8 +13,11 @@ import { createDefaultConfig } from "../../src/types/config.js";
 import type { CharlotteConfig } from "../../src/types/config.js";
 import type { ToolDependencies } from "../../src/tools/tool-helpers.js";
 import { renderActivePage, renderAfterAction } from "../../src/tools/tool-helpers.js";
+import { setupMcpHarness, parseToolJson, type McpHarness } from "../helpers/mcp-harness.js";
+import type { InteractiveElement } from "../../src/types/page-representation.js";
 
 const DRAG_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/drag.html")}`;
+const FIXTURES_DIR = path.resolve(import.meta.dirname, "../fixtures/pages");
 
 describe("Drag and drop integration", () => {
   let browserManager: BrowserManager;
@@ -21,6 +25,7 @@ describe("Drag and drop integration", () => {
   let pageManager: PageManager;
   let elementIdGenerator: ElementIdGenerator;
   let deps: ToolDependencies;
+  let artifactDirectory: string;
 
   beforeAll(async () => {
     browserManager = new BrowserManager(undefined, { noSandbox: true });
@@ -31,9 +36,8 @@ describe("Drag and drop integration", () => {
     const cdpSessionManager = new CDPSessionManager();
     elementIdGenerator = new ElementIdGenerator();
     const rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator);
-    const artifactStore = new ArtifactStore(
-      path.join(os.tmpdir(), "charlotte-drag-test-artifacts"),
-    );
+    artifactDirectory = await fs.mkdtemp(path.join(os.tmpdir(), "charlotte-drag-test-"));
+    const artifactStore = new ArtifactStore(artifactDirectory);
     await artifactStore.initialize();
     deps = {
       browserManager,
@@ -49,6 +53,7 @@ describe("Drag and drop integration", () => {
 
   afterAll(async () => {
     await browserManager.close();
+    await fs.rm(artifactDirectory, { recursive: true, force: true }).catch(() => {});
   });
 
   beforeEach(async () => {
@@ -243,6 +248,57 @@ describe("Drag and drop integration", () => {
       expect(afterDrag.title).toBe("Drag and Drop Test Page");
       // Delta should be present (snapshot was taken before the action)
       expect(afterDrag.delta).toBeDefined();
+    });
+  });
+
+  // ─── Issue #187: cross-frame drag is caller-fixable → INVALID_ARGUMENT ───────
+  describe("cross-frame drag (via MCP handler)", () => {
+    let harness: McpHarness;
+
+    beforeAll(async () => {
+      // Iframes need HTTP (not file://) and the render pipeline must descend
+      // into them so iframe elements get IDs.
+      harness = await setupMcpHarness({
+        profile: "full",
+        serveDirectory: FIXTURES_DIR,
+        configOverrides: (cfg) => {
+          cfg.includeIframes = true;
+          cfg.iframeDepth = 3;
+        },
+      });
+      await harness.callTool("charlotte_navigate", {
+        url: `${harness.fixtureServer!.url}/iframe-parent.html`,
+      });
+    });
+
+    afterAll(async () => {
+      await harness.teardown();
+    });
+
+    it("returns INVALID_ARGUMENT (not SESSION_ERROR) when dragging across frames", async () => {
+      // observe descends into the iframe (includeIframes), so the interactive
+      // list contains both main-frame elements (no `frame`) and iframe elements
+      // (with a `frame` URL). Pick one of each so source and target live in
+      // different frames.
+      const observe = parseToolJson<{ interactive?: InteractiveElement[] }>(
+        await harness.callTool("charlotte_observe", { detail: "summary" }),
+      );
+      const interactive = observe.interactive ?? [];
+      const mainFrameElement = interactive.find((el) => el.frame === undefined);
+      const iframeElement = interactive.find((el) => el.frame !== undefined);
+      expect(mainFrameElement).toBeDefined();
+      expect(iframeElement).toBeDefined();
+
+      const result = await harness.callTool("charlotte_drag", {
+        source_id: mainFrameElement!.id,
+        target_id: iframeElement!.id,
+      });
+
+      expect(result.isError).toBe(true);
+      const parsed = parseToolJson<{ error: { code: string; message: string } }>(result);
+      expect(parsed.error.code).toBe("INVALID_ARGUMENT");
+      expect(parsed.error.code).not.toBe("SESSION_ERROR");
+      expect(parsed.error.message).toContain("frame");
     });
   });
 });

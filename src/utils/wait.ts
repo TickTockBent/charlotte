@@ -20,6 +20,45 @@ export interface WaitOptions {
 const DEFAULT_POLL_INTERVAL_MS = 100;
 
 /**
+ * Substrings that mark a `Runtime.evaluate` protocol error as TRANSIENT — i.e.
+ * caused by the page mutating underneath the poll (navigation tore down the
+ * execution context, the target/session closed mid-evaluate). These can clear
+ * on a subsequent poll iteration, so they should be folded into "not satisfied"
+ * rather than thrown.
+ *
+ * Everything else (notably serialization failures like "Object reference chain
+ * is too long" / "Object couldn't be returned by value" raised when a cyclic or
+ * non-serializable result is requested under `returnByValue`) is NON-transient:
+ * polling will never fix it, so the error is surfaced immediately. (#198)
+ */
+const TRANSIENT_EVAL_ERROR_MARKERS = [
+  "Target closed",
+  "Session closed",
+  "Target.closeTarget",
+  "Execution context was destroyed",
+  "Execution context is not available",
+  "Cannot find context",
+  "Inspected target navigated or closed",
+  "detached",
+  "Connection closed",
+];
+
+/**
+ * Decide whether a thrown `Runtime.evaluate` error is transient (page churn,
+ * recoverable by polling) or non-transient (a caller-fixable problem with the
+ * expression, e.g. it returns a non-serializable/cyclic value).
+ *
+ * Returns `true` when the caller should keep polling (transient), `false` when
+ * the caller should surface the error as INVALID_ARGUMENT.
+ */
+export function isTransientEvalError(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err);
+  return TRANSIENT_EVAL_ERROR_MARKERS.some((marker) =>
+    message.toLowerCase().includes(marker.toLowerCase()),
+  );
+}
+
+/**
  * Poll a page until a condition is met or timeout is reached.
  * Returns true if the condition was satisfied, false if timed out.
  *
@@ -110,8 +149,20 @@ async function evaluateCondition(page: Page, condition: WaitCondition): Promise<
       if (err instanceof CharlotteError) {
         throw err;
       }
-      // Protocol/serialization errors count as "not satisfied"
-      return false;
+      // Transient protocol errors (navigation/context teardown) can clear on the
+      // next poll iteration — treat as "not satisfied" and keep polling.
+      if (isTransientEvalError(err)) {
+        return false;
+      }
+      // Non-transient protocol/serialization errors (e.g. a cyclic or
+      // non-serializable result requested under returnByValue) will never be
+      // fixed by polling. Surface them immediately. (#198)
+      const message = err instanceof Error ? err.message : String(err);
+      throw new CharlotteError(
+        CharlotteErrorCode.INVALID_ARGUMENT,
+        `The 'js' condition could not be evaluated: ${message}`,
+        "The expression returned a value that cannot be serialized (e.g. a cyclic object or `window`). Return a primitive or a plain serializable value instead.",
+      );
     } finally {
       await cdpSession.detach().catch(() => {});
     }

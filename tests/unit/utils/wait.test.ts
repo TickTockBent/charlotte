@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { pollUntilCondition } from "../../../src/utils/wait.js";
+import { pollUntilCondition, isTransientEvalError } from "../../../src/utils/wait.js";
 import { CharlotteError, CharlotteErrorCode } from "../../../src/types/errors.js";
 
 // Create a mock page object for testing
@@ -192,5 +192,84 @@ describe("pollUntilCondition", () => {
     const result = await pollUntilCondition(mockPage, {}, { timeout: 100 });
 
     expect(result).toBe(true);
+  });
+
+  it("throws INVALID_ARGUMENT immediately for a non-transient protocol/serialization error (#198)", async () => {
+    // A cyclic/non-serializable result requested under returnByValue surfaces as
+    // a ProtocolError ("Object reference chain is too long"). It will never be
+    // fixed by polling, so it must fail fast as INVALID_ARGUMENT, not TIMEOUT.
+    const mockCdpSession = {
+      send: vi
+        .fn()
+        .mockRejectedValue(
+          new Error("Protocol error (Runtime.evaluate): Object reference chain is too long"),
+        ),
+      detach: vi.fn().mockResolvedValue(undefined),
+    };
+    const mockPage = {
+      $: vi.fn(),
+      createCDPSession: vi.fn().mockResolvedValue(mockCdpSession),
+      evaluate: vi.fn(),
+    } as any;
+
+    await expect(
+      pollUntilCondition(mockPage, { js: "window" }, { timeout: 5000 }),
+    ).rejects.toMatchObject({ code: CharlotteErrorCode.INVALID_ARGUMENT });
+
+    // Must have failed on the first evaluate, not polled.
+    expect(mockCdpSession.send).toHaveBeenCalledTimes(1);
+  });
+
+  it("treats a transient protocol error as not-satisfied and keeps polling (#198)", async () => {
+    // Context teardown during navigation is recoverable — fold into "not met"
+    // and poll to a normal false-timeout instead of throwing.
+    const mockCdpSession = {
+      send: vi
+        .fn()
+        .mockRejectedValue(
+          new Error("Execution context was destroyed, most likely due to navigation"),
+        ),
+      detach: vi.fn().mockResolvedValue(undefined),
+    };
+    const mockPage = {
+      $: vi.fn(),
+      createCDPSession: vi.fn().mockResolvedValue(mockCdpSession),
+      evaluate: vi.fn(),
+    } as any;
+
+    const result = await pollUntilCondition(
+      mockPage,
+      { js: "document.ready" },
+      { timeout: 150, pollInterval: 50 },
+    );
+
+    expect(result).toBe(false);
+    // Polled more than once (transient errors do not short-circuit).
+    expect(mockCdpSession.send.mock.calls.length).toBeGreaterThan(1);
+  });
+});
+
+describe("isTransientEvalError", () => {
+  it.each([
+    "Target closed",
+    "Session closed",
+    "Execution context was destroyed, most likely due to navigation",
+    "Inspected target navigated or closed",
+    "Connection closed",
+  ])("classifies %s as transient", (message) => {
+    expect(isTransientEvalError(new Error(message))).toBe(true);
+  });
+
+  it.each([
+    "Protocol error (Runtime.evaluate): Object reference chain is too long",
+    "Object couldn't be returned by value",
+    "some unrelated failure",
+  ])("classifies %s as non-transient", (message) => {
+    expect(isTransientEvalError(new Error(message))).toBe(false);
+  });
+
+  it("handles non-Error inputs via String()", () => {
+    expect(isTransientEvalError("Target closed")).toBe(true);
+    expect(isTransientEvalError(null)).toBe(false);
   });
 });

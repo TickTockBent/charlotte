@@ -96,7 +96,14 @@ describe("Navigation integration", () => {
     it("navigates forward after going back", async () => {
       const page = pageManager.getActivePage();
 
-      // Should still be on simple.html from previous test
+      // Build self-contained history: simple → SPA → back to simple.
+      // (Previously this relied on state left by the prior test, which broke
+      // under shuffle/isolation — see #206.)
+      await page.goto(SIMPLE_FIXTURE, { waitUntil: "load" });
+      await page.goto(SPA_FIXTURE, { waitUntil: "load" });
+      await page.goBack({ waitUntil: "load" });
+      expect(page.url()).toContain("simple.html");
+
       // Go forward to SPA
       const forwardResponse = await page.goForward({ waitUntil: "load" });
       expect(forwardResponse).not.toBeNull();

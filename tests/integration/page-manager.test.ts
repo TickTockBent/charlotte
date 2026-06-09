@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
 import type { Page, Browser } from "puppeteer";
-import { BrowserManager } from "../../../src/browser/browser-manager.js";
-import { PageManager } from "../../../src/browser/page-manager.js";
-import { createDefaultConfig } from "../../../src/types/config.js";
+import { BrowserManager } from "../../src/browser/browser-manager.js";
+import { PageManager } from "../../src/browser/page-manager.js";
+import { createDefaultConfig } from "../../src/types/config.js";
 
 describe("PageManager", () => {
   let browserManager: BrowserManager;

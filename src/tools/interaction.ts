@@ -27,6 +27,8 @@ import {
   submitFormByBackendNodeId,
   setFileInputFiles,
   waitForPossibleNavigation,
+  assertTypingDurationWithinLimit,
+  resolveCharacterDelay,
 } from "./interaction-helpers.js";
 import { registerWaitForTools } from "./wait-for.js";
 
@@ -189,18 +191,25 @@ export function registerInteractionTools(
           .min(1)
           .optional()
           .describe(
-            "Milliseconds between keystrokes (implies slowly: true). Default when slowly is true: 50ms",
+            "Milliseconds between keystrokes (implies slowly: true). Default when slowly is true: 50ms. " +
+              "Total typing time is capped at approximately 30s (including per-keystroke overhead); " +
+              "requests whose estimated duration exceeds that are rejected.",
           ),
       },
     },
     async ({ element_id, text, clear_first, press_enter, slowly, character_delay }) => {
       try {
+        const shouldClearFirst = clear_first ?? true;
+        const shouldPressEnter = press_enter ?? false;
+        const delayMs = resolveCharacterDelay(slowly, character_delay);
+
+        // Pure argument validation — guard against slow-typing operations long
+        // enough to risk an MCP tool timeout before doing any browser work.
+        assertTypingDurationWithinLimit(text.length, delayMs);
+
         await ensureReady(deps);
         const resolved = await resolveElement(deps, element_id);
         const session = await getSessionForElement(deps, resolved);
-        const shouldClearFirst = clear_first ?? true;
-        const shouldPressEnter = press_enter ?? false;
-        const delayMs = character_delay ?? (slowly ? 50 : undefined);
 
         logger.info("Typing into element", {
           element_id,

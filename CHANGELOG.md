@@ -4,7 +4,9 @@ All notable changes to Charlotte will be documented in this file.
 
 ## [Unreleased]
 
-<!-- Nothing yet -->
+### Added
+
+- **Slow-typing duration guard** — `charlotte_type` now rejects slow-typing requests whose estimated duration would risk an MCP tool timeout, failing fast with an `INVALID_ARGUMENT` error instead of starting to type and timing out partway. The estimate (`text.length * character_delay`) is capped at 30s and includes a margin for per-keystroke overhead. The `character_delay` schema description documents the ceiling so callers see it upfront. Fixes #127. (#174, #180)
 
 ## [0.6.3] - 2026-04-17
 

@@ -336,7 +336,15 @@ describe("Interaction integration", () => {
       const delayMs = 60;
 
       const startTime = Date.now();
-      await typeIntoElement(page, backendNodeId, textToType, true, false, delayMs);
+      await typeIntoElement(
+        page,
+        backendNodeId,
+        textToType,
+        true,
+        false,
+        delayMs,
+        await cdpSessionManager.getSession(page),
+      );
       const elapsed = Date.now() - startTime;
 
       // Verify text was typed
@@ -366,7 +374,15 @@ describe("Interaction integration", () => {
         });
       });
 
-      await typeIntoElement(page, backendNodeId, "abc", true, false, 30);
+      await typeIntoElement(
+        page,
+        backendNodeId,
+        "abc",
+        true,
+        false,
+        30,
+        await cdpSessionManager.getSession(page),
+      );
 
       const inputEvents = await page.evaluate(() => (window as any).__inputEvents);
       // Should see incremental values: "a", "ab", "abc"
@@ -384,7 +400,15 @@ describe("Interaction integration", () => {
 
       const fastText = "fast typing test";
       const startTime = Date.now();
-      await typeIntoElement(page, backendNodeId, fastText, true, false);
+      await typeIntoElement(
+        page,
+        backendNodeId,
+        fastText,
+        true,
+        false,
+        undefined,
+        await cdpSessionManager.getSession(page),
+      );
       const elapsed = Date.now() - startTime;
 
       const inputValue = await page.evaluate(() => {

@@ -48,6 +48,50 @@ describe("BrowserManager", () => {
     });
   });
 
+  // Issue #184: sandbox is ON by default; --no-sandbox only added on opt-out.
+  describe("Chromium sandbox (issue #184)", () => {
+    function launchedArgs(): string[] {
+      const call = (puppeteer.launch as ReturnType<typeof vi.fn>).mock.calls[0];
+      return (call?.[0]?.args ?? []) as string[];
+    }
+
+    it("does NOT pass --no-sandbox by default (sandbox enabled)", async () => {
+      const manager = new BrowserManager();
+      await manager.launch();
+
+      const args = launchedArgs();
+      expect(args).not.toContain("--no-sandbox");
+      expect(args).not.toContain("--disable-setuid-sandbox");
+    });
+
+    it("passes --no-sandbox when noSandbox opt-out is set in constructor", async () => {
+      const manager = new BrowserManager(undefined, { noSandbox: true });
+      await manager.launch();
+
+      const args = launchedArgs();
+      expect(args).toContain("--no-sandbox");
+      expect(args).toContain("--disable-setuid-sandbox");
+    });
+
+    it("passes --no-sandbox when noSandbox opt-out is set in launch()", async () => {
+      const manager = new BrowserManager();
+      await manager.launch({ noSandbox: true });
+
+      const args = launchedArgs();
+      expect(args).toContain("--no-sandbox");
+      expect(args).toContain("--disable-setuid-sandbox");
+    });
+
+    it("retains other hardening args regardless of sandbox setting", async () => {
+      const manager = new BrowserManager();
+      await manager.launch();
+
+      const args = launchedArgs();
+      expect(args).toContain("--disable-gpu");
+      expect(args).toContain("--disable-dev-shm-usage");
+    });
+  });
+
   describe("CDP connected mode", () => {
     it("calls puppeteer.connect with browserURL for HTTP endpoint", async () => {
       const manager = new BrowserManager(undefined, undefined, "http://localhost:9222");
@@ -164,6 +208,132 @@ describe("BrowserManager", () => {
       mockBrowser.connected = false;
 
       await expect(manager.ensureConnected()).rejects.toThrow("Remote browser disconnected");
+    });
+  });
+
+  // #201/#202: lifecycle resilience.
+  describe("disconnect recovery and first-connect (issues #201, #202)", () => {
+    /** Build a mock browser whose `disconnected` listener we can fire manually. */
+    function disconnectableBrowser() {
+      let disconnectListener: (() => void) | undefined;
+      const browser = {
+        connected: true,
+        on: vi.fn((event: string, listener: () => void) => {
+          if (event === "disconnected") disconnectListener = listener;
+        }),
+        close: vi.fn().mockResolvedValue(undefined),
+        disconnect: vi.fn().mockResolvedValue(undefined),
+        process: () => ({ pid: 4321 }),
+        pages: vi.fn().mockResolvedValue([]),
+      };
+      return {
+        browser,
+        fireDisconnect: () => {
+          browser.connected = false;
+          disconnectListener?.();
+        },
+      };
+    }
+
+    it("invokes onDisconnected when the launched browser drops", async () => {
+      const { browser, fireDisconnect } = disconnectableBrowser();
+      (puppeteer.launch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(browser);
+
+      const manager = new BrowserManager();
+      const onDisconnected = vi.fn();
+      manager.setOnDisconnected(onDisconnected);
+      await manager.launch();
+
+      expect(onDisconnected).not.toHaveBeenCalled();
+      fireDisconnect();
+      expect(onDisconnected).toHaveBeenCalledTimes(1);
+      expect(manager.isConnected()).toBe(false);
+    });
+
+    it("relaunches after a crash so the next ensureConnected() recovers", async () => {
+      const first = disconnectableBrowser();
+      const second = disconnectableBrowser();
+      (puppeteer.launch as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce(first.browser)
+        .mockResolvedValueOnce(second.browser);
+
+      const manager = new BrowserManager();
+      manager.setOnDisconnected(vi.fn());
+      await manager.launch();
+
+      first.fireDisconnect();
+      expect(manager.isConnected()).toBe(false);
+
+      await manager.ensureConnected();
+      expect(puppeteer.launch).toHaveBeenCalledTimes(2);
+      expect(manager.isConnected()).toBe(true);
+    });
+
+    it("swallows errors thrown by the onDisconnected callback", async () => {
+      const { browser, fireDisconnect } = disconnectableBrowser();
+      (puppeteer.launch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(browser);
+
+      const manager = new BrowserManager();
+      manager.setOnDisconnected(() => {
+        throw new Error("reset blew up");
+      });
+      await manager.launch();
+
+      expect(() => fireDisconnect()).not.toThrow();
+    });
+
+    it("CDP first-connect adoption is awaited by concurrent ensureConnected callers", async () => {
+      // Adoption resolves on a deferred so we can prove concurrent callers wait
+      // for it (the folded launching promise), not just the raw connect (#202).
+      let releaseAdoption: () => void = () => {};
+      const adoptionGate = new Promise<void>((resolve) => {
+        releaseAdoption = resolve;
+      });
+      let adoptionDone = false;
+      const onFirstConnect = vi.fn(async () => {
+        await adoptionGate;
+        adoptionDone = true;
+      });
+
+      const manager = new BrowserManager(
+        undefined,
+        undefined,
+        "http://localhost:9222",
+        onFirstConnect,
+      );
+
+      const callerA = manager.ensureConnected();
+      const callerB = manager.ensureConnected();
+
+      // Neither caller may resolve until adoption completes.
+      releaseAdoption();
+      await Promise.all([callerA, callerB]);
+
+      expect(adoptionDone).toBe(true);
+      // Adoption ran exactly once despite two concurrent callers.
+      expect(onFirstConnect).toHaveBeenCalledTimes(1);
+      expect(puppeteer.connect).toHaveBeenCalledTimes(1);
+    });
+
+    it("retries adoption if onFirstConnect throws on the first attempt", async () => {
+      const onFirstConnect = vi
+        .fn()
+        .mockRejectedValueOnce(new Error("adoption failed"))
+        .mockResolvedValueOnce(undefined);
+
+      const manager = new BrowserManager(
+        undefined,
+        undefined,
+        "http://localhost:9222",
+        onFirstConnect,
+      );
+
+      // First attempt: adoption throws and must propagate (not silently wedge).
+      await expect(manager.ensureConnected()).rejects.toThrow("adoption failed");
+
+      // Second attempt: adoption is retried (firstConnectDone was NOT latched).
+      await manager.ensureConnected();
+      expect(onFirstConnect).toHaveBeenCalledTimes(2);
     });
   });
 });

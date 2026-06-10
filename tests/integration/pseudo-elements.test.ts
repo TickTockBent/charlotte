@@ -16,7 +16,7 @@ describe("Pseudo-element content deduplication", () => {
   let page: Page;
 
   beforeAll(async () => {
-    browserManager = new BrowserManager();
+    browserManager = new BrowserManager(undefined, { noSandbox: true });
     await browserManager.launch();
     page = await browserManager.newPage();
     cdpSessionManager = new CDPSessionManager();

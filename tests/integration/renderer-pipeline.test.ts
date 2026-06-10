@@ -16,7 +16,7 @@ describe("RendererPipeline integration", () => {
   let page: Page;
 
   beforeAll(async () => {
-    browserManager = new BrowserManager();
+    browserManager = new BrowserManager(undefined, { noSandbox: true });
     await browserManager.launch();
     page = await browserManager.newPage();
     cdpSessionManager = new CDPSessionManager();
@@ -217,6 +217,42 @@ describe("RendererPipeline integration", () => {
       }
 
       expect(resolvedCount).toBeGreaterThan(0);
+    });
+  });
+
+  // #202: concurrent renders of the same page must be serialized by the
+  // per-page mutex so the shared ElementIdGenerator is not raced — every
+  // returned representation's IDs must resolve against the final generator.
+  describe("concurrent render mutex (issue #202)", () => {
+    it("serializes concurrent renders so all returned IDs resolve", async () => {
+      const [a, b, c] = await Promise.all([
+        pipeline.render(page, { detail: "minimal" }),
+        pipeline.render(page, { detail: "minimal" }),
+        pipeline.render(page, { detail: "minimal" }),
+      ]);
+
+      // The mutex guarantees the LAST render to run is the one whose IDs the
+      // shared generator holds. Because the page is static, all three renders
+      // produce identical (stable-hash) IDs, so every representation resolves.
+      for (const representation of [a, b, c]) {
+        expect(representation.interactive.length).toBeGreaterThan(0);
+        for (const element of representation.interactive) {
+          expect(elementIdGenerator.resolveId(element.id)).not.toBeNull();
+        }
+      }
+    });
+
+    it("one failed render does not wedge the per-page chain", async () => {
+      // A render against a closed page rejects; the next render of a live page
+      // must still succeed (the chain links swallow rejections).
+      const scratch = await browserManager.newPage();
+      await scratch.goto(`file://${FIXTURE_PATH}`, { waitUntil: "load" });
+      await scratch.close();
+
+      await expect(pipeline.render(scratch, { detail: "minimal" })).rejects.toBeDefined();
+
+      const ok = await pipeline.render(page, { detail: "minimal" });
+      expect(ok.url).toContain("simple.html");
     });
   });
 });

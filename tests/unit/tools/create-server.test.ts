@@ -23,6 +23,12 @@ function createMockDeps(): ServerDeps {
       allowedWorkspaceRoot: "/tmp",
       includeIframes: false,
       iframeDepth: 3,
+      limits: {
+        maxInteractiveElements: 2000,
+        maxFullContentChars: 200_000,
+        maxResponseBytes: 1_000_000,
+        maxEvaluateBytes: 256_000,
+      },
     } as any,
   };
 }

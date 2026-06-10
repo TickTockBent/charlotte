@@ -1,3 +1,4 @@
+import * as dns from "node:dns/promises";
 import type { Page, CDPSession } from "puppeteer";
 import { logger } from "../utils/logger.js";
 
@@ -18,6 +19,78 @@ export interface AuditResult {
 }
 
 const ALL_CATEGORIES: AuditCategory[] = ["a11y", "performance", "seo", "contrast", "links"];
+
+/**
+ * Return true if the given IP address string is a private, loopback, or link-local address
+ * that should be excluded from dev_audit link checks.
+ *
+ * dev_audit link checks run from the Node host process, not the browser sandbox. Fetching
+ * URLs supplied by the audited page without this guard would allow a malicious page to probe
+ * internal services (e.g. 169.254.169.254 IMDS, localhost admin endpoints) via Charlotte.
+ * This filter blocks the host-side fetch; the links still appear in the page's AX tree and
+ * are visible to the agent — they are just not actively probed.
+ */
+export function isPrivateOrInternalIp(ipAddress: string): boolean {
+  // IPv6 loopback
+  if (ipAddress === "::1" || ipAddress === "0:0:0:0:0:0:0:1") {
+    return true;
+  }
+
+  const parts = ipAddress.split(".").map(Number);
+  if (parts.length !== 4 || parts.some((p) => isNaN(p) || p < 0 || p > 255)) {
+    // Not a valid IPv4 address — treat as safe (hostname; DNS resolved separately)
+    return false;
+  }
+
+  const [a, b] = parts;
+  // 127.0.0.0/8   — loopback
+  if (a === 127) return true;
+  // 10.0.0.0/8    — private Class A
+  if (a === 10) return true;
+  // 172.16.0.0/12 — private Class B
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  // 192.168.0.0/16 — private Class C
+  if (a === 192 && b === 168) return true;
+  // 169.254.0.0/16 — link-local (IMDS, APIPA)
+  if (a === 169 && b === 254) return true;
+  // 0.0.0.0/8     — "this" network
+  if (a === 0) return true;
+
+  return false;
+}
+
+/**
+ * Resolve the hostname of a URL and return whether it points to a private/internal address.
+ * Returns true (block) when the hostname is `localhost` or resolves to a private IP.
+ * Returns false (allow) on DNS error — we'll let the fetch attempt and report any 4xx/5xx.
+ */
+export async function isInternalUrl(urlString: string): Promise<boolean> {
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(urlString);
+  } catch {
+    return false;
+  }
+
+  const { hostname } = parsedUrl;
+
+  // localhost is always internal regardless of DNS
+  if (hostname === "localhost") return true;
+
+  // If the hostname is already an IP literal, check it directly
+  if (/^[\d.]+$/.test(hostname) || hostname.startsWith("[")) {
+    const ipAddress = hostname.replace(/^\[|\]$/g, ""); // strip IPv6 brackets
+    return isPrivateOrInternalIp(ipAddress);
+  }
+
+  // Resolve via DNS and check the first result
+  try {
+    const addresses = await dns.lookup(hostname, { all: true });
+    return addresses.some((entry) => isPrivateOrInternalIp(entry.address));
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Compute relative luminance of a color per WCAG 2.1.
@@ -508,9 +581,24 @@ export class Auditor {
       linksToCheck.push(link);
     }
 
+    // Filter out links that resolve to private / loopback / link-local addresses to prevent
+    // the host-side fetch from probing internal services (SSRF). The link is still surfaced to
+    // the agent via the page's AX tree — it just won't be actively fetched by Charlotte.
+    const safeLinksToCheck = (
+      await Promise.all(
+        linksToCheck.map(async (link) => {
+          const internal = await isInternalUrl(link.href);
+          if (internal) {
+            logger.debug("dev_audit: skipping internal/private URL", { href: link.href });
+          }
+          return internal ? null : link;
+        }),
+      )
+    ).filter((link): link is { href: string; text: string } => link !== null);
+
     // Check all links concurrently
     const checkResults = await Promise.allSettled(
-      linksToCheck.map(async (link) => {
+      safeLinksToCheck.map(async (link) => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), LINK_TIMEOUT_MS);
 

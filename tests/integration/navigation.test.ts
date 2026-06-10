@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import * as path from "node:path";
 import * as os from "node:os";
+import * as fs from "node:fs/promises";
 import { BrowserManager } from "../../src/browser/browser-manager.js";
 import { PageManager } from "../../src/browser/page-manager.js";
 import { CDPSessionManager } from "../../src/browser/cdp-session.js";
@@ -23,9 +24,10 @@ describe("Navigation integration", () => {
   let elementIdGenerator: ElementIdGenerator;
   let rendererPipeline: RendererPipeline;
   let deps: ToolDependencies;
+  let artifactDirectory: string;
 
   beforeAll(async () => {
-    browserManager = new BrowserManager();
+    browserManager = new BrowserManager(undefined, { noSandbox: true });
     await browserManager.launch();
     pageManager = new PageManager();
     await pageManager.openTab(browserManager);
@@ -33,7 +35,8 @@ describe("Navigation integration", () => {
     elementIdGenerator = new ElementIdGenerator();
     rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator);
     const config = createDefaultConfig();
-    const artifactStore = new ArtifactStore(path.join(os.tmpdir(), "charlotte-nav-test-artifacts"));
+    artifactDirectory = await fs.mkdtemp(path.join(os.tmpdir(), "charlotte-nav-test-"));
+    const artifactStore = new ArtifactStore(artifactDirectory);
     await artifactStore.initialize();
     deps = {
       browserManager,
@@ -49,6 +52,7 @@ describe("Navigation integration", () => {
 
   afterAll(async () => {
     await browserManager.close();
+    await fs.rm(artifactDirectory, { recursive: true, force: true }).catch(() => {});
   });
 
   describe("navigate to file URLs", () => {
@@ -96,7 +100,14 @@ describe("Navigation integration", () => {
     it("navigates forward after going back", async () => {
       const page = pageManager.getActivePage();
 
-      // Should still be on simple.html from previous test
+      // Build self-contained history: simple → SPA → back to simple.
+      // (Previously this relied on state left by the prior test, which broke
+      // under shuffle/isolation — see #206.)
+      await page.goto(SIMPLE_FIXTURE, { waitUntil: "load" });
+      await page.goto(SPA_FIXTURE, { waitUntil: "load" });
+      await page.goBack({ waitUntil: "load" });
+      expect(page.url()).toContain("simple.html");
+
       // Go forward to SPA
       const forwardResponse = await page.goForward({ waitUntil: "load" });
       expect(forwardResponse).not.toBeNull();

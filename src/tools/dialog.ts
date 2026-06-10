@@ -7,7 +7,7 @@ import type { ToolDependencies } from "./tool-helpers.js";
 import {
   ensureReady,
   renderAfterAction,
-  stripEmptyFields,
+  formatPageResponse,
   handleToolError,
 } from "./tool-helpers.js";
 
@@ -76,20 +76,14 @@ export function registerDialogTools(
 
         const representation = await renderAfterAction(deps);
 
-        // Build response with dialog_handled metadata
-        const responsePayload = {
-          dialog_handled: dialogHandled,
-          page: stripEmptyFields(representation),
-        };
-
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: JSON.stringify(responsePayload),
-            },
-          ],
-        };
+        // Route through formatPageResponse so the page payload is stripped and
+        // size-capped like every other tool, with dialog_handled merged in as a
+        // top-level key (previously the page was nested under a unique `page`
+        // key, drifting from the rest of the API) (#204).
+        return formatPageResponse(representation, {
+          extra: { dialog_handled: dialogHandled },
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }

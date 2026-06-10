@@ -1,0 +1,24 @@
+{
+  "browser": {
+    "headless": true,
+    "noSandbox": false,
+    "cdpEndpoint": null
+  },
+  "tools": {
+    "profile": "browse"
+  },
+  "snapshot": {
+    "depth": 50,
+    "autoSnapshot": "every_action"
+  },
+  "rendering": {
+    "includeIframes": false,
+    "iframeDepth": 3
+  },
+  "dialog": {
+    "autoDismiss": "none"
+  },
+  "output": {
+    "dir": "./charlotte-output"
+  }
+}

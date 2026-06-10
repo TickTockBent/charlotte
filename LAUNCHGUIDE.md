@@ -4,7 +4,7 @@
 Headless browser for AI agents — navigate, interact with, and test web pages via MCP.
 
 ## Description
-Charlotte is an MCP server that gives AI agents full browser control through headless Chromium. It renders web pages into structured, agent-readable representations — extracting landmarks, interactive elements, forms, and content — so agents can understand and interact with any web page without parsing raw HTML. Charlotte provides 39 tools covering navigation, clicking, typing, screenshots, cookie management, network monitoring, visual diffing, accessibility auditing, and local development serving. Built for developers who want their AI agents to browse, test, and debug web applications.
+Charlotte is an MCP server that gives AI agents full browser control through headless Chromium. It renders web pages into structured, agent-readable representations — extracting landmarks, interactive elements, forms, and content — so agents can understand and interact with any web page without parsing raw HTML. Charlotte provides 43 tools covering navigation, clicking, typing, screenshots, cookie management, network monitoring, visual diffing, accessibility auditing, and local development serving. Built for developers who want their AI agents to browse, test, and debug web applications.
 
 ## Setup Requirements
 - No API keys or environment variables required. Charlotte launches a local headless Chromium instance via Puppeteer.
@@ -25,7 +25,7 @@ Developer Tools
 - Run arbitrary JavaScript in the page context
 - Local dev server with file watching and automatic reload detection
 - Accessibility, performance, SEO, contrast, and link auditing
-- Configurable detail levels (full or minimal) to control response size
+- Configurable detail levels (minimal, summary, or full) to control response size
 - Dialog handling for alerts, confirms, and prompts
 - Keyboard input for special keys, shortcuts, and key combinations
 - Viewport resizing for responsive testing

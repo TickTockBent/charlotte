@@ -26,7 +26,8 @@ export interface ElementState {
   enabled?: boolean;
   visible?: boolean;
   focused?: boolean;
-  checked?: boolean;
+  /** `"mixed"` for tri-state (indeterminate) checkboxes. */
+  checked?: boolean | "mixed";
   expanded?: boolean;
   selected?: boolean;
   required?: boolean;
@@ -105,6 +106,30 @@ export interface IframeInfo {
   bounds: Bounds | null;
 }
 
+/**
+ * Describes any output caps that fired while building this representation
+ * (issue #188). Present only when something was truncated so a clean page
+ * never carries the field.
+ */
+export interface TruncationInfo {
+  /** Set when the interactive element list was capped. */
+  interactive?: {
+    /** Total interactive elements found before truncation. */
+    total: number;
+    /** Number actually included in `interactive`. */
+    returned: number;
+  };
+  /** Set when `full_content` text was truncated. */
+  full_content?: {
+    /** Original character count. */
+    total_chars: number;
+    /** Character count actually included. */
+    returned_chars: number;
+  };
+  /** Human-readable suggestion for getting the full data. */
+  suggestion: string;
+}
+
 export interface PageRepresentation {
   url: string;
   title: string;
@@ -125,4 +150,6 @@ export interface PageRepresentation {
   /** Tab IDs of pages opened by popups or target="_blank" links since the last tool call. */
   opened_tabs?: string[];
   delta?: import("./snapshot.js").SnapshotDiff;
+  /** Present only when an output cap fired during render (issue #188). */
+  truncation?: TruncationInfo;
 }

@@ -27,9 +27,10 @@ describe("Dev mode integration", () => {
   let devModeState: DevModeState;
   let deps: ToolDependencies;
   let AUDIT_TARGET_FIXTURE: string;
+  let artifactDirectory: string;
 
   beforeAll(async () => {
-    browserManager = new BrowserManager();
+    browserManager = new BrowserManager(undefined, { noSandbox: true });
     await browserManager.launch();
     pageManager = new PageManager();
     await pageManager.openTab(browserManager);
@@ -48,9 +49,8 @@ describe("Dev mode integration", () => {
     // Update AUDIT_TARGET_FIXTURE to use the temp directory
     AUDIT_TARGET_FIXTURE = `file://${path.resolve(FIXTURES_DIR, "audit-target.html")}`;
 
-    const artifactStore = new ArtifactStore(
-      path.join(os.tmpdir(), "charlotte-devmode-test-artifacts"),
-    );
+    artifactDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "charlotte-devmode-test-"));
+    const artifactStore = new ArtifactStore(artifactDirectory);
     await artifactStore.initialize();
     deps = {
       browserManager,
@@ -72,6 +72,9 @@ describe("Dev mode integration", () => {
     if (TEMP_FIXTURES_DIR && fs.existsSync(TEMP_FIXTURES_DIR)) {
       fs.rmSync(TEMP_FIXTURES_DIR, { recursive: true, force: true });
     }
+    if (artifactDirectory && fs.existsSync(artifactDirectory)) {
+      fs.rmSync(artifactDirectory, { recursive: true, force: true });
+    }
   });
 
   describe("dev_serve", () => {
@@ -83,7 +86,8 @@ describe("Dev mode integration", () => {
         cdpSessionManager,
       });
 
-      expect(serverInfo.url).toMatch(/^http:\/\/localhost:\d+$/);
+      // The static server reports 127.0.0.1 to match its bind address (#203).
+      expect(serverInfo.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
       expect(serverInfo.port).toBeGreaterThan(0);
 
       // Navigate to the served page

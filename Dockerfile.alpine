@@ -42,5 +42,11 @@ RUN chown -R charlotte:charlotte /app
 # Switch to non-root user
 USER charlotte
 
+# The Chromium sandbox is ON by default (issue #184), but inside a container
+# the kernel sandbox usually cannot be set up, so opt out explicitly here.
+# On bare metal the sandbox stays enabled. Override with CHARLOTTE_NO_SANDBOX=0
+# if you run with a seccomp profile / user namespaces that support the sandbox.
+ENV CHARLOTTE_NO_SANDBOX=1
+
 # Charlotte MCP uses stdio transport
 CMD ["dumb-init", "node", "dist/index.js"]

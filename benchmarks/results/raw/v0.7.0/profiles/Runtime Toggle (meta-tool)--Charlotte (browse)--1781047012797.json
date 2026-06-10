@@ -1,0 +1,72 @@
+{
+  "testName": "Runtime Toggle (meta-tool)",
+  "serverName": "Charlotte (browse)",
+  "calls": [
+    {
+      "toolName": "charlotte_tools",
+      "arguments": {
+        "action": "list"
+      },
+      "responseChars": 2300,
+      "estimatedTokens": 575,
+      "wallTimeMs": 2.2376839999997173,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte_tools",
+      "arguments": {
+        "action": "enable",
+        "group": "monitoring"
+      },
+      "responseChars": 164,
+      "estimatedTokens": 41,
+      "wallTimeMs": 1.921533000000636,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte_navigate",
+      "arguments": {
+        "url": "about:blank"
+      },
+      "responseChars": 259,
+      "estimatedTokens": 65,
+      "wallTimeMs": 476.16698299999916,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte_console",
+      "arguments": {},
+      "responseChars": 104,
+      "estimatedTokens": 26,
+      "wallTimeMs": 0.9772140000059153,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte_tools",
+      "arguments": {
+        "action": "disable",
+        "group": "monitoring"
+      },
+      "responseChars": 166,
+      "estimatedTokens": 42,
+      "wallTimeMs": 1.1462959999989835,
+      "isError": false
+    }
+  ],
+  "cumulative": {
+    "totalChars": 2993,
+    "totalEstimatedTokens": 749,
+    "totalWallTimeMs": 482.4497100000044,
+    "totalCalls": 5
+  },
+  "toolDefinitions": {
+    "toolCount": 23,
+    "definitionChars": 16747,
+    "estimatedDefinitionTokens": 4785,
+    "cumulativeDefinitionTokens": 23925
+  },
+  "success": true,
+  "successCriteria": "Tool count increases after enable, monitoring tool works, tool count decreases after disable.",
+  "notes": "Initial: 23 tools. After enable: 25 tools (grew: true). Console tool worked: true. After disable: 23 tools (restored: true). Initial def chars: 16,747. Expanded def chars: 18,864. Contracted def chars: 16,747",
+  "timestamp": 1781047012796
+}

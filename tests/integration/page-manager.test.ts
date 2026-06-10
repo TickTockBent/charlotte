@@ -1,14 +1,17 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
 import type { Page, Browser } from "puppeteer";
-import { BrowserManager } from "../../../src/browser/browser-manager.js";
-import { PageManager } from "../../../src/browser/page-manager.js";
-import { createDefaultConfig } from "../../../src/types/config.js";
+import { BrowserManager } from "../../src/browser/browser-manager.js";
+import { PageManager } from "../../src/browser/page-manager.js";
+import { createDefaultConfig } from "../../src/types/config.js";
 
 describe("PageManager", () => {
   let browserManager: BrowserManager;
 
   beforeAll(async () => {
-    browserManager = new BrowserManager();
+    // This test launches a real Chromium. The sandbox is ON by default
+    // (issue #184), so opt out here to keep it portable across CI/dev hosts
+    // where the kernel sandbox is unavailable.
+    browserManager = new BrowserManager(undefined, { noSandbox: true });
     await browserManager.launch();
   });
 
@@ -232,5 +235,77 @@ describe("PageManager.adoptExistingPages", () => {
     expect(registeredEvents).toContain("response");
     expect(registeredEvents).toContain("dialog");
     expect(registeredEvents).toContain("close");
+  });
+});
+
+// #201/#202: crash-safety and resilience. Driven with mock pages (no browser).
+describe("PageManager crash-safety and resilience (issues #201, #202)", () => {
+  function deadPage(): Page {
+    // A page bound to a dead connection: url() throws, close() rejects.
+    return {
+      url: () => {
+        throw new Error("Protocol error: connection closed");
+      },
+      title: () => Promise.reject(new Error("Protocol error: connection closed")),
+      on: () => {},
+      removeAllListeners: () => {},
+      mainFrame: () => ({}),
+      bringToFront: () => Promise.resolve(),
+      close: () => Promise.reject(new Error("Protocol error: Session closed")),
+    } as unknown as Page;
+  }
+
+  function livePage(url: string, title: string): Page {
+    return {
+      url: () => url,
+      title: () => Promise.resolve(title),
+      on: () => {},
+      removeAllListeners: () => {},
+      mainFrame: () => ({}),
+      bringToFront: () => Promise.resolve(),
+      close: () => Promise.resolve(),
+    } as unknown as Page;
+  }
+
+  /** Inject a page directly into PageManager's map via adoptExistingPages. */
+  async function adopt(pageManager: PageManager, pages: Page[]): Promise<void> {
+    await pageManager.adoptExistingPages({
+      pages: () => Promise.resolve(pages),
+    } as unknown as Browser);
+  }
+
+  it("closeTab removes the tab even when page.close() throws (#201)", async () => {
+    const pageManager = new PageManager();
+    await adopt(pageManager, [deadPage()]);
+    const [tab] = await pageManager.listTabs();
+
+    // Old behavior: close() rejects before pages.delete(), so the tab is never
+    // removed and the server wedges. New behavior: cleanup completes regardless.
+    await expect(pageManager.closeTab(tab.id)).resolves.toBeUndefined();
+    expect(pageManager.hasPages()).toBe(false);
+  });
+
+  it("reset() clears all tabs and the active id after a disconnect (#201)", async () => {
+    const pageManager = new PageManager();
+    await adopt(pageManager, [deadPage(), deadPage()]);
+    expect(pageManager.hasPages()).toBe(true);
+
+    pageManager.reset();
+
+    expect(pageManager.hasPages()).toBe(false);
+    expect(() => pageManager.getActiveTabId()).toThrow("No active tab");
+  });
+
+  it("listTabs survives a dead page with a fallback title (#202)", async () => {
+    const pageManager = new PageManager();
+    await adopt(pageManager, [livePage("https://ok.example", "OK"), deadPage()]);
+
+    // Old behavior: one rejecting page.title() rejected the whole listing.
+    const tabs = await pageManager.listTabs();
+
+    expect(tabs).toHaveLength(2);
+    expect(tabs[0].title).toBe("OK");
+    expect(tabs[1].title).toBe("(unavailable)");
+    expect(tabs[1].url).toBe("about:blank");
   });
 });

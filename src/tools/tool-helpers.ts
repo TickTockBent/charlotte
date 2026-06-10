@@ -5,7 +5,7 @@ import type { PageManager } from "../browser/page-manager.js";
 import type { BrowserManager } from "../browser/browser-manager.js";
 import type { CDPSessionManager } from "../browser/cdp-session.js";
 import type { RendererPipeline } from "../renderer/renderer-pipeline.js";
-import type { ElementIdGenerator } from "../renderer/element-id-generator.js";
+import type { ElementIdGenerator, DomQueryRegistration } from "../renderer/element-id-generator.js";
 import type { SnapshotStore } from "../state/snapshot-store.js";
 import type { ArtifactStore } from "../state/artifact-store.js";
 import type { CharlotteConfig } from "../types/config.js";
@@ -181,6 +181,24 @@ export async function resolveElement(
 ): Promise<ResolvedElement> {
   const page = deps.pageManager.getActivePage();
 
+  // Step 0: Selector-mode (dom-) IDs re-resolve against the live DOM. The
+  // stored backend node ID can go stale (DOM mutation, partial re-render), so
+  // re-run the originating selector to get a fresh node ID. This is also what
+  // keeps dom- IDs working after fill_form's pre-render (issue #191).
+  const domRegistration = deps.elementIdGenerator.getDomQueryRegistration(elementId);
+  if (domRegistration) {
+    const reResolved = await reResolveDomQueryId(deps, elementId, domRegistration);
+    if (reResolved) {
+      return reResolved;
+    }
+    // Selector no longer matches — element is genuinely gone.
+    throw new CharlotteError(
+      CharlotteErrorCode.ELEMENT_NOT_FOUND,
+      `Element '${elementId}' not found on page.`,
+      `The selector '${domRegistration.selector}' that produced '${elementId}' no longer matches that element. Re-run charlotte_find with the selector to get a current ID.`,
+    );
+  }
+
   // Step 1: Check current map
   let backendNodeId = deps.elementIdGenerator.resolveId(elementId);
   if (backendNodeId !== null) {
@@ -208,6 +226,50 @@ export async function resolveElement(
     `Element '${elementId}' not found on page.`,
     suggestion,
   );
+}
+
+/**
+ * Re-resolve a selector-mode (`dom-`) element ID by re-running its originating
+ * CSS selector against the live DOM. Returns the resolved element with a fresh
+ * backend node ID, or null if the selector no longer matches that index.
+ *
+ * Updates the durable registration so subsequent lookups stay cheap.
+ */
+async function reResolveDomQueryId(
+  deps: ToolDependencies,
+  elementId: string,
+  registration: DomQueryRegistration,
+): Promise<ResolvedElement | null> {
+  const page = deps.pageManager.getActivePage();
+  const cdpSession = await page.createCDPSession();
+  try {
+    const { root } = await cdpSession.send("DOM.getDocument", { depth: 0 });
+    const { nodeIds } = await cdpSession.send("DOM.querySelectorAll", {
+      nodeId: root.nodeId,
+      selector: registration.selector,
+    });
+
+    const nodeId = nodeIds[registration.matchIndex];
+    if (nodeId === undefined) {
+      return null;
+    }
+
+    const { node } = await cdpSession.send("DOM.describeNode", { nodeId });
+    const freshBackendNodeId = node.backendNodeId;
+
+    // Refresh the durable registration so the per-render maps and the stored
+    // backend node ID stay in sync after DOM mutations.
+    deps.elementIdGenerator.registerDomQueryId(elementId, {
+      ...registration,
+      backendDOMNodeId: freshBackendNodeId,
+    });
+
+    return { page, backendNodeId: freshBackendNodeId, frameId: registration.frameId };
+  } catch {
+    return null;
+  } finally {
+    await cdpSession.detach();
+  }
 }
 
 /**
@@ -321,22 +383,111 @@ export function stripEmptyFields(representation: PageRepresentation): Record<str
     delete cleaned.opened_tabs;
   }
 
+  // Strip absent truncation marker (#188)
+  if (!representation.truncation) {
+    delete cleaned.truncation;
+  }
+
   return cleaned;
+}
+
+/**
+ * Byte ceiling used by {@link formatPageResponse} when the caller does not
+ * supply config-driven limits. Mirrors {@link DEFAULT_OUTPUT_LIMITS.maxResponseBytes}.
+ */
+const FALLBACK_MAX_RESPONSE_BYTES = 1_000_000;
+
+/**
+ * Degrade an over-large serialized page response (#188).
+ *
+ * When the compact JSON exceeds `maxBytes`, we drop the heavy fields
+ * (`interactive`, `forms`, `structure.full_content`) and return a compact
+ * summary instead: landmark/heading counts, the interactive_summary (computed
+ * here if the render didn't already produce one), and an explicit truncation
+ * marker steering the agent toward `output_file` or a narrower detail level.
+ */
+function degradeOversizedResponse(
+  cleaned: Record<string, unknown>,
+  representation: PageRepresentation,
+  maxBytes: number,
+): Record<string, unknown> {
+  const summary: Record<string, unknown> = {
+    url: representation.url,
+    title: representation.title,
+    viewport: representation.viewport,
+    snapshot_id: representation.snapshot_id,
+    timestamp: representation.timestamp,
+    structure: {
+      landmarks_count: representation.structure.landmarks.length,
+      headings_count: representation.structure.headings.length,
+      ...(representation.structure.content_summary
+        ? { content_summary: representation.structure.content_summary }
+        : {}),
+    },
+    interactive_count: representation.interactive.length,
+    forms_count: representation.forms.length,
+    response_truncated: {
+      reason: `Full response exceeded ${maxBytes} bytes and was replaced with this summary.`,
+      suggestion:
+        "Re-run with output_file to write the full page representation to disk, " +
+        "or use a narrower detail level / selector (e.g. charlotte_find for specific elements).",
+    },
+  };
+
+  // Preserve any errors and pending dialog — these are small and high-signal.
+  if (cleaned.errors) summary.errors = cleaned.errors;
+  if (cleaned.pending_dialog) summary.pending_dialog = cleaned.pending_dialog;
+  if (cleaned.truncation) summary.truncation = cleaned.truncation;
+
+  return summary;
+}
+
+export interface FormatPageResponseOptions {
+  /**
+   * Extra top-level keys merged into the serialized payload alongside the
+   * stripped page representation (#204). Lets tools like tab_open, dev_serve,
+   * and dialog attach their metadata without hand-rolling pretty-printed,
+   * unstripped JSON (which roughly doubles token cost).
+   */
+  extra?: Record<string, unknown>;
+  /**
+   * Byte ceiling before the response degrades to a compact summary (#188).
+   * Pass `deps.config.limits.maxResponseBytes`; defaults to
+   * {@link FALLBACK_MAX_RESPONSE_BYTES} when omitted.
+   */
+  maxResponseBytes?: number;
 }
 
 /**
  * Format a PageRepresentation as an MCP tool response.
  * Uses compact JSON (no indentation) with empty fields stripped.
+ *
+ * Enforces a total byte ceiling (#188): if the serialized payload would exceed
+ * `maxResponseBytes`, the heavy fields are dropped and a compact summary with a
+ * truncation marker + output_file suggestion is returned instead.
  */
-export function formatPageResponse(representation: PageRepresentation): {
+export function formatPageResponse(
+  representation: PageRepresentation,
+  options: FormatPageResponseOptions = {},
+): {
   content: Array<{ type: "text"; text: string }>;
 } {
+  const { extra, maxResponseBytes = FALLBACK_MAX_RESPONSE_BYTES } = options;
   const cleaned = stripEmptyFields(representation);
+  const payload = extra ? { ...extra, ...cleaned } : cleaned;
+
+  let text = JSON.stringify(payload);
+  if (Buffer.byteLength(text, "utf-8") > maxResponseBytes) {
+    const degraded = degradeOversizedResponse(cleaned, representation, maxResponseBytes);
+    const degradedPayload = extra ? { ...extra, ...degraded } : degraded;
+    text = JSON.stringify(degradedPayload);
+  }
+
   return {
     content: [
       {
         type: "text" as const,
-        text: JSON.stringify(cleaned),
+        text,
       },
     ],
   };
@@ -416,7 +567,7 @@ export async function resolveOutputPath(
   const normalized = path.resolve(resolved);
   if (!normalized.startsWith(baseDir + path.sep) && normalized !== baseDir) {
     throw new CharlotteError(
-      CharlotteErrorCode.SESSION_ERROR,
+      CharlotteErrorCode.INVALID_ARGUMENT,
       `Output path '${outputFile}' resolves outside the allowed directory '${baseDir}'.`,
       "Use a relative path or configure output_dir to an appropriate directory.",
     );
@@ -435,10 +586,30 @@ export async function resolveOutputPath(
 
   if (!realResolved.startsWith(realBase + path.sep) && realResolved !== realBase) {
     throw new CharlotteError(
-      CharlotteErrorCode.SESSION_ERROR,
+      CharlotteErrorCode.INVALID_ARGUMENT,
       `Output path '${outputFile}' resolves outside the allowed directory '${baseDir}'.`,
       "Use a relative path or configure output_dir to an appropriate directory.",
     );
+  }
+
+  // Leaf-symlink check: if the output file already exists as a symlink, refuse to follow it.
+  // The parent-directory realpath above catches symlinked *parents*, but a pre-planted symlink
+  // at the leaf node (e.g. `output.png -> /etc/passwd`) would be followed by `writeFile`.
+  // We check via lstat (which does NOT follow symlinks) and reject if the leaf is a symlink.
+  try {
+    const leafStat = await fs.lstat(realResolved);
+    if (leafStat.isSymbolicLink()) {
+      throw new CharlotteError(
+        CharlotteErrorCode.INVALID_ARGUMENT,
+        `Output path '${outputFile}' is a symbolic link. Writing through symlinks is not allowed.`,
+        "Remove the symlink or use a different filename.",
+      );
+    }
+  } catch (error) {
+    // ENOENT — file does not exist yet, which is the normal case. Re-throw anything else.
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      throw error;
+    }
   }
 
   return realResolved;

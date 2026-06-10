@@ -10,7 +10,16 @@ export interface EvaluateDeps {
   browserManager: BrowserManager;
   pageManager: PageManager;
   getActivePage: () => import("puppeteer").Page;
+  /**
+   * Byte ceiling for a serialized evaluate result before truncation (#188).
+   * Reads `config.limits.maxEvaluateBytes`; falls back to the default when
+   * the caller omits it.
+   */
+  maxEvaluateBytes?: number;
 }
+
+/** Default cap for evaluate results when EvaluateDeps does not supply one. */
+const DEFAULT_MAX_EVALUATE_BYTES = 256_000;
 
 export function registerEvaluateTools(
   server: McpServer,
@@ -42,6 +51,10 @@ export function registerEvaluateTools(
       const shouldAwaitPromise = await_promise ?? true;
 
       const cdpSession = await page.createCDPSession();
+      // Track the race fallback timer so it can be cleared once the CDP call
+      // settles — otherwise it leaks a pending timer (and keeps the event loop
+      // alive ~500ms past resolution / through teardown) (#204).
+      let raceTimer: ReturnType<typeof setTimeout> | undefined;
       try {
         const evalResult = await Promise.race([
           cdpSession.send("Runtime.evaluate", {
@@ -50,12 +63,12 @@ export function registerEvaluateTools(
             awaitPromise: shouldAwaitPromise,
             timeout: evaluationTimeout,
           }),
-          new Promise<never>((_, reject) =>
-            setTimeout(
+          new Promise<never>((_, reject) => {
+            raceTimer = setTimeout(
               () => reject(new Error("TIMEOUT")),
               evaluationTimeout + 500, // slightly longer than CDP timeout as fallback
-            ),
-          ),
+            );
+          }),
         ]);
 
         // Check for exceptions
@@ -74,11 +87,37 @@ export function registerEvaluateTools(
         const remoteObject = evalResult.result;
         const result = serializeRemoteObject(remoteObject);
 
+        // Cap the serialized result so a query like document.documentElement.outerHTML
+        // can't round-trip an entire multi-MB document straight into the response (#188).
+        const maxBytes = deps.maxEvaluateBytes ?? DEFAULT_MAX_EVALUATE_BYTES;
+        const serialized = JSON.stringify(result, null, 2);
+        if (Buffer.byteLength(serialized, "utf-8") > maxBytes) {
+          const truncatedPayload = {
+            type: result.type,
+            value: truncateToBytes(serialized, maxBytes),
+            truncated: {
+              reason: `Evaluate result exceeded ${maxBytes} bytes and was truncated.`,
+              total_bytes: Buffer.byteLength(serialized, "utf-8"),
+              suggestion:
+                "Return a smaller value (e.g. select a subtree, project specific fields), " +
+                "or write the full result to disk yourself via the page before reading it back.",
+            },
+          };
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: JSON.stringify(truncatedPayload, null, 2),
+              },
+            ],
+          };
+        }
+
         return {
           content: [
             {
               type: "text" as const,
-              text: JSON.stringify(result, null, 2),
+              text: serialized,
             },
           ],
         };
@@ -126,12 +165,33 @@ export function registerEvaluateTools(
           isError: true,
         };
       } finally {
+        // Clear the race fallback timer so it never fires after the CDP call
+        // settled (prevents a leaked timer keeping the loop alive) (#204).
+        if (raceTimer) clearTimeout(raceTimer);
         await cdpSession.detach();
       }
     },
   );
 
   return tools;
+}
+
+/**
+ * Truncate a string so its UTF-8 encoding fits within `maxBytes`, appending a
+ * marker. Slices on a character boundary (a generous over-slice by character
+ * count is fine — JSON-escaped text is at most a few bytes per char) so we
+ * never split a multi-byte sequence.
+ */
+function truncateToBytes(text: string, maxBytes: number): string {
+  const marker = "…[truncated]";
+  // Reserve room for the marker; conservatively cap characters at maxBytes
+  // (UTF-8 is >=1 byte/char, so this is always within budget).
+  const budget = Math.max(0, maxBytes - Buffer.byteLength(marker, "utf-8"));
+  let sliced = text.slice(0, budget);
+  while (Buffer.byteLength(sliced, "utf-8") > budget && sliced.length > 0) {
+    sliced = sliced.slice(0, -1);
+  }
+  return sliced + marker;
 }
 
 /**

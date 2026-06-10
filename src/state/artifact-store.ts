@@ -4,6 +4,9 @@ import * as os from "node:os";
 import * as crypto from "node:crypto";
 import { logger } from "../utils/logger.js";
 
+/** Regex that matches the ID format produced by generateId(): ss-YYYYMMDDHHmmss-xxxxxx */
+const ARTIFACT_ID_PATTERN = /^ss-\d{14}-[0-9a-f]{6}$/;
+
 export interface ScreenshotArtifact {
   id: string;
   filename: string;
@@ -167,6 +170,16 @@ export class ArtifactStore {
       const entries: ArtifactMeta[] = JSON.parse(raw);
 
       for (const meta of entries) {
+        // Validate the id format before using it to build filesystem paths.
+        // A tampered index could contain ids like `../../etc/passwd` which would
+        // escape the screenshot directory in delete()/readFile() calls.
+        if (!ARTIFACT_ID_PATTERN.test(meta.id)) {
+          logger.warn("Artifact index contains entry with invalid id format — skipping", {
+            id: meta.id,
+          });
+          continue;
+        }
+
         const ext = meta.format === "jpeg" ? "jpg" : meta.format;
         const filename = `${meta.id}.${ext}`;
         const filePath = path.join(this._screenshotDir, filename);
@@ -207,6 +220,11 @@ export class ArtifactStore {
       timestamp: a.timestamp,
     }));
 
-    await fs.writeFile(this.indexPath, JSON.stringify(entries, null, 2));
+    // Write atomically via a temp file + rename so that a crash mid-write does not corrupt the
+    // index. The rename is atomic on POSIX (same filesystem guaranteed — both paths are in
+    // _screenshotDir). On Windows, fs.rename replaces the destination atomically in NTFS.
+    const tmpPath = `${this.indexPath}.tmp`;
+    await fs.writeFile(tmpPath, JSON.stringify(entries, null, 2));
+    await fs.rename(tmpPath, this.indexPath);
   }
 }

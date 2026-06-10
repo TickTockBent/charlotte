@@ -3,6 +3,7 @@ import type { ParsedAXNode } from "./accessibility-extractor.js";
 import { isInteractiveRole } from "./accessibility-extractor.js";
 import type { ElementIdGenerator } from "./element-id-generator.js";
 import { computeDOMPathSignature } from "./dom-path.js";
+import { TYPE_PREFIX_MAP } from "../types/element-id.js";
 import type {
   Bounds,
   InteractiveElement,
@@ -47,7 +48,11 @@ function extractElementState(node: ParsedAXNode): ElementState {
   if (props["focused"] === true) {
     state.focused = true;
   }
-  if (props["checked"] === "true" || props["checked"] === true || props["checked"] === "mixed") {
+  // Preserve the tri-state (indeterminate) value so "mixed" checkboxes are
+  // distinguishable from checked ones, and mixed→checked transitions diff.
+  if (props["checked"] === "mixed") {
+    state.checked = "mixed";
+  } else if (props["checked"] === "true" || props["checked"] === true) {
     state.checked = true;
   }
   if (props["expanded"] !== undefined) {
@@ -192,6 +197,15 @@ export class InteractiveExtractor {
   ): FormRepresentation[] {
     const forms: FormRepresentation[] = [];
 
+    // Index the already-extracted interactive elements by ID once, so each
+    // form descendant resolves to its element in O(1) instead of scanning the
+    // whole interactiveElements array (and re-resolving every candidate's
+    // backend node id) per descendant per form (#196).
+    const elementsById = new Map<string, InteractiveElement>();
+    for (const element of interactiveElements) {
+      elementsById.set(element.id, element);
+    }
+
     for (const formNode of formNodes) {
       const domPath = computeDOMPathSignature(formNode);
       const formId = idGenerator.generateId(
@@ -209,13 +223,16 @@ export class InteractiveExtractor {
 
       const collectFields = (node: ParsedAXNode) => {
         if (isInteractiveRole(node.role)) {
-          // Find the matching interactive element by backendDOMNodeId
-          const matchingElement = interactiveElements.find((el) => {
-            if (node.backendDOMNodeId === null) return false;
-            const resolvedId = idGenerator.resolveId(el.id);
-            if (resolvedId === null) return false;
-            return resolvedId === node.backendDOMNodeId;
-          });
+          // Resolve this descendant to its already-extracted element via the
+          // generator's O(1) reverse lookup, then the prebuilt id→element map
+          // (#196). Replaces the previous O(elements) .find scan per descendant.
+          const matchingElement =
+            node.backendDOMNodeId !== null
+              ? (() => {
+                  const elementId = idGenerator.getIdForBackendNode(node.backendDOMNodeId);
+                  return elementId !== null ? elementsById.get(elementId) : undefined;
+                })()
+              : undefined;
 
           if (matchingElement) {
             if (
@@ -259,23 +276,48 @@ export async function reclassifyFileInputs(
   session: CDPSession,
   idGenerator: ElementIdGenerator,
 ): Promise<void> {
-  for (const element of elements) {
-    if (element.type !== "button") continue;
+  // Only button-role elements can be a misclassified <input type="file">.
+  const candidates = elements.filter((element) => element.type === "button");
+  if (candidates.length === 0) return;
+
+  // Probe all candidates concurrently instead of awaiting each DOM.describeNode
+  // serially. The old serial loop appended one round-trip-blocking CDP call per
+  // button to every render (100 buttons = 100 serial round-trips); batching
+  // dispatches them together so the cost is one round-trip's latency, not N
+  // (#194). Operating on backendNodeId keeps this frame-agnostic (works the
+  // same for main- and out-of-process-frame sessions).
+  const filePrefix = TYPE_PREFIX_MAP["file_input"] ?? "inp";
+
+  const isFileInput = async (element: InteractiveElement): Promise<boolean> => {
     const backendNodeId = idGenerator.resolveId(element.id);
-    if (backendNodeId === null) continue;
+    if (backendNodeId === null) return false;
     try {
       const { node } = await session.send("DOM.describeNode", { backendNodeId });
-      if (node.nodeName === "INPUT") {
-        const attrs = node.attributes ?? [];
-        for (let i = 0; i < attrs.length; i += 2) {
-          if (attrs[i] === "type" && attrs[i + 1] === "file") {
-            element.type = "file_input";
-            break;
-          }
+      if (node.nodeName !== "INPUT") return false;
+      const attrs = node.attributes ?? [];
+      for (let i = 0; i < attrs.length; i += 2) {
+        if (attrs[i] === "type" && attrs[i + 1] === "file") {
+          return true;
         }
       }
+      return false;
     } catch {
-      // Node may have been detached — skip
+      // Node may have been detached — treat as not a file input.
+      return false;
     }
+  };
+
+  const settled = await Promise.allSettled(
+    candidates.map(async (element) => ({ element, fileInput: await isFileInput(element) })),
+  );
+
+  for (const result of settled) {
+    if (result.status !== "fulfilled" || !result.value.fileInput) continue;
+    const { element } = result.value;
+    element.type = "file_input";
+    // Re-key the ID so its prefix matches TYPE_PREFIX_MAP.file_input ("inp").
+    // Leaving the btn- prefix breaks prefix-driven findSimilar and misleads
+    // prefix-based agent reasoning.
+    element.id = idGenerator.reassignPrefix(element.id, filePrefix);
   }
 }

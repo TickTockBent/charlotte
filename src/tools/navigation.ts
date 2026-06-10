@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { Page } from "puppeteer";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 import { logger } from "../utils/logger.js";
@@ -18,6 +19,33 @@ const detailSchema = z
   .describe(
     '"minimal" (default), "summary" (includes content context), "full" (includes all text content)',
   );
+
+/**
+ * Read history position from CDP so we can decide whether a back/forward move
+ * is possible BEFORE attempting it.
+ *
+ * Why not rely solely on `goBack()`/`goForward()` returning null? They return
+ * null both when there is no entry to move to AND when the move is a
+ * same-document navigation (SPA pushState) that produces no HTTP response. URL
+ * comparison has the inverse problem: a same-URL history entry looks like "no
+ * navigation happened". Checking `currentIndex` against the history length
+ * distinguishes "no entry" from "real (possibly same-URL) navigation" without
+ * either false negative (#202).
+ */
+async function getHistoryPosition(
+  page: Page,
+): Promise<{ currentIndex: number; entryCount: number }> {
+  const client = await page.createCDPSession();
+  try {
+    const history = (await client.send("Page.getNavigationHistory")) as {
+      currentIndex: number;
+      entries: unknown[];
+    };
+    return { currentIndex: history.currentIndex, entryCount: history.entries.length };
+  } finally {
+    await client.detach().catch(() => {});
+  }
+}
 
 export function registerNavigationTools(
   server: McpServer,
@@ -86,12 +114,18 @@ export function registerNavigationTools(
           );
         }
 
+        // dom- selector registrations are scoped to the document they were
+        // created against; drop them on cross-document navigation (#191).
+        deps.elementIdGenerator.clearDomQueryIds();
+
         const detailLevel: DetailLevel = detail ?? "minimal";
         const representation = await renderActivePage(deps, {
           detail: detailLevel,
           source: "action",
         });
-        return formatPageResponse(representation);
+        return formatPageResponse(representation, {
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }
@@ -115,23 +149,32 @@ export function registerNavigationTools(
         logger.info("Navigating back");
         deps.pageManager.clearErrors();
 
-        const urlBeforeNavigation = page.url();
-        await page.goBack({ waitUntil: "load" });
-        const urlAfterNavigation = page.url();
-
-        if (urlAfterNavigation === urlBeforeNavigation) {
+        // Decide possibility from history position, not URL comparison: a
+        // same-URL entry (SPA pushState) is a real navigation that URL
+        // comparison would misreport as "no previous page" (#202).
+        const { currentIndex } = await getHistoryPosition(page);
+        if (currentIndex <= 0) {
           throw new CharlotteError(
             CharlotteErrorCode.NAVIGATION_FAILED,
             "No previous page in history.",
           );
         }
 
+        // goBack() returns null for same-document (pushState) navigations even
+        // though the move succeeded, so we do not treat null as failure here.
+        await page.goBack({ waitUntil: "load" });
+
+        // Only fire on actual navigation success (#191).
+        deps.elementIdGenerator.clearDomQueryIds();
+
         const detailLevel: DetailLevel = detail ?? "minimal";
         const representation = await renderActivePage(deps, {
           detail: detailLevel,
           source: "action",
         });
-        return formatPageResponse(representation);
+        return formatPageResponse(representation, {
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }
@@ -155,23 +198,31 @@ export function registerNavigationTools(
         logger.info("Navigating forward");
         deps.pageManager.clearErrors();
 
-        const urlBeforeNavigation = page.url();
-        await page.goForward({ waitUntil: "load" });
-        const urlAfterNavigation = page.url();
-
-        if (urlAfterNavigation === urlBeforeNavigation) {
+        // Possibility decided from history position rather than URL comparison,
+        // so same-URL SPA entries are not misreported as "no forward page" (#202).
+        const { currentIndex, entryCount } = await getHistoryPosition(page);
+        if (currentIndex >= entryCount - 1) {
           throw new CharlotteError(
             CharlotteErrorCode.NAVIGATION_FAILED,
             "No forward page in history.",
           );
         }
 
+        // goForward() returns null for same-document (pushState) navigations
+        // even though the move succeeded, so null is not treated as failure.
+        await page.goForward({ waitUntil: "load" });
+
+        // Only fire on actual navigation success (#191).
+        deps.elementIdGenerator.clearDomQueryIds();
+
         const detailLevel: DetailLevel = detail ?? "minimal";
         const representation = await renderActivePage(deps, {
           detail: detailLevel,
           source: "action",
         });
-        return formatPageResponse(representation);
+        return formatPageResponse(representation, {
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }
@@ -197,13 +248,20 @@ export function registerNavigationTools(
         deps.pageManager.clearErrors();
 
         if (bypassCache) {
-          // Use CDP to reload with cache bypass
+          // Use CDP to reload with cache bypass.
           const client = await page.createCDPSession();
-          await client.send("Page.reload", {
-            ignoreCache: true,
-          });
-          await page.waitForNavigation({ waitUntil: "load" });
-          await client.detach();
+          try {
+            // Register the navigation wait BEFORE sending Page.reload. Fast
+            // localhost reloads can complete before waitForNavigation attaches,
+            // producing a spurious 30s timeout if registered afterwards (#202).
+            const navigationPromise = page.waitForNavigation({ waitUntil: "load" });
+            await client.send("Page.reload", { ignoreCache: true });
+            await navigationPromise;
+          } finally {
+            // Always detach so the ad-hoc session does not leak even if the
+            // reload throws (#202).
+            await client.detach().catch(() => {});
+          }
         } else {
           await page.reload({ waitUntil: "load" });
         }
@@ -213,7 +271,9 @@ export function registerNavigationTools(
           detail: detailLevel,
           source: "action",
         });
-        return formatPageResponse(representation);
+        return formatPageResponse(representation, {
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }

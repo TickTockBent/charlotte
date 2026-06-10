@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { pollUntilCondition } from "../../../src/utils/wait.js";
+import { pollUntilCondition, isTransientEvalError } from "../../../src/utils/wait.js";
+import { CharlotteError, CharlotteErrorCode } from "../../../src/types/errors.js";
 
 // Create a mock page object for testing
 function createMockPage(behavior: {
@@ -95,10 +96,10 @@ describe("pollUntilCondition", () => {
     expect(result).toBe(true);
   });
 
-  it("treats JS evaluation exceptions as falsy", async () => {
+  it("treats JS evaluation exceptions as falsy (condition not met, polls until timeout)", async () => {
     const mockCdpSession = {
       send: vi.fn().mockResolvedValue({
-        result: {},
+        result: { type: "undefined" },
         exceptionDetails: { text: "ReferenceError: foo is not defined" },
       }),
       detach: vi.fn().mockResolvedValue(undefined),
@@ -115,7 +116,58 @@ describe("pollUntilCondition", () => {
       { timeout: 200, pollInterval: 50 },
     );
 
+    // Exceptions fold into "not met" — no immediate INVALID_ARGUMENT, just a false timeout
     expect(result).toBe(false);
+  });
+
+  it("throws INVALID_ARGUMENT immediately when JS expression evaluates to a function", async () => {
+    const mockCdpSession = {
+      send: vi.fn().mockResolvedValue({
+        result: { type: "function" },
+      }),
+      detach: vi.fn().mockResolvedValue(undefined),
+    };
+    const mockPage = {
+      $: vi.fn(),
+      createCDPSession: vi.fn().mockResolvedValue(mockCdpSession),
+      evaluate: vi.fn(),
+    } as any;
+
+    // Must reject immediately, not timeout
+    await expect(
+      pollUntilCondition(mockPage, { js: "() => document.title === 'x'" }, { timeout: 5000 }),
+    ).rejects.toThrow(CharlotteError);
+
+    await expect(
+      pollUntilCondition(mockPage, { js: "() => document.title === 'x'" }, { timeout: 5000 }),
+    ).rejects.toMatchObject({ code: CharlotteErrorCode.INVALID_ARGUMENT });
+
+    // Should have only called send once (immediate failure, not polling)
+    expect(mockCdpSession.send).toHaveBeenCalledTimes(2);
+  });
+
+  it("treats truthy non-boolean JS result as satisfied (non-serializable object → {})", async () => {
+    // returnByValue: true on a DOM node returns type: "object", no value (or empty object)
+    // The condition should still be considered truthy (object exists, subtype not "null")
+    const mockCdpSession = {
+      send: vi.fn().mockResolvedValue({
+        result: { type: "object", subtype: undefined, value: undefined },
+      }),
+      detach: vi.fn().mockResolvedValue(undefined),
+    };
+    const mockPage = {
+      $: vi.fn(),
+      createCDPSession: vi.fn().mockResolvedValue(mockCdpSession),
+      evaluate: vi.fn(),
+    } as any;
+
+    const result = await pollUntilCondition(
+      mockPage,
+      { js: "document.querySelector('h1')" },
+      { timeout: 1000 },
+    );
+
+    expect(result).toBe(true);
   });
 
   it("requires all conditions to be true (AND logic)", async () => {
@@ -140,5 +192,84 @@ describe("pollUntilCondition", () => {
     const result = await pollUntilCondition(mockPage, {}, { timeout: 100 });
 
     expect(result).toBe(true);
+  });
+
+  it("throws INVALID_ARGUMENT immediately for a non-transient protocol/serialization error (#198)", async () => {
+    // A cyclic/non-serializable result requested under returnByValue surfaces as
+    // a ProtocolError ("Object reference chain is too long"). It will never be
+    // fixed by polling, so it must fail fast as INVALID_ARGUMENT, not TIMEOUT.
+    const mockCdpSession = {
+      send: vi
+        .fn()
+        .mockRejectedValue(
+          new Error("Protocol error (Runtime.evaluate): Object reference chain is too long"),
+        ),
+      detach: vi.fn().mockResolvedValue(undefined),
+    };
+    const mockPage = {
+      $: vi.fn(),
+      createCDPSession: vi.fn().mockResolvedValue(mockCdpSession),
+      evaluate: vi.fn(),
+    } as any;
+
+    await expect(
+      pollUntilCondition(mockPage, { js: "window" }, { timeout: 5000 }),
+    ).rejects.toMatchObject({ code: CharlotteErrorCode.INVALID_ARGUMENT });
+
+    // Must have failed on the first evaluate, not polled.
+    expect(mockCdpSession.send).toHaveBeenCalledTimes(1);
+  });
+
+  it("treats a transient protocol error as not-satisfied and keeps polling (#198)", async () => {
+    // Context teardown during navigation is recoverable — fold into "not met"
+    // and poll to a normal false-timeout instead of throwing.
+    const mockCdpSession = {
+      send: vi
+        .fn()
+        .mockRejectedValue(
+          new Error("Execution context was destroyed, most likely due to navigation"),
+        ),
+      detach: vi.fn().mockResolvedValue(undefined),
+    };
+    const mockPage = {
+      $: vi.fn(),
+      createCDPSession: vi.fn().mockResolvedValue(mockCdpSession),
+      evaluate: vi.fn(),
+    } as any;
+
+    const result = await pollUntilCondition(
+      mockPage,
+      { js: "document.ready" },
+      { timeout: 150, pollInterval: 50 },
+    );
+
+    expect(result).toBe(false);
+    // Polled more than once (transient errors do not short-circuit).
+    expect(mockCdpSession.send.mock.calls.length).toBeGreaterThan(1);
+  });
+});
+
+describe("isTransientEvalError", () => {
+  it.each([
+    "Target closed",
+    "Session closed",
+    "Execution context was destroyed, most likely due to navigation",
+    "Inspected target navigated or closed",
+    "Connection closed",
+  ])("classifies %s as transient", (message) => {
+    expect(isTransientEvalError(new Error(message))).toBe(true);
+  });
+
+  it.each([
+    "Protocol error (Runtime.evaluate): Object reference chain is too long",
+    "Object couldn't be returned by value",
+    "some unrelated failure",
+  ])("classifies %s as non-transient", (message) => {
+    expect(isTransientEvalError(new Error(message))).toBe(false);
+  });
+
+  it("handles non-Error inputs via String()", () => {
+    expect(isTransientEvalError("Target closed")).toBe(true);
+    expect(isTransientEvalError(null)).toBe(false);
   });
 });

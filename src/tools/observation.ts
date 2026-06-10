@@ -51,6 +51,7 @@ async function findBySelector(
     });
 
     const results: DOMElementResult[] = [];
+    let matchIndex = 0;
 
     for (const nodeId of nodeIds) {
       try {
@@ -87,7 +88,10 @@ async function findBySelector(
           // Element may be hidden or zero-sized — leave bounds as null
         }
 
-        // Register with ElementIdGenerator so the ID works with click, hover, drag, etc.
+        // Generate a stable hash-based ID, then register it durably so it
+        // survives the renders that every interaction tool triggers. The
+        // originating selector + match index let resolveElement re-query a
+        // fresh backend node ID after the DOM mutates (issue #191).
         const elementId = deps.elementIdGenerator.generateId(
           "dom_element",
           tag,
@@ -96,10 +100,17 @@ async function findBySelector(
             nearestLandmarkRole: null,
             nearestLandmarkLabel: null,
             nearestLabelledContainer: null,
-            siblingIndex: results.length,
+            siblingIndex: matchIndex,
           },
           backendNodeId,
         );
+
+        deps.elementIdGenerator.registerDomQueryId(elementId, {
+          backendDOMNodeId: backendNodeId,
+          frameId: null,
+          selector,
+          matchIndex,
+        });
 
         results.push({
           id: elementId,
@@ -107,6 +118,7 @@ async function findBySelector(
           text: textContent,
           bounds,
         });
+        matchIndex++;
       } catch {
         // Skip nodes that can't be described (e.g. pseudo-elements)
         continue;
@@ -219,7 +231,9 @@ export function registerObservationTools(
           return await writeOutputFile(resolvedPath, JSON.stringify(cleaned, null, 2));
         }
 
-        return formatPageResponse(representation);
+        return formatPageResponse(representation, {
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }
@@ -255,11 +269,17 @@ export function registerObservationTools(
           .string()
           .optional()
           .describe(
-            "CSS selector to query the DOM directly. Returns elements that may not be in the accessibility tree. Results include Charlotte element IDs for use with interaction tools.",
+            "CSS selector to query the DOM directly. Returns elements that may not be in the accessibility tree. Results include durable Charlotte element IDs (dom-…) that remain valid across subsequent renders and interactions, and work with fill_form; they are re-resolved against the live DOM by re-running the selector.",
+          ),
+        output_file: z
+          .string()
+          .optional()
+          .describe(
+            "Write the full match results to this file path instead of returning them inline. Relative paths resolve against output_dir (see charlotte_configure). Returns only a confirmation with the file path and size. Use for broad selectors (e.g. 'div', '*') that match many elements.",
           ),
       },
     },
-    async ({ text, role, type, near, within, selector }) => {
+    async ({ text, role, type, near, within, selector, output_file }) => {
       try {
         await ensureReady(deps);
         logger.info("Finding elements", { text, role, type, near, within, selector });
@@ -268,6 +288,10 @@ export function registerObservationTools(
         if (selector) {
           const page = deps.pageManager.getActivePage();
           const domElements = await findBySelector(page, deps, selector);
+          if (output_file) {
+            const resolvedPath = await resolveOutputPath(output_file, deps.config);
+            return await writeOutputFile(resolvedPath, JSON.stringify(domElements, null, 2));
+          }
           return {
             content: [
               {
@@ -326,40 +350,64 @@ export function registerObservationTools(
 
         // Spatial filter: near
         if (near) {
-          const { backendNodeId: _nearNodeId } = await resolveElement(deps, near);
+          await resolveElement(deps, near);
           // Find the reference element in the interactive list
           const referenceElement = representation.interactive.find(
             (element) => element.id === near,
           );
 
-          if (referenceElement?.bounds) {
-            matchingElements = matchingElements
-              .filter((element) => {
-                if (!element.bounds || element.id === near) return false;
-                const distance = centerDistance(element.bounds, referenceElement.bounds!);
-                return distance <= NEAR_THRESHOLD_PX;
-              })
-              .sort((elementA, elementB) => {
-                const distanceA = centerDistance(elementA.bounds!, referenceElement.bounds!);
-                const distanceB = centerDistance(elementB.bounds!, referenceElement.bounds!);
-                return distanceA - distanceB;
-              });
+          // A reference with no bounds can't anchor a spatial filter. Silently
+          // skipping it would return the UNFILTERED set with no indication —
+          // reject so the caller knows the filter didn't apply (#204).
+          if (!referenceElement?.bounds) {
+            throw new CharlotteError(
+              CharlotteErrorCode.INVALID_ARGUMENT,
+              `Reference element '${near}' has no bounds; cannot apply spatial filter.`,
+              "Pick a reference element that is laid out on the page (has bounds), or drop the 'near' filter.",
+            );
           }
+
+          const referenceBounds = referenceElement.bounds;
+          matchingElements = matchingElements
+            .filter((element) => {
+              if (!element.bounds || element.id === near) return false;
+              const distance = centerDistance(element.bounds, referenceBounds);
+              return distance <= NEAR_THRESHOLD_PX;
+            })
+            .sort((elementA, elementB) => {
+              const distanceA = centerDistance(elementA.bounds!, referenceBounds);
+              const distanceB = centerDistance(elementB.bounds!, referenceBounds);
+              return distanceA - distanceB;
+            });
         }
 
         // Spatial filter: within
         if (within) {
-          const { backendNodeId: _withinNodeId } = await resolveElement(deps, within);
+          await resolveElement(deps, within);
           const containerElement = representation.interactive.find(
             (element) => element.id === within,
           );
 
-          if (containerElement?.bounds) {
-            matchingElements = matchingElements.filter((element) => {
-              if (!element.bounds || element.id === within) return false;
-              return isContainedWithin(element.bounds, containerElement.bounds!);
-            });
+          // Same rationale as 'near': a boundsless container can't contain
+          // anything, so reject instead of silently returning everything (#204).
+          if (!containerElement?.bounds) {
+            throw new CharlotteError(
+              CharlotteErrorCode.INVALID_ARGUMENT,
+              `Reference element '${within}' has no bounds; cannot apply spatial filter.`,
+              "Pick a container element that is laid out on the page (has bounds), or drop the 'within' filter.",
+            );
           }
+
+          const containerBounds = containerElement.bounds;
+          matchingElements = matchingElements.filter((element) => {
+            if (!element.bounds || element.id === within) return false;
+            return isContainedWithin(element.bounds, containerBounds);
+          });
+        }
+
+        if (output_file) {
+          const resolvedPath = await resolveOutputPath(output_file, deps.config);
+          return await writeOutputFile(resolvedPath, JSON.stringify(matchingElements, null, 2));
         }
 
         return formatElementsResponse(matchingElements);
@@ -396,13 +444,19 @@ export function registerObservationTools(
           .describe(
             "Write screenshot to this file path instead of returning base64 inline. Relative paths resolve against output_dir (see charlotte_configure). Returns only a confirmation with the file path and size.",
           ),
+        full_page: z
+          .boolean()
+          .optional()
+          .describe(
+            "Capture the entire scrollable page (default: true). Set false to capture only the current viewport — much smaller output for long pages. Ignored when 'selector' is provided.",
+          ),
       },
     },
-    async ({ selector, format, quality, save, output_file }) => {
+    async ({ selector, format, quality, save, output_file, full_page }) => {
       try {
         if (save && output_file) {
           throw new CharlotteError(
-            CharlotteErrorCode.SESSION_ERROR,
+            CharlotteErrorCode.INVALID_ARGUMENT,
             "Cannot use both 'save' and 'output_file' on the same screenshot call.",
             "Use 'save: true' to persist as an artifact, or 'output_file' to write to a specific path — not both.",
           );
@@ -423,6 +477,7 @@ export function registerObservationTools(
           format: screenshotFormat,
           quality,
           save,
+          full_page: full_page ?? true,
         });
 
         let screenshotBase64: string;
@@ -449,7 +504,7 @@ export function registerObservationTools(
             type: screenshotFormat,
             quality: screenshotFormat !== "png" ? quality : undefined,
             encoding: "base64",
-            fullPage: true,
+            fullPage: full_page ?? true,
           })) as string;
         }
 

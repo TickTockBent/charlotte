@@ -51,7 +51,7 @@ export function registerDevModeTools(
           directoryStats = fs.statSync(absoluteDirectoryPath);
         } catch {
           throw new CharlotteError(
-            CharlotteErrorCode.SESSION_ERROR,
+            CharlotteErrorCode.INVALID_ARGUMENT,
             `Path does not exist: ${absoluteDirectoryPath}`,
             "Provide a valid directory path.",
           );
@@ -59,7 +59,7 @@ export function registerDevModeTools(
 
         if (!directoryStats.isDirectory()) {
           throw new CharlotteError(
-            CharlotteErrorCode.SESSION_ERROR,
+            CharlotteErrorCode.INVALID_ARGUMENT,
             `Path is not a directory: ${absoluteDirectoryPath}`,
             "Provide a path to a directory, not a file.",
           );
@@ -88,26 +88,19 @@ export function registerDevModeTools(
           source: "action",
         });
 
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: JSON.stringify(
-                {
-                  ...representation,
-                  dev_server: {
-                    url: serverInfo.url,
-                    port: serverInfo.port,
-                    directory: serverInfo.directoryPath,
-                    watching: shouldWatch,
-                  },
-                },
-                null,
-                2,
-              ),
+        // Route through formatPageResponse so the page payload is stripped and
+        // size-capped, with the dev_server metadata merged in (#188, #204).
+        return formatPageResponse(representation, {
+          extra: {
+            dev_server: {
+              url: serverInfo.url,
+              port: serverInfo.port,
+              directory: serverInfo.directoryPath,
+              watching: shouldWatch,
             },
-          ],
-        };
+          },
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }
@@ -131,7 +124,7 @@ export function registerDevModeTools(
 
         if (!css && !js) {
           throw new CharlotteError(
-            CharlotteErrorCode.SESSION_ERROR,
+            CharlotteErrorCode.INVALID_ARGUMENT,
             "At least one of 'css' or 'js' must be provided.",
             "Provide CSS to inject, JS to execute, or both.",
           );

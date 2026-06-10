@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Size caps fixture</title>
+  </head>
+  <body>
+    <main>
+      <h1>Size caps fixture</h1>
+      <!-- Several buttons so an interactive cap of e.g. 3 will truncate. -->
+      <button id="b1">One</button>
+      <button id="b2">Two</button>
+      <button id="b3">Three</button>
+      <button id="b4">Four</button>
+      <button id="b5">Five</button>
+      <button id="b6">Six</button>
+      <!-- A checkbox already checked, and one unchecked, for set-semantics. -->
+      <label><input type="checkbox" id="cb-checked" checked /> Pre-checked</label>
+      <label><input type="checkbox" id="cb-unchecked" /> Unchecked</label>
+      <!-- A long paragraph so full_content can be truncated by a small cap. -->
+      <p id="long-text">
+        Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut
+        labore et dolore magna aliqua ut enim ad minim veniam quis nostrud exercitation ullamco
+        laboris nisi ut aliquip ex ea commodo consequat duis aute irure dolor in reprehenderit in
+        voluptate velit esse cillum dolore eu fugiat nulla pariatur excepteur sint occaecat cupidatat
+        non proident sunt in culpa qui officia deserunt mollit anim id est laborum.
+      </p>
+    </main>
+  </body>
+</html>

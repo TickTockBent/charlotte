@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Network Block Test</title>
+</head>
+<body>
+  <p id="status">idle</p>
+  <script>
+    // Fetch a resource when triggered by the test
+    window.testFetch = async function(url) {
+      try {
+        const response = await fetch(url);
+        document.getElementById('status').textContent = 'ok:' + response.status;
+        return { ok: true, status: response.status };
+      } catch (err) {
+        document.getElementById('status').textContent = 'error:' + err.message;
+        return { ok: false, error: err.message };
+      }
+    };
+  </script>
+</body>
+</html>

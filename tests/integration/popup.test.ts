@@ -3,6 +3,7 @@ import * as http from "node:http";
 import * as path from "node:path";
 import * as os from "node:os";
 import * as fs from "node:fs";
+import * as fsp from "node:fs/promises";
 import { BrowserManager } from "../../src/browser/browser-manager.js";
 import { PageManager } from "../../src/browser/page-manager.js";
 import { CDPSessionManager } from "../../src/browser/cdp-session.js";
@@ -14,6 +15,7 @@ import { createDefaultConfig } from "../../src/types/config.js";
 import type { ToolDependencies } from "../../src/tools/tool-helpers.js";
 import { renderActivePage } from "../../src/tools/tool-helpers.js";
 import { waitForPossibleNavigation } from "../../src/tools/interaction.js";
+import { pollUntil } from "../helpers/poll.js";
 
 const FIXTURES_DIR = path.resolve(import.meta.dirname, "../fixtures/pages");
 
@@ -26,6 +28,7 @@ describe("Popup tab capture", () => {
   let deps: ToolDependencies;
   let server: http.Server;
   let baseUrl: string;
+  let artifactDirectory: string;
 
   beforeAll(async () => {
     // HTTP server required — target="_blank" doesn't work with file:// URLs
@@ -47,7 +50,7 @@ describe("Popup tab capture", () => {
     const addr = server.address() as { port: number };
     baseUrl = `http://127.0.0.1:${addr.port}`;
 
-    browserManager = new BrowserManager();
+    browserManager = new BrowserManager(undefined, { noSandbox: true });
     await browserManager.launch();
     pageManager = new PageManager();
     await pageManager.openTab(browserManager);
@@ -55,9 +58,8 @@ describe("Popup tab capture", () => {
     elementIdGenerator = new ElementIdGenerator();
     rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator);
     const config = createDefaultConfig();
-    const artifactStore = new ArtifactStore(
-      path.join(os.tmpdir(), "charlotte-popup-test-artifacts"),
-    );
+    artifactDirectory = await fsp.mkdtemp(path.join(os.tmpdir(), "charlotte-popup-test-"));
+    const artifactStore = new ArtifactStore(artifactDirectory);
     await artifactStore.initialize();
     deps = {
       browserManager,
@@ -74,6 +76,7 @@ describe("Popup tab capture", () => {
   afterAll(async () => {
     await browserManager.close();
     server.close();
+    await fsp.rm(artifactDirectory, { recursive: true, force: true }).catch(() => {});
   });
 
   beforeEach(async () => {
@@ -88,10 +91,14 @@ describe("Popup tab capture", () => {
 
     // Use evaluate to click — Puppeteer's page.click on target="_blank" links
     // waits for a navigation event that never fires on the current page
+    const baselineTabCount = (await pageManager.listTabs()).length;
     await page.evaluate(() => {
       document.getElementById("blank-link")!.click();
     });
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    // Poll on tab count (non-draining) until the popup tab is registered.
+    await pollUntil(async () => (await pageManager.listTabs()).length > baselineTabCount, {
+      message: "popup tab was never registered",
+    });
 
     const newTabs = pageManager.consumeNewTabs();
     expect(newTabs.length).toBe(1);
@@ -107,10 +114,13 @@ describe("Popup tab capture", () => {
 
     // Use evaluate to trigger window.open — page.click("#window-open") hangs
     // because Puppeteer waits for navigation that never happens on the current page
+    const baselineTabCount = (await pageManager.listTabs()).length;
     await page.evaluate(() => {
       document.getElementById("window-open")!.click();
     });
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await pollUntil(async () => (await pageManager.listTabs()).length > baselineTabCount, {
+      message: "window.open popup tab was never registered",
+    });
 
     const newTabs = pageManager.consumeNewTabs();
     expect(newTabs.length).toBe(1);
@@ -125,10 +135,13 @@ describe("Popup tab capture", () => {
     const page = pageManager.getActivePage();
 
     // Use evaluate to click — page.click on target="_blank" links hangs
+    const baselineTabCount = (await pageManager.listTabs()).length;
     await page.evaluate(() => {
       document.getElementById("blank-link")!.click();
     });
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await pollUntil(async () => (await pageManager.listTabs()).length > baselineTabCount, {
+      message: "opened tab was never registered",
+    });
 
     // Render should include opened_tabs (drains the queue)
     const representation = await renderActivePage(deps, { source: "action" });
@@ -155,10 +168,13 @@ describe("Popup tab capture", () => {
     const page = pageManager.getActivePage();
 
     // Open a popup via window.open and capture a reference
+    const baselineTabCount = (await pageManager.listTabs()).length;
     await page.evaluate(() => {
       (window as unknown as Record<string, unknown>)._popup = window.open("about:blank", "_blank");
     });
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await pollUntil(async () => (await pageManager.listTabs()).length > baselineTabCount, {
+      message: "popup tab was never registered",
+    });
 
     const newTabs = pageManager.consumeNewTabs();
     expect(newTabs.length).toBe(1);
@@ -172,11 +188,10 @@ describe("Popup tab capture", () => {
     await page.evaluate(() => {
       ((window as unknown as Record<string, unknown>)._popup as Window).close();
     });
-    await new Promise((resolve) => setTimeout(resolve, 200));
 
-    // Tab should have been auto-removed
-    const tabsAfter = await pageManager.listTabs();
-    const popupTabStillExists = tabsAfter.some((t) => t.id === popupTabId);
-    expect(popupTabStillExists).toBe(false);
+    // Tab should be auto-removed once the close event is processed
+    await pollUntil(async () => !(await pageManager.listTabs()).some((t) => t.id === popupTabId), {
+      message: "popup tab was not auto-removed after close",
+    });
   });
 });

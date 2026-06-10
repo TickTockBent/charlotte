@@ -283,8 +283,26 @@ export function registerSessionTools(
         }
 
         if (screenshot_dir !== undefined) {
-          deps.config.screenshotDir = screenshot_dir;
-          await deps.artifactStore.setScreenshotDir(screenshot_dir);
+          // Validate against allowedWorkspaceRoot so that an agent cannot use charlotte_configure
+          // to silently repoint the screenshot directory outside the workspace. resolveOutputPath
+          // enforces containment at write time, but validating here catches the misconfiguration
+          // early and provides a clear error message. The agent is trusted to manage files within
+          // the workspace; this boundary is a bug-catcher, not a hard security sandbox.
+          const resolvedScreenshotDir = path.resolve(screenshot_dir);
+          const workspaceRoot =
+            deps.config.allowedWorkspaceRoot ??
+            (deps.config.outputDir ? path.resolve(deps.config.outputDir) : process.cwd());
+          if (
+            !resolvedScreenshotDir.startsWith(workspaceRoot + path.sep) &&
+            resolvedScreenshotDir !== workspaceRoot
+          ) {
+            throw new Error(
+              `screenshot_dir '${screenshot_dir}' resolves outside the allowed workspace root '${workspaceRoot}'. ` +
+                `Use a path within the workspace or update allowedWorkspaceRoot.`,
+            );
+          }
+          deps.config.screenshotDir = resolvedScreenshotDir;
+          await deps.artifactStore.setScreenshotDir(resolvedScreenshotDir);
         }
 
         if (dialog_auto_dismiss !== undefined) {
@@ -293,6 +311,19 @@ export function registerSessionTools(
 
         if (output_dir !== undefined) {
           const resolvedOutputDir = path.resolve(output_dir);
+          // Validate against allowedWorkspaceRoot (same rationale as screenshot_dir above).
+          const workspaceRoot =
+            deps.config.allowedWorkspaceRoot ??
+            (deps.config.screenshotDir ? path.resolve(deps.config.screenshotDir) : process.cwd());
+          if (
+            !resolvedOutputDir.startsWith(workspaceRoot + path.sep) &&
+            resolvedOutputDir !== workspaceRoot
+          ) {
+            throw new Error(
+              `output_dir '${output_dir}' resolves outside the allowed workspace root '${workspaceRoot}'. ` +
+                `Use a path within the workspace or update allowedWorkspaceRoot.`,
+            );
+          }
           deps.config.outputDir = resolvedOutputDir;
           await fs.mkdir(resolvedOutputDir, { recursive: true });
         }
@@ -378,21 +409,12 @@ export function registerSessionTools(
           source: "action",
         });
 
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: JSON.stringify(
-                {
-                  tab_id: tabId,
-                  ...representation,
-                },
-                null,
-                2,
-              ),
-            },
-          ],
-        };
+        // Route through formatPageResponse so the page payload is stripped/size-
+        // capped like every other tool, with the new tab_id merged in (#188, #204).
+        return formatPageResponse(representation, {
+          extra: { tab_id: tabId },
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }
@@ -420,7 +442,9 @@ export function registerSessionTools(
           source: "action",
         });
 
-        return formatPageResponse(representation);
+        return formatPageResponse(representation, {
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }
@@ -518,7 +542,9 @@ export function registerSessionTools(
           source: "action",
         });
 
-        return formatPageResponse(representation);
+        return formatPageResponse(representation, {
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }
@@ -586,7 +612,14 @@ export function registerSessionTools(
       try {
         await ensureReady(deps);
         const page = deps.pageManager.getActivePage();
-        const session = await page.createCDPSession();
+        // Use the cached long-lived CDP session rather than creating a fresh one: blocking
+        // rules die with their session, so the cached session (which lives as long as the
+        // page) is the correct lifetime — and a fresh session would be leaked (never
+        // detached). Network is NOT pre-enabled on this session (the render path doesn't
+        // need it), so enable it here explicitly; without it setBlockedURLs and
+        // emulateNetworkConditions are silent no-ops (#192). Idempotent per session.
+        const session = await deps.cdpSessionManager.getSession(page);
+        await session.send("Network.enable");
 
         const appliedSettings: {
           throttle?: string;

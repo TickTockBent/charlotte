@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import * as path from "node:path";
 import * as os from "node:os";
+import * as fs from "node:fs/promises";
 import type { KeyInput } from "puppeteer";
 import { BrowserManager } from "../../src/browser/browser-manager.js";
 import { PageManager } from "../../src/browser/page-manager.js";
@@ -12,6 +13,7 @@ import { ArtifactStore } from "../../src/state/artifact-store.js";
 import { createDefaultConfig } from "../../src/types/config.js";
 import type { ToolDependencies } from "../../src/tools/tool-helpers.js";
 import { renderActivePage } from "../../src/tools/tool-helpers.js";
+import { pollUntil } from "../helpers/poll.js";
 
 const KEYBOARD_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/keyboard.html")}`;
 
@@ -20,9 +22,10 @@ describe("Keyboard integration", () => {
   let pageManager: PageManager;
   let elementIdGenerator: ElementIdGenerator;
   let deps: ToolDependencies;
+  let artifactDirectory: string;
 
   beforeAll(async () => {
-    browserManager = new BrowserManager();
+    browserManager = new BrowserManager(undefined, { noSandbox: true });
     await browserManager.launch();
     const config = createDefaultConfig();
     pageManager = new PageManager(config);
@@ -30,9 +33,8 @@ describe("Keyboard integration", () => {
     const cdpSessionManager = new CDPSessionManager();
     elementIdGenerator = new ElementIdGenerator();
     const rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator);
-    const artifactStore = new ArtifactStore(
-      path.join(os.tmpdir(), "charlotte-keyboard-test-artifacts"),
-    );
+    artifactDirectory = await fs.mkdtemp(path.join(os.tmpdir(), "charlotte-keyboard-test-"));
+    const artifactStore = new ArtifactStore(artifactDirectory);
     await artifactStore.initialize();
     deps = {
       browserManager,
@@ -48,6 +50,7 @@ describe("Keyboard integration", () => {
 
   afterAll(async () => {
     await browserManager.close();
+    await fs.rm(artifactDirectory, { recursive: true, force: true }).catch(() => {});
   });
 
   beforeEach(async () => {
@@ -101,7 +104,9 @@ describe("Keyboard integration", () => {
       await page.focus("#key-target");
 
       await page.keyboard.press("ArrowDown" as KeyInput);
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await pollUntil(async () => (await getResultText("#result")).includes("key:ArrowDown"), {
+        message: "result never contained key:ArrowDown",
+      });
 
       const resultText = await getResultText("#result");
       expect(resultText).toContain("key:ArrowDown");
@@ -112,7 +117,9 @@ describe("Keyboard integration", () => {
       await page.focus("#key-target");
 
       await page.keyboard.press("a" as KeyInput);
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await pollUntil(async () => (await getResultText("#result")).includes("key:a"), {
+        message: "result never contained key:a",
+      });
 
       const resultText = await getResultText("#result");
       expect(resultText).toContain("key:a");
@@ -123,7 +130,9 @@ describe("Keyboard integration", () => {
       await page.focus("#key-target");
 
       await page.keyboard.press("Space" as KeyInput);
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await pollUntil(async () => (await getResultText("#result")).includes("key: "), {
+        message: "result never contained key: ",
+      });
 
       const resultText = await getResultText("#result");
       expect(resultText).toContain("key: ");
@@ -148,7 +157,9 @@ describe("Keyboard integration", () => {
       }
 
       await page.keyboard.press("ArrowUp" as KeyInput);
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await pollUntil(async () => (await getResultText("#result")).includes("key:ArrowUp"), {
+        message: "result never contained key:ArrowUp",
+      });
 
       const resultText = await getResultText("#result");
       expect(resultText).toContain("key:ArrowUp");
@@ -169,7 +180,9 @@ describe("Keyboard integration", () => {
 
       await page.keyboard.press("ArrowRight" as KeyInput);
       await page.keyboard.press("ArrowDown" as KeyInput);
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await pollUntil(async () => (await getResultText("#grid-result")) === "1,1", {
+        message: "result never became 1,1",
+      });
 
       const resultText = await getResultText("#grid-result");
       expect(resultText).toBe("1,1");
@@ -185,7 +198,9 @@ describe("Keyboard integration", () => {
       for (const k of keysToPress) {
         await page.keyboard.press(k as KeyInput);
       }
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await pollUntil(async () => (await getResultText("#sequence-result")) === "a,b,c", {
+        message: "result never became a,b,c",
+      });
 
       const resultText = await getResultText("#sequence-result");
       expect(resultText).toBe("a,b,c");
@@ -200,7 +215,9 @@ describe("Keyboard integration", () => {
       for (const k of keysToPress) {
         await page.keyboard.press(k as KeyInput);
       }
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await pollUntil(async () => (await getResultText("#grid-result")) === "2,1", {
+        message: "result never became 2,1",
+      });
 
       const resultText = await getResultText("#grid-result");
       expect(resultText).toBe("2,1");
@@ -236,7 +253,9 @@ describe("Keyboard integration", () => {
       await page.keyboard.down("Control" as KeyInput);
       await page.keyboard.press("c" as KeyInput);
       await page.keyboard.up("Control" as KeyInput);
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await pollUntil(async () => (await getResultText("#result")).includes("key:c"), {
+        message: "result never contained key:c",
+      });
 
       const resultText = await getResultText("#result");
       expect(resultText).toContain("key:c");
@@ -250,7 +269,9 @@ describe("Keyboard integration", () => {
       await page.keyboard.down("Shift" as KeyInput);
       await page.keyboard.press("a" as KeyInput);
       await page.keyboard.up("Shift" as KeyInput);
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await pollUntil(async () => (await getResultText("#result")).includes("shift:true"), {
+        message: "result never contained shift:true",
+      });
 
       const resultText = await getResultText("#result");
       // Puppeteer sends e.key as lowercase even with shift held
@@ -264,7 +285,9 @@ describe("Keyboard integration", () => {
       await page.keyboard.down("Alt" as KeyInput);
       await page.keyboard.press("x" as KeyInput);
       await page.keyboard.up("Alt" as KeyInput);
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await pollUntil(async () => (await getResultText("#result")).includes("alt:true"), {
+        message: "result never contained alt:true",
+      });
 
       const resultText = await getResultText("#result");
       expect(resultText).toContain("alt:true");
@@ -292,7 +315,9 @@ describe("Keyboard integration", () => {
       for (const k of keysToPress) {
         await page.keyboard.press(k as KeyInput);
       }
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await pollUntil(async () => (await getResultText("#grid-result")) === "2,2", {
+        message: 'grid result never became "2,2"',
+      });
 
       // Verify page state
       const gridResult = await getResultText("#grid-result");
@@ -320,7 +345,13 @@ describe("Keyboard integration", () => {
       // Type via keyboard (not charlotte_type, just raw keys)
       await page.keyboard.press("h" as KeyInput);
       await page.keyboard.press("i" as KeyInput);
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await pollUntil(
+        async () =>
+          (await page.evaluate(
+            () => (document.getElementById("text-input") as HTMLInputElement).value,
+          )) === "hi",
+        { message: "input value never became hi" },
+      );
 
       const inputValue = await page.evaluate(
         () => (document.getElementById("text-input") as HTMLInputElement).value,

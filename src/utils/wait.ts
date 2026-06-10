@@ -1,4 +1,5 @@
 import type { Page } from "puppeteer";
+import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 
 export interface WaitCondition {
   /** Wait for a CSS selector to match */
@@ -19,8 +20,50 @@ export interface WaitOptions {
 const DEFAULT_POLL_INTERVAL_MS = 100;
 
 /**
+ * Substrings that mark a `Runtime.evaluate` protocol error as TRANSIENT — i.e.
+ * caused by the page mutating underneath the poll (navigation tore down the
+ * execution context, the target/session closed mid-evaluate). These can clear
+ * on a subsequent poll iteration, so they should be folded into "not satisfied"
+ * rather than thrown.
+ *
+ * Everything else (notably serialization failures like "Object reference chain
+ * is too long" / "Object couldn't be returned by value" raised when a cyclic or
+ * non-serializable result is requested under `returnByValue`) is NON-transient:
+ * polling will never fix it, so the error is surfaced immediately. (#198)
+ */
+const TRANSIENT_EVAL_ERROR_MARKERS = [
+  "Target closed",
+  "Session closed",
+  "Target.closeTarget",
+  "Execution context was destroyed",
+  "Execution context is not available",
+  "Cannot find context",
+  "Inspected target navigated or closed",
+  "detached",
+  "Connection closed",
+];
+
+/**
+ * Decide whether a thrown `Runtime.evaluate` error is transient (page churn,
+ * recoverable by polling) or non-transient (a caller-fixable problem with the
+ * expression, e.g. it returns a non-serializable/cyclic value).
+ *
+ * Returns `true` when the caller should keep polling (transient), `false` when
+ * the caller should surface the error as INVALID_ARGUMENT.
+ */
+export function isTransientEvalError(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err);
+  return TRANSIENT_EVAL_ERROR_MARKERS.some((marker) =>
+    message.toLowerCase().includes(marker.toLowerCase()),
+  );
+}
+
+/**
  * Poll a page until a condition is met or timeout is reached.
  * Returns true if the condition was satisfied, false if timed out.
+ *
+ * Throws CharlotteError(INVALID_ARGUMENT) immediately if the JS expression
+ * evaluates to a function (the agent passed a lambda instead of an expression).
  */
 export async function pollUntilCondition(
   page: Page,
@@ -31,6 +74,7 @@ export async function pollUntilCondition(
   const deadline = Date.now() + options.timeout;
 
   while (Date.now() < deadline) {
+    // evaluateCondition throws INVALID_ARGUMENT for function-type results — let it propagate
     const satisfied = await evaluateCondition(page, condition);
     if (satisfied) return true;
 
@@ -45,6 +89,11 @@ export async function pollUntilCondition(
 
 /**
  * Evaluate a single WaitCondition against the current page state.
+ *
+ * Throws CharlotteError(INVALID_ARGUMENT) if the JS expression evaluates to a
+ * function (agent passed a lambda like `() => ...` instead of an expression).
+ * This is an immediate failure — not a polling retry — because the expression
+ * itself is invalid, not just unsatisfied.
  */
 async function evaluateCondition(page: Page, condition: WaitCondition): Promise<boolean> {
   if (condition.selector) {
@@ -68,10 +117,52 @@ async function evaluateCondition(page: Page, condition: WaitCondition): Promise<
         returnByValue: true,
         awaitPromise: true,
       });
-      const isTruthy = !evalResult.exceptionDetails && !!evalResult.result.value;
+
+      // Detect function-type results: agent passed a lambda instead of an expression.
+      // Fail immediately with INVALID_ARGUMENT — polling would never fix this.
+      if (evalResult.result.type === "function") {
+        throw new CharlotteError(
+          CharlotteErrorCode.INVALID_ARGUMENT,
+          "The 'js' condition evaluated to a function. Pass an expression (e.g. `document.title === 'x'`), not a function literal (e.g. `() => ...`).",
+          "Change the 'js' parameter to a plain expression that returns a truthy/falsy value.",
+        );
+      }
+
+      // Exception during evaluation: condition is not met this iteration.
+      // The caller (pollUntilCondition) accumulates the last exception text
+      // if it needs to surface it in a timeout error.
+      if (evalResult.exceptionDetails) {
+        return false;
+      }
+
+      // Truthy if the value is truthy OR the result is a non-null object
+      // (handles cases like `document.querySelector(...)` returning a DOM node
+      // which serializes to `{}` under returnByValue — still a truthy result).
+      const resultValue = evalResult.result.value;
+      const resultType = evalResult.result.type;
+      const isTruthy =
+        !!resultValue ||
+        (resultType === "object" && evalResult.result.subtype !== "null" && !resultValue);
       if (!isTruthy) return false;
-    } catch {
-      return false;
+    } catch (err) {
+      // Re-throw CharlotteErrors (e.g. INVALID_ARGUMENT) so callers can handle them.
+      if (err instanceof CharlotteError) {
+        throw err;
+      }
+      // Transient protocol errors (navigation/context teardown) can clear on the
+      // next poll iteration — treat as "not satisfied" and keep polling.
+      if (isTransientEvalError(err)) {
+        return false;
+      }
+      // Non-transient protocol/serialization errors (e.g. a cyclic or
+      // non-serializable result requested under returnByValue) will never be
+      // fixed by polling. Surface them immediately. (#198)
+      const message = err instanceof Error ? err.message : String(err);
+      throw new CharlotteError(
+        CharlotteErrorCode.INVALID_ARGUMENT,
+        `The 'js' condition could not be evaluated: ${message}`,
+        "The expression returned a value that cannot be serialized (e.g. a cyclic object or `window`). Return a primitive or a plain serializable value instead.",
+      );
     } finally {
       await cdpSession.detach().catch(() => {});
     }

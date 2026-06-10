@@ -311,4 +311,65 @@ describe("ArtifactStore", () => {
     const store = new ArtifactStore(testDir);
     expect(store.screenshotDir).toBe(testDir);
   });
+
+  // ── Security hardening tests ──
+
+  it("skips index entries with invalid id format to prevent path traversal", async () => {
+    // Write a tampered index with a path-traversal id
+    const tamperedIndex = [
+      {
+        id: "../../etc/passwd",
+        format: "png",
+        url: "https://example.com",
+        title: "Evil",
+        timestamp: new Date().toISOString(),
+      },
+      {
+        id: "ss-20260101000000-aabbcc",
+        format: "png",
+        url: "https://example.com",
+        title: "Good",
+        timestamp: new Date().toISOString(),
+      },
+    ];
+
+    // Create a fake file for the valid entry so it passes the stat check
+    const goodFilePath = path.join(testDir, "ss-20260101000000-aabbcc.png");
+    await fs.writeFile(goodFilePath, Buffer.from("fake-data"));
+
+    // Write the tampered index directly
+    const indexPath = path.join(testDir, ".charlotte-screenshots.json");
+    await fs.writeFile(indexPath, JSON.stringify(tamperedIndex, null, 2));
+
+    const store = new ArtifactStore(testDir);
+    await store.initialize();
+
+    // Only the valid entry should be loaded; the traversal id must be rejected
+    expect(store.count).toBe(1);
+    const entry = store.list()[0];
+    expect(entry.id).toBe("ss-20260101000000-aabbcc");
+  });
+
+  it("saveIndex writes atomically via tmp+rename (no partial index on crash)", async () => {
+    const store = new ArtifactStore(testDir);
+    await store.initialize();
+
+    await store.save(Buffer.from("data"), {
+      format: "png",
+      url: "https://example.com",
+      title: "Atomic test",
+    });
+
+    // The tmp file should NOT exist after a successful save
+    const tmpPath = path.join(testDir, ".charlotte-screenshots.json.tmp");
+    await expect(fs.access(tmpPath)).rejects.toThrow();
+
+    // The real index should exist and be valid JSON
+    const indexPath = path.join(testDir, ".charlotte-screenshots.json");
+    const raw = await fs.readFile(indexPath, "utf-8");
+    expect(() => JSON.parse(raw)).not.toThrow();
+    const entries = JSON.parse(raw) as Array<{ id: string }>;
+    expect(entries).toHaveLength(1);
+    expect(entries[0].id).toMatch(/^ss-\d{14}-[0-9a-f]{6}$/);
+  });
 });

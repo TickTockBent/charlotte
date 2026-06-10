@@ -2,7 +2,15 @@ import type { CDPSession } from "puppeteer";
 import type { Bounds } from "../types/page-representation.js";
 import { logger } from "../utils/logger.js";
 
-export const ZERO_BOUNDS: Bounds = { x: 0, y: 0, w: 0, h: 0 };
+/**
+ * Shared sentinel for nodes with no layout box. This object is handed out by
+ * reference (into boundsMap entries and landmark bounds), so it MUST stay
+ * immutable — a single mutation would corrupt every node that shares it.
+ * `Object.freeze` enforces that at runtime; the `Readonly<Bounds>` type enforces
+ * it at compile time (previously it was typed as a plain mutable `Bounds`, which
+ * is why the audit flagged the protection as ineffective/misleading).
+ */
+export const ZERO_BOUNDS: Readonly<Bounds> = Object.freeze({ x: 0, y: 0, w: 0, h: 0 });
 
 export class LayoutExtractor {
   async getBounds(session: CDPSession, backendNodeId: number): Promise<Bounds | null> {
@@ -51,10 +59,16 @@ export class LayoutExtractor {
     const offsetX = frameOffset?.x ?? 0;
     const offsetY = frameOffset?.y ?? 0;
 
+    // Multiple AX nodes can share one backing DOM node (e.g. a control and its
+    // label wrapper), so the same backendNodeId can appear more than once.
+    // Dedupe up front so each node triggers at most one DOM.getBoxModel call
+    // per render per frame (#199).
+    const uniqueNodeIds = [...new Set(backendNodeIds)];
+
     // Process in parallel for performance, but cap concurrency
     const batchSize = 50;
-    for (let i = 0; i < backendNodeIds.length; i += batchSize) {
-      const batch = backendNodeIds.slice(i, i + batchSize);
+    for (let i = 0; i < uniqueNodeIds.length; i += batchSize) {
+      const batch = uniqueNodeIds.slice(i, i + batchSize);
       const settledResults = await Promise.allSettled(
         batch.map(async (nodeId) => {
           const bounds = await this.getBounds(session, nodeId);
@@ -84,7 +98,7 @@ export class LayoutExtractor {
       }
     }
 
-    logger.debug(`Extracted bounds for ${boundsMap.size}/${backendNodeIds.length} nodes`);
+    logger.debug(`Extracted bounds for ${boundsMap.size}/${uniqueNodeIds.length} unique nodes`);
     return boundsMap;
   }
 }

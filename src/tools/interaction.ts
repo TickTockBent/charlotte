@@ -18,6 +18,7 @@ import {
 } from "./tool-helpers.js";
 import {
   MODIFIER_KEY_MAP,
+  clickAtCoordinates,
   clickElementByBackendNodeId,
   focusElementByBackendNodeId,
   hoverElementByBackendNodeId,
@@ -34,6 +35,68 @@ import { registerWaitForTools } from "./wait-for.js";
 
 // Re-export for backward compatibility (used by dialog and popup integration tests)
 export { waitForPossibleNavigation } from "./interaction-helpers.js";
+
+/** Element types charlotte_toggle accepts (checkbox/radio/switch roles). */
+const TOGGLEABLE_TYPES = new Set(["checkbox", "radio", "toggle"]);
+
+/**
+ * Classify a resolved DOM node into a fill_form element type and capture its
+ * current checked state, by inspecting the live element via CDP.
+ *
+ * Selector-mode (`dom-`) IDs never appear in `representation.interactive` (that
+ * array is built from the accessibility tree), so fill_form cannot read their
+ * type from the interactive list. This derives the same `{ type, checked }`
+ * classification directly from the DOM element instead (#191).
+ *
+ * Returns null when the node cannot be resolved or is not a fillable form field.
+ */
+async function classifyFillableNode(
+  deps: ToolDependencies,
+  resolved: import("./tool-helpers.js").ResolvedElement,
+): Promise<{ type: string; currentlyChecked: boolean } | null> {
+  const session = await getSessionForElement(deps, resolved);
+  const { object } = await session.send("DOM.resolveNode", {
+    backendNodeId: resolved.backendNodeId,
+  });
+  if (!object?.objectId) {
+    return null;
+  }
+
+  const callResult = await session.send("Runtime.callFunctionOn", {
+    objectId: object.objectId,
+    returnByValue: true,
+    functionDeclaration: `function() {
+      const tag = (this.tagName || '').toLowerCase();
+      const role = (this.getAttribute && this.getAttribute('role')) || '';
+      if (tag === 'textarea') return { type: 'textarea', checked: false };
+      if (tag === 'select') return { type: 'select', checked: false };
+      if (tag === 'input') {
+        const inputType = (this.type || 'text').toLowerCase();
+        if (inputType === 'checkbox') return { type: 'checkbox', checked: !!this.checked };
+        if (inputType === 'radio') return { type: 'radio', checked: !!this.checked };
+        if (inputType === 'date' || inputType === 'datetime-local' || inputType === 'month' || inputType === 'week' || inputType === 'time') {
+          return { type: 'date_input', checked: false };
+        }
+        if (inputType === 'color') return { type: 'color_input', checked: false };
+        if (inputType === 'file') return { type: 'file_input', checked: false };
+        // text, search, email, url, tel, number, password, etc. — all text-like.
+        return { type: 'text_input', checked: false };
+      }
+      // ARIA switch / role-based toggles.
+      if (role === 'switch') {
+        return { type: 'toggle', checked: this.getAttribute('aria-checked') === 'true' };
+      }
+      if (this.isContentEditable) return { type: 'text_input', checked: false };
+      return { type: null, checked: false };
+    }`,
+  });
+
+  const value = callResult.result?.value as { type: string | null; checked: boolean } | undefined;
+  if (!value || value.type === null) {
+    return null;
+  }
+  return { type: value.type, currentlyChecked: value.checked };
+}
 
 export function registerInteractionTools(
   server: McpServer,
@@ -86,7 +149,9 @@ export function registerInteractionTools(
         );
 
         const representation = await renderAfterAction(deps);
-        return formatPageResponse(representation);
+        return formatPageResponse(representation, {
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }
@@ -135,31 +200,13 @@ export function registerInteractionTools(
         await new Promise((resolve) => setTimeout(resolve, 50));
 
         await waitForPossibleNavigation(page, async () => {
-          // Hold down modifier keys
-          for (const modifier of activeModifiers) {
-            const modifierKey = MODIFIER_KEY_MAP[modifier];
-            await page.keyboard.down(modifierKey);
-          }
-
-          try {
-            if (clickVariant === "right") {
-              await page.mouse.click(x, y, { button: "right" });
-            } else if (clickVariant === "double") {
-              await page.mouse.click(x, y, { clickCount: 2 });
-            } else {
-              await page.mouse.click(x, y);
-            }
-          } finally {
-            // Release modifier keys in reverse order
-            for (const modifier of [...activeModifiers].reverse()) {
-              const modifierKey = MODIFIER_KEY_MAP[modifier];
-              await page.keyboard.up(modifierKey);
-            }
-          }
+          await clickAtCoordinates(page, x, y, clickVariant, activeModifiers);
         });
 
         const representation = await renderAfterAction(deps);
-        return formatPageResponse(representation);
+        return formatPageResponse(representation, {
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }
@@ -203,9 +250,11 @@ export function registerInteractionTools(
         const shouldPressEnter = press_enter ?? false;
         const delayMs = resolveCharacterDelay(slowly, character_delay);
 
-        // Pure argument validation — guard against slow-typing operations long
-        // enough to risk an MCP tool timeout before doing any browser work.
-        assertTypingDurationWithinLimit(text.length, delayMs);
+        // Pure argument validation — guard against typing operations long enough
+        // to risk an MCP tool timeout before doing any browser work. Floor the
+        // effective per-character delay at 2ms so even *full-speed* typing of a
+        // ~100KB payload (delayMs undefined) is bounded, not just slow typing (#204).
+        assertTypingDurationWithinLimit(text.length, Math.max(delayMs ?? 0, 2));
 
         await ensureReady(deps);
         const resolved = await resolveElement(deps, element_id);
@@ -219,18 +268,24 @@ export function registerInteractionTools(
           characterDelay: delayMs,
         });
 
-        await typeIntoElement(
-          resolved.page,
-          resolved.backendNodeId,
-          text,
-          shouldClearFirst,
-          shouldPressEnter,
-          delayMs,
-          session,
+        // press_enter can submit a form (navigation) or trigger a JS dialog from
+        // a keydown/submit handler — guard against the dialog blocking forever (#182).
+        await waitForPossibleNavigation(resolved.page, () =>
+          typeIntoElement(
+            resolved.page,
+            resolved.backendNodeId,
+            text,
+            shouldClearFirst,
+            shouldPressEnter,
+            delayMs,
+            session,
+          ),
         );
 
         const representation = await renderAfterAction(deps);
-        return formatPageResponse(representation);
+        return formatPageResponse(representation, {
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }
@@ -256,10 +311,16 @@ export function registerInteractionTools(
 
         logger.info("Selecting option", { element_id, value });
 
-        await selectOptionByBackendNodeId(resolved.page, resolved.backendNodeId, value, session);
+        // A change handler may open a dialog or navigate — guard so the action
+        // promise can't block on a dialog forever (#182).
+        await waitForPossibleNavigation(resolved.page, () =>
+          selectOptionByBackendNodeId(resolved.page, resolved.backendNodeId, value, session),
+        );
 
         const representation = await renderAfterAction(deps);
-        return formatPageResponse(representation);
+        return formatPageResponse(representation, {
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }
@@ -279,24 +340,38 @@ export function registerInteractionTools(
     async ({ element_id }) => {
       try {
         await ensureReady(deps);
+
+        // Validate the target is actually a toggleable control before clicking.
+        // charlotte_toggle is otherwise an unvalidated left click on any element,
+        // so a misrouted call (e.g. a link/button) would fire its real action
+        // with no error. Restrict to checkbox/radio/switch roles (#204).
+        const preToggleRepresentation = await renderActivePage(deps, { detail: "minimal" });
+        const targetElement = preToggleRepresentation.interactive.find(
+          (el) => el.id === element_id,
+        );
+        if (targetElement && !TOGGLEABLE_TYPES.has(targetElement.type)) {
+          throw new CharlotteError(
+            CharlotteErrorCode.INVALID_ARGUMENT,
+            `Element '${element_id}' is a ${targetElement.type}, not a checkbox/radio/switch — charlotte_toggle only operates on toggleable controls.`,
+            "Use charlotte_click for buttons, links, and other elements.",
+          );
+        }
+
         const resolved = await resolveElement(deps, element_id);
         const session = await getSessionForElement(deps, resolved);
 
         logger.info("Toggling element", { element_id });
 
-        // Toggle by clicking the element
-        await clickElementByBackendNodeId(
-          resolved.page,
-          resolved.backendNodeId,
-          "left",
-          [],
-          session,
+        // Toggle by clicking the element. A change handler may open a dialog or
+        // navigate — guard so the click can't block on a dialog forever (#182).
+        await waitForPossibleNavigation(resolved.page, () =>
+          clickElementByBackendNodeId(resolved.page, resolved.backendNodeId, "left", [], session),
         );
 
-        await new Promise((resolve) => setTimeout(resolve, 50));
-
         const representation = await renderAfterAction(deps);
-        return formatPageResponse(representation);
+        return formatPageResponse(representation, {
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }
@@ -406,7 +481,7 @@ export function registerInteractionTools(
           pixelDistance = parseInt(scrollAmount, 10);
           if (isNaN(pixelDistance)) {
             throw new CharlotteError(
-              CharlotteErrorCode.SESSION_ERROR,
+              CharlotteErrorCode.INVALID_ARGUMENT,
               `Invalid scroll amount: "${scrollAmount}". Use "page", "half", or a pixel value.`,
             );
           }
@@ -460,7 +535,9 @@ export function registerInteractionTools(
         await new Promise((resolve) => setTimeout(resolve, 50));
 
         const representation = await renderAfterAction(deps);
-        return formatPageResponse(representation);
+        return formatPageResponse(representation, {
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }
@@ -488,7 +565,9 @@ export function registerInteractionTools(
         await hoverElementByBackendNodeId(resolved.page, resolved.backendNodeId, session);
 
         const representation = await renderAfterAction(deps);
-        return formatPageResponse(representation);
+        return formatPageResponse(representation, {
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }
@@ -513,8 +592,10 @@ export function registerInteractionTools(
         const targetResolved = await resolveElement(deps, target_id);
 
         if (sourceResolved.frameId !== targetResolved.frameId) {
+          // Caller-fixable (pick elements in the same frame), so INVALID_ARGUMENT
+          // rather than SESSION_ERROR (#187).
           throw new CharlotteError(
-            CharlotteErrorCode.SESSION_ERROR,
+            CharlotteErrorCode.INVALID_ARGUMENT,
             "Cannot drag between different frames — source and target must be in the same frame.",
             "Use charlotte_find to locate elements within the same frame.",
           );
@@ -524,18 +605,25 @@ export function registerInteractionTools(
 
         logger.info("Dragging element", { source_id, target_id });
 
-        await dragElementToElement(
+        // A drop handler may open a dialog or navigate — guard so the drag can't
+        // block on a dialog forever (#182).
+        await waitForPossibleNavigation(
           sourceResolved.page,
-          sourceResolved.backendNodeId,
-          targetResolved.backendNodeId,
-          session,
+          () =>
+            dragElementToElement(
+              sourceResolved.page,
+              sourceResolved.backendNodeId,
+              targetResolved.backendNodeId,
+              session,
+            ),
+          // Drags include built-in settle pauses; give DOM updates a beat to land.
+          { settleMs: 100 },
         );
 
-        // Brief settle for DOM updates after drop
-        await new Promise((resolve) => setTimeout(resolve, 100));
-
         const representation = await renderAfterAction(deps);
-        return formatPageResponse(representation);
+        return formatPageResponse(representation, {
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }
@@ -584,22 +672,30 @@ export function registerInteractionTools(
     },
     async ({ key, keys, modifiers, element_id, delay }) => {
       try {
-        await ensureReady(deps);
-        const page = deps.pageManager.getActivePage();
-
         // Validate: exactly one of key or keys must be provided
         if (key && keys) {
           throw new CharlotteError(
-            CharlotteErrorCode.SESSION_ERROR,
+            CharlotteErrorCode.INVALID_ARGUMENT,
             "Provide either key or keys, not both.",
           );
         }
         if (!key && !keys) {
           throw new CharlotteError(
-            CharlotteErrorCode.SESSION_ERROR,
+            CharlotteErrorCode.INVALID_ARGUMENT,
             "Provide either key (single) or keys (sequence).",
           );
         }
+
+        // Guard long key sequences the same way charlotte_type guards slow typing:
+        // keys:[500 items] with delay:200 would run 100s into the MCP timeout (#180,
+        // #204). Each press also has a small fixed per-key cost, so floor the
+        // effective delay at 2ms so even a full-speed mega-sequence is bounded.
+        if (keys) {
+          assertTypingDurationWithinLimit(keys.length, Math.max(delay ?? 0, 2));
+        }
+
+        await ensureReady(deps);
+        const page = deps.pageManager.getActivePage();
 
         // Focus target element if specified
         if (element_id) {
@@ -608,39 +704,46 @@ export function registerInteractionTools(
           await focusElementByBackendNodeId(resolved.page, resolved.backendNodeId, session);
         }
 
-        if (key) {
-          // Single key with optional modifiers
-          logger.info("Pressing key", { key, modifiers, element_id });
+        // Enter (and other keys) on a focused form can submit/navigate or fire a
+        // dialog from a keydown handler — guard so the dispatch can't block on a
+        // dialog forever (#182).
+        await waitForPossibleNavigation(page, async () => {
+          if (key) {
+            // Single key with optional modifiers
+            logger.info("Pressing key", { key, modifiers, element_id });
 
-          const activeModifiers = modifiers ?? [];
-          for (const modifier of activeModifiers) {
-            const modifierKey = MODIFIER_KEY_MAP[modifier];
-            await page.keyboard.down(modifierKey as KeyInput);
-          }
+            const activeModifiers = modifiers ?? [];
+            for (const modifier of activeModifiers) {
+              const modifierKey = MODIFIER_KEY_MAP[modifier];
+              await page.keyboard.down(modifierKey as KeyInput);
+            }
 
-          await page.keyboard.press(key as KeyInput);
+            try {
+              await page.keyboard.press(key as KeyInput);
+            } finally {
+              for (const modifier of [...activeModifiers].reverse()) {
+                const modifierKey = MODIFIER_KEY_MAP[modifier];
+                await page.keyboard.up(modifierKey as KeyInput);
+              }
+            }
+          } else if (keys) {
+            // Key sequence
+            logger.info("Pressing key sequence", { keys, element_id, delay });
 
-          for (const modifier of [...activeModifiers].reverse()) {
-            const modifierKey = MODIFIER_KEY_MAP[modifier];
-            await page.keyboard.up(modifierKey as KeyInput);
-          }
-        } else if (keys) {
-          // Key sequence
-          logger.info("Pressing key sequence", { keys, element_id, delay });
-
-          const delayMs = delay ?? 0;
-          for (let i = 0; i < keys.length; i++) {
-            await page.keyboard.press(keys[i] as KeyInput);
-            if (delayMs > 0 && i < keys.length - 1) {
-              await new Promise((resolve) => setTimeout(resolve, delayMs));
+            const delayMs = delay ?? 0;
+            for (let i = 0; i < keys.length; i++) {
+              await page.keyboard.press(keys[i] as KeyInput);
+              if (delayMs > 0 && i < keys.length - 1) {
+                await new Promise((resolve) => setTimeout(resolve, delayMs));
+              }
             }
           }
-        }
-
-        await new Promise((resolve) => setTimeout(resolve, 50));
+        });
 
         const representation = await renderAfterAction(deps);
-        return formatPageResponse(representation);
+        return formatPageResponse(representation, {
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }
@@ -670,7 +773,7 @@ export function registerInteractionTools(
             await fs.access(filePath);
           } catch {
             throw new CharlotteError(
-              CharlotteErrorCode.SESSION_ERROR,
+              CharlotteErrorCode.INVALID_ARGUMENT,
               `File not found: ${filePath}`,
               "Provide absolute paths to files that exist on disk.",
             );
@@ -682,7 +785,9 @@ export function registerInteractionTools(
         await setFileInputFiles(resolved.page, resolved.backendNodeId, paths, session);
 
         const representation = await renderAfterAction(deps);
-        return formatPageResponse(representation);
+        return formatPageResponse(representation, {
+          maxResponseBytes: deps.config.limits.maxResponseBytes,
+        });
       } catch (error: unknown) {
         return handleToolError(error);
       }
@@ -706,7 +811,7 @@ export function registerInteractionTools(
     "charlotte_fill_form",
     {
       description:
-        "Fill multiple form fields in a single call. Auto-detects element types (text input, select, checkbox, etc.) and applies the appropriate action. Returns a single page representation with delta covering all changes. Validates all fields before mutating any — if one field is invalid, no fields are changed.",
+        "Fill multiple form fields in a single call. Auto-detects element types (text input, select, checkbox, etc.) and applies the appropriate action. Returns a single page representation with delta covering all changes. All fields are validated up front before any field is mutated; if validation fails, no fields are changed. Note: if a field action fails mid-list (e.g. a handler throws after earlier fields succeeded), earlier fields remain applied.",
       inputSchema: {
         fields: z
           .array(
@@ -715,7 +820,10 @@ export function registerInteractionTools(
               value: z
                 .string()
                 .describe(
-                  "Value to set: text for inputs/textareas, option value or text for selects. For checkbox/radio/toggle the element is clicked (toggling its state) and value is ignored.",
+                  "Value to set: text for inputs/textareas, option value or text for selects. " +
+                    'For checkbox/radio/toggle, pass the DESIRED state as "true" (checked) or "false" (unchecked) — ' +
+                    "the element is clicked only when its current state differs, so re-filling is idempotent. " +
+                    'Any non-"false" value is treated as "true".',
                 ),
             }),
           )
@@ -736,10 +844,48 @@ export function registerInteractionTools(
           frameId: string | null;
           type: string;
           value: string;
+          /** Current checked state for checkbox/radio/toggle, captured at validation time. */
+          currentlyChecked: boolean;
           page: import("puppeteer").Page;
         }> = [];
 
         for (const field of fields) {
+          // Selector-mode (dom-) IDs never appear in representation.interactive
+          // (that array comes from the AX tree). Resolve them against the live
+          // DOM and derive their type/state from the resolved node instead, so
+          // the CHANGELOG claim that dom- IDs work with fill_form holds (#191).
+          if (field.element_id.startsWith("dom-")) {
+            const resolved = await resolveElement(deps, field.element_id);
+            const classified = await classifyFillableNode(deps, resolved);
+            if (!classified) {
+              throw new CharlotteError(
+                CharlotteErrorCode.ELEMENT_NOT_INTERACTIVE,
+                `Element '${field.element_id}' is not a fillable form field.`,
+                "fill_form supports: text_input, textarea, select, checkbox, radio, toggle, date_input, color_input.",
+              );
+            }
+            if (!FILLABLE_TYPES.has(classified.type)) {
+              const hint =
+                classified.type === "file_input"
+                  ? "Use charlotte_upload for file inputs."
+                  : "fill_form supports: text_input, textarea, select, checkbox, radio, toggle, date_input, color_input.";
+              throw new CharlotteError(
+                CharlotteErrorCode.ELEMENT_NOT_INTERACTIVE,
+                `Element '${field.element_id}' is type '${classified.type}' which cannot be filled.`,
+                hint,
+              );
+            }
+            resolvedFields.push({
+              backendNodeId: resolved.backendNodeId,
+              frameId: resolved.frameId,
+              type: classified.type,
+              value: field.value,
+              currentlyChecked: classified.currentlyChecked,
+              page: resolved.page,
+            });
+            continue;
+          }
+
           // Check type before resolving — gives better errors for non-fillable elements
           const element = representation.interactive.find((el) => el.id === field.element_id);
           if (!element) {
@@ -771,14 +917,24 @@ export function registerInteractionTools(
             frameId: resolved.frameId,
             type: element.type,
             value: field.value,
+            // "mixed" (indeterminate) counts as not-checked so an explicit
+            // value: "true" forces it on.
+            currentlyChecked: element.state.checked === true,
             page: resolved.page,
           });
         }
 
         logger.info("Filling form fields", { fieldCount: resolvedFields.length });
 
-        // Fill each field using the appropriate action
+        // Fill each field using the appropriate action. Each field action is
+        // guarded so a change/input handler that opens a dialog can't block the
+        // whole fill forever (#182). If a dialog appears, waitForPossibleNavigation
+        // returns early and renderAfterAction surfaces pending_dialog.
         for (const field of resolvedFields) {
+          // Stop issuing further field actions once a dialog is blocking — they
+          // would queue behind the blocked execution context.
+          if (deps.pageManager.getPendingDialogInfo()) break;
+
           const fieldSession = await getSessionForElement(deps, {
             page: field.page,
             backendNodeId: field.backendNodeId,
@@ -789,35 +945,48 @@ export function registerInteractionTools(
             case "textarea":
             case "date_input":
             case "color_input":
-              await typeIntoElement(
-                field.page,
-                field.backendNodeId,
-                field.value,
-                true,
-                false,
-                undefined,
-                fieldSession,
+              await waitForPossibleNavigation(field.page, () =>
+                typeIntoElement(
+                  field.page,
+                  field.backendNodeId,
+                  field.value,
+                  true,
+                  false,
+                  undefined,
+                  fieldSession,
+                ),
               );
               break;
             case "select":
-              await selectOptionByBackendNodeId(
-                field.page,
-                field.backendNodeId,
-                field.value,
-                fieldSession,
+              await waitForPossibleNavigation(field.page, () =>
+                selectOptionByBackendNodeId(
+                  field.page,
+                  field.backendNodeId,
+                  field.value,
+                  fieldSession,
+                ),
               );
               break;
             case "checkbox":
             case "radio":
-            case "toggle":
-              await clickElementByBackendNodeId(
-                field.page,
-                field.backendNodeId,
-                "left",
-                [],
-                fieldSession,
-              );
+            case "toggle": {
+              // Set-semantics, not toggle: the value expresses the DESIRED state.
+              // Only click when the current state differs, so value: "true" on an
+              // already-checked box is a no-op instead of unchecking it (#204).
+              const desiredChecked = field.value.toLowerCase() !== "false";
+              if (desiredChecked !== field.currentlyChecked) {
+                await waitForPossibleNavigation(field.page, () =>
+                  clickElementByBackendNodeId(
+                    field.page,
+                    field.backendNodeId,
+                    "left",
+                    [],
+                    fieldSession,
+                  ),
+                );
+              }
               break;
+            }
           }
         }
 

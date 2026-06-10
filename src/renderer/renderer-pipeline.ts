@@ -27,12 +27,23 @@ import type {
   Landmark,
   Heading,
   Bounds,
+  TruncationInfo,
 } from "../types/page-representation.js";
 import { createDefaultConfig } from "../types/config.js";
 import type { CharlotteConfig } from "../types/config.js";
 import { logger } from "../utils/logger.js";
 
 export type DetailLevel = "minimal" | "summary" | "full";
+
+/**
+ * A frame's accessibility tree plus its source URL. `frameUrl` is undefined for
+ * the main frame. Used to build a landmark-aware interactive summary across the
+ * main frame and any iframes (#68).
+ */
+interface FrameTree {
+  rootNodes: ParsedAXNode[];
+  frameUrl?: string;
+}
 
 export interface RenderOptions {
   detail: DetailLevel;
@@ -48,6 +59,14 @@ export class RendererPipeline {
 
   private config: CharlotteConfig;
 
+  /**
+   * Per-page render mutex. Concurrent renders of the same page race the shared
+   * ElementIdGenerator (last writer wins via replaceWith(), so the loser's
+   * representation holds IDs that no longer resolve) and tear when a navigation
+   * lands mid-render. Chaining renders per page serializes them (#202).
+   */
+  private renderChains = new WeakMap<Page, Promise<unknown>>();
+
   constructor(
     private cdpSessionManager: CDPSessionManager,
     private elementIdGenerator: ElementIdGenerator,
@@ -58,6 +77,19 @@ export class RendererPipeline {
   }
 
   async render(page: Page, options: RenderOptions): Promise<PageRepresentation> {
+    // Serialize renders of the same page. Run after any in-flight render
+    // settles (success OR failure) so one failed render cannot wedge the chain.
+    const previous = this.renderChains.get(page) ?? Promise.resolve();
+    const result = previous.catch(() => {}).then(() => this.renderInternal(page, options));
+    // Store a swallowed copy so the chain link never rejects.
+    this.renderChains.set(
+      page,
+      result.catch(() => {}),
+    );
+    return result;
+  }
+
+  private async renderInternal(page: Page, options: RenderOptions): Promise<PageRepresentation> {
     const startTime = Date.now();
     logger.debug("Starting render pipeline", { detail: options.detail });
 
@@ -97,19 +129,31 @@ export class RendererPipeline {
     // Step 8: Extract content based on detail level
     let contentSummary: string | undefined;
     let fullContent: string | undefined;
+    // Tracks any output cap that fired so we can attach a truncation marker (#188).
+    let fullContentTruncation: { total_chars: number; returned_chars: number } | undefined;
 
     if (options.detail !== "minimal") {
       contentSummary = this.contentExtractor.extractSummary(rootNodes);
     }
 
     if (options.detail === "full") {
-      fullContent = this.contentExtractor.extractFullContent(rootNodes);
+      const extracted = this.contentExtractor.extractFullContent(
+        rootNodes,
+        this.config.limits.maxFullContentChars,
+      );
+      fullContent = extracted.text;
+      if (extracted.truncated) {
+        fullContentTruncation = {
+          total_chars: extracted.totalChars,
+          returned_chars: this.config.limits.maxFullContentChars,
+        };
+      }
     }
 
     // Step 8.5: Generate interactive summary for minimal detail
     let interactiveSummary: InteractiveSummary | undefined;
     if (options.detail === "minimal") {
-      interactiveSummary = this.buildInteractiveSummary(rootNodes);
+      interactiveSummary = this.buildInteractiveSummary([{ rootNodes }]);
     }
 
     // Step 9: Extract iframe content if enabled
@@ -137,11 +181,27 @@ export class RendererPipeline {
           fullContent += "\n\n" + iframeResult.fullContents.join("\n\n");
         }
 
-        // Rebuild interactive summary if needed (now includes iframe elements)
+        // Rebuild interactive summary across main + iframe trees so that
+        // per-landmark grouping is preserved for iframe elements too (#68).
         if (options.detail === "minimal") {
-          interactiveSummary = this.buildInteractiveSummaryFromElements(elements);
+          interactiveSummary = this.buildInteractiveSummary([
+            { rootNodes },
+            ...iframeResult.frameTrees,
+          ]);
         }
       }
+    }
+
+    // Step 9.5: Cap the interactive element list so an adversarial page (100k
+    // links) cannot produce a multi-MB response. The full set is kept long
+    // enough to register every ID with the generator above; we truncate only
+    // the serialized array and record how many were dropped (#188).
+    const maxInteractive = this.config.limits.maxInteractiveElements;
+    let interactiveTruncation: { total: number; returned: number } | undefined;
+    let cappedElements = elements;
+    if (elements.length > maxInteractive) {
+      interactiveTruncation = { total: elements.length, returned: maxInteractive };
+      cappedElements = elements.slice(0, maxInteractive);
     }
 
     // Step 10: Atomically replace the shared ID generator
@@ -151,6 +211,8 @@ export class RendererPipeline {
     const url = page.url();
     const title = await page.title();
     const viewport = page.viewport() ?? this.config.defaultViewport;
+
+    const truncation = this.buildTruncationInfo(interactiveTruncation, fullContentTruncation);
 
     const representation: PageRepresentation = {
       url,
@@ -164,7 +226,7 @@ export class RendererPipeline {
         ...(contentSummary !== undefined ? { content_summary: contentSummary } : {}),
         ...(fullContent !== undefined ? { full_content: fullContent } : {}),
       },
-      interactive: elements,
+      interactive: cappedElements,
       forms,
       ...(interactiveSummary ? { interactive_summary: interactiveSummary } : {}),
       ...(iframeInfos ? { iframes: iframeInfos } : {}),
@@ -172,6 +234,7 @@ export class RendererPipeline {
         console: [],
         network: [],
       },
+      ...(truncation ? { truncation } : {}),
     };
 
     logger.debug("Render pipeline complete", {
@@ -202,10 +265,13 @@ export class RendererPipeline {
     iframeInfos: IframeInfo[];
     contentSummaries: string[];
     fullContents: string[];
+    /** Per-frame AX trees, used to rebuild a landmark-aware summary (#68). */
+    frameTrees: FrameTree[];
   }> {
     const iframeInfos: IframeInfo[] = [];
     const contentSummaries: string[] = [];
     const fullContents: string[] = [];
+    const frameTrees: FrameTree[] = [];
 
     const maxDepth = this.config?.iframeDepth ?? 3;
     let discoveredFrames: DiscoveredFrame[];
@@ -214,12 +280,12 @@ export class RendererPipeline {
       discoveredFrames = await discoverFrames(page, this.cdpSessionManager, maxDepth);
     } catch (error) {
       logger.debug("Frame discovery failed", error);
-      return { iframeInfos, contentSummaries, fullContents };
+      return { iframeInfos, contentSummaries, fullContents, frameTrees };
     }
 
     for (const discoveredFrame of discoveredFrames) {
       try {
-        await this.extractSingleFrame(
+        const frameRootNodes = await this.extractSingleFrame(
           discoveredFrame,
           options,
           freshIdGenerator,
@@ -231,6 +297,10 @@ export class RendererPipeline {
           fullContents,
         );
 
+        if (frameRootNodes.length > 0) {
+          frameTrees.push({ rootNodes: frameRootNodes, frameUrl: discoveredFrame.url });
+        }
+
         iframeInfos.push({
           frame_id: discoveredFrame.frameId,
           url: discoveredFrame.url,
@@ -241,7 +311,7 @@ export class RendererPipeline {
       }
     }
 
-    return { iframeInfos, contentSummaries, fullContents };
+    return { iframeInfos, contentSummaries, fullContents, frameTrees };
   }
 
   /**
@@ -258,12 +328,12 @@ export class RendererPipeline {
     forms: ReturnType<InteractiveExtractor["extractInteractiveElements"]>["forms"],
     contentSummaries: string[],
     fullContents: string[],
-  ): Promise<void> {
-    const { session, frameId, url: frameUrl, contentOffset } = discoveredFrame;
+  ): Promise<ParsedAXNode[]> {
+    const { session, frameId, url: frameUrl, contentOffset, isOutOfProcess } = discoveredFrame;
 
     // Extract AX tree for this frame
     const frameRootNodes = await this.accessibilityExtractor.extract(session, frameId);
-    if (frameRootNodes.length === 0) return;
+    if (frameRootNodes.length === 0) return [];
 
     // Collect and extract layout with offset
     const nodesNeedingBounds = this.collectNodesNeedingBounds(frameRootNodes);
@@ -271,10 +341,17 @@ export class RendererPipeline {
       .filter((n) => n.backendDOMNodeId !== null)
       .map((n) => n.backendDOMNodeId as number);
 
+    // Only out-of-process frames use a frame-local CDP session whose box-model
+    // quads are frame-local and therefore need translation by contentOffset.
+    // Same-process frames share the main session, which already returns
+    // main-frame-viewport coordinates — applying the offset there double-counts
+    // the iframe position. See issue #183.
+    const layoutOffset = isOutOfProcess ? contentOffset : undefined;
+
     const boundsMap = await this.layoutExtractor.getBoundsForNodes(
       session,
       backendNodeIds,
-      contentOffset,
+      layoutOffset,
     );
 
     // Extract landmarks (with frame annotation)
@@ -326,11 +403,16 @@ export class RendererPipeline {
     }
 
     if (options.detail === "full") {
-      const frameFullContent = this.contentExtractor.extractFullContent(frameRootNodes);
-      if (frameFullContent) {
-        fullContents.push(`--- iframe: ${frameUrl} ---\n${frameFullContent}`);
+      const frameFullContent = this.contentExtractor.extractFullContent(
+        frameRootNodes,
+        this.config.limits.maxFullContentChars,
+      );
+      if (frameFullContent.text) {
+        fullContents.push(`--- iframe: ${frameUrl} ---\n${frameFullContent.text}`);
       }
     }
+
+    return frameRootNodes;
   }
 
   /**
@@ -349,7 +431,10 @@ export class RendererPipeline {
     const nodes: ParsedAXNode[] = [];
 
     const traverse = (node: ParsedAXNode) => {
-      if (isLandmarkRole(node.role) || isHeadingRole(node.role) || this.isInteractiveNode(node)) {
+      // Reuse the single source of truth for interactive roles
+      // (accessibility-extractor's isInteractiveRole) rather than re-creating a
+      // duplicate 16-entry Set on every call (#205).
+      if (isLandmarkRole(node.role) || isHeadingRole(node.role) || isInteractiveRole(node.role)) {
         nodes.push(node);
       }
 
@@ -363,28 +448,6 @@ export class RendererPipeline {
     }
 
     return nodes;
-  }
-
-  private isInteractiveNode(node: ParsedAXNode): boolean {
-    const interactiveRoles = new Set([
-      "button",
-      "link",
-      "textbox",
-      "combobox",
-      "listbox",
-      "checkbox",
-      "radio",
-      "switch",
-      "slider",
-      "spinbutton",
-      "searchbox",
-      "menuitem",
-      "menuitemcheckbox",
-      "menuitemradio",
-      "tab",
-      "treeitem",
-    ]);
-    return interactiveRoles.has(node.role);
   }
 
   private extractLandmarks(
@@ -471,17 +534,27 @@ export class RendererPipeline {
     return headings;
   }
 
-  private buildInteractiveSummary(rootNodes: ParsedAXNode[]): InteractiveSummary {
+  /**
+   * Build the interactive summary by walking the AX trees of the main frame
+   * and any iframes, preserving per-landmark grouping for every frame (#68).
+   *
+   * Landmark keys match `structure.landmarks` ("role (label)" or "role"), with
+   * "(page root)" for elements outside any landmark. Iframe landmark keys are
+   * prefixed with the frame URL (e.g. "iframe (child.html) > main") so the
+   * per-landmark breakdown is not collapsed into a single "(iframe)" bucket.
+   */
+  private buildInteractiveSummary(frameTrees: FrameTree[]): InteractiveSummary {
     const PAGE_ROOT_KEY = "(page root)";
     const landmarkCounts: Record<string, Record<string, number>> = {};
     let total = 0;
 
-    const traverse = (node: ParsedAXNode, currentLandmarkKey: string) => {
+    const traverse = (node: ParsedAXNode, currentLandmarkKey: string, framePrefix: string) => {
       let landmarkKey = currentLandmarkKey;
 
       if (isLandmarkRole(node.role)) {
         const label = node.name || node.role;
-        landmarkKey = label !== node.role ? `${node.role} (${label})` : node.role;
+        const baseKey = label !== node.role ? `${node.role} (${label})` : node.role;
+        landmarkKey = framePrefix ? `${framePrefix} > ${baseKey}` : baseKey;
       }
 
       if (isInteractiveRole(node.role)) {
@@ -495,41 +568,53 @@ export class RendererPipeline {
       }
 
       for (const child of node.children) {
-        traverse(child, landmarkKey);
+        traverse(child, landmarkKey, framePrefix);
       }
     };
 
-    for (const root of rootNodes) {
-      traverse(root, PAGE_ROOT_KEY);
+    for (const tree of frameTrees) {
+      // For iframes, the default (non-landmark) bucket is "iframe (url)" so
+      // elements outside any landmark inside the frame are still attributed to
+      // that frame rather than the page root.
+      const framePrefix = tree.frameUrl ? `iframe (${tree.frameUrl})` : "";
+      const rootKey = framePrefix || PAGE_ROOT_KEY;
+      for (const root of tree.rootNodes) {
+        traverse(root, rootKey, framePrefix);
+      }
     }
 
     return { total, by_landmark: landmarkCounts };
   }
 
   /**
-   * Build interactive summary from the already-extracted elements array.
-   * Used when iframe elements have been merged in and we need to rebuild
-   * the summary to include them.
+   * Assemble the optional `truncation` block from whichever caps fired during
+   * render (#188). Returns undefined when nothing was truncated so a clean page
+   * never carries the field.
    */
-  private buildInteractiveSummaryFromElements(
-    elements: { type: string; frame?: string }[],
-  ): InteractiveSummary {
-    const PAGE_ROOT_KEY = "(page root)";
-    const IFRAME_KEY = "(iframe)";
-    const landmarkCounts: Record<string, Record<string, number>> = {};
-    let total = 0;
+  private buildTruncationInfo(
+    interactive: { total: number; returned: number } | undefined,
+    fullContent: { total_chars: number; returned_chars: number } | undefined,
+  ): TruncationInfo | undefined {
+    if (!interactive && !fullContent) return undefined;
 
-    for (const element of elements) {
-      const landmarkKey = element.frame ? IFRAME_KEY : PAGE_ROOT_KEY;
-      if (!landmarkCounts[landmarkKey]) {
-        landmarkCounts[landmarkKey] = {};
-      }
-      landmarkCounts[landmarkKey][element.type] =
-        (landmarkCounts[landmarkKey][element.type] ?? 0) + 1;
-      total++;
+    const suggestions: string[] = [];
+    if (interactive) {
+      suggestions.push(
+        "Use charlotte_find to query a narrower set of interactive elements, " +
+          "or scope observation with a selector.",
+      );
+    }
+    if (fullContent) {
+      suggestions.push(
+        "Use a narrower selector or observe with output_file to retrieve the full text.",
+      );
     }
 
-    return { total, by_landmark: landmarkCounts };
+    return {
+      ...(interactive ? { interactive } : {}),
+      ...(fullContent ? { full_content: fullContent } : {}),
+      suggestion: suggestions.join(" "),
+    };
   }
 
   private getHeadingLevel(node: ParsedAXNode): 1 | 2 | 3 | 4 | 5 | 6 {

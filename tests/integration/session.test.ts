@@ -1,235 +1,327 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import * as path from "node:path";
-import * as os from "node:os";
-import { BrowserManager } from "../../src/browser/browser-manager.js";
-import { PageManager } from "../../src/browser/page-manager.js";
-import { CDPSessionManager } from "../../src/browser/cdp-session.js";
-import { RendererPipeline } from "../../src/renderer/renderer-pipeline.js";
-import { ElementIdGenerator } from "../../src/renderer/element-id-generator.js";
-import { SnapshotStore } from "../../src/state/snapshot-store.js";
-import { ArtifactStore } from "../../src/state/artifact-store.js";
-import { createDefaultConfig } from "../../src/types/config.js";
-import type { ToolDependencies } from "../../src/tools/tool-helpers.js";
+import { setupMcpHarness, parseToolJson, type McpHarness } from "../helpers/mcp-harness.js";
 
-const INTERACTION_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/interaction.html")}`;
+const FIXTURES_DIR = path.resolve(import.meta.dirname, "../fixtures/pages");
 
-describe("Session integration", () => {
-  let browserManager: BrowserManager;
-  let pageManager: PageManager;
-  let cdpSessionManager: CDPSessionManager;
-  let elementIdGenerator: ElementIdGenerator;
-  let rendererPipeline: RendererPipeline;
-  let _deps: ToolDependencies;
+/**
+ * Exercises the real session-group handlers (src/tools/session.ts) through the
+ * MCP transport: cookies, headers, configure, tabs, viewport, network.
+ *
+ * Previously this file built a `_deps` bundle, never used it, and drove
+ * Puppeteer's `page.setCookie`/`page.cookies` directly — i.e. it tested
+ * Puppeteer, not the handlers (#195). It is reimplemented here so the handlers'
+ * own serialization, validation, and effect are what is asserted. Cookies are
+ * exercised over a real http origin (the harness fixture server) because CDP
+ * cookie operations require http/https.
+ */
+describe("session-group handlers", () => {
+  let harness: McpHarness;
+  let baseUrl: string;
+  let cookieDomain: string;
 
   beforeAll(async () => {
-    browserManager = new BrowserManager();
-    await browserManager.launch();
-    pageManager = new PageManager();
-    await pageManager.openTab(browserManager);
-    cdpSessionManager = new CDPSessionManager();
-    elementIdGenerator = new ElementIdGenerator();
-    rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator);
-    const config = createDefaultConfig();
-    const artifactStore = new ArtifactStore(
-      path.join(os.tmpdir(), "charlotte-session-test-artifacts"),
-    );
-    await artifactStore.initialize();
-    _deps = {
-      browserManager,
-      pageManager,
-      cdpSessionManager,
-      rendererPipeline,
-      elementIdGenerator,
-      snapshotStore: new SnapshotStore(config.snapshotDepth),
-      artifactStore,
-      config,
-    };
+    harness = await setupMcpHarness({ profile: "full", serveDirectory: FIXTURES_DIR });
+    baseUrl = harness.fixtureServer!.url;
+    // The fixture server binds to 127.0.0.1, so cookies must use that host as
+    // their domain or page.cookies() (matched by current-URL host) won't see them.
+    cookieDomain = new URL(baseUrl).hostname;
   });
 
   afterAll(async () => {
-    await browserManager.close();
+    await harness.teardown();
   });
 
-  describe("set_cookies", () => {
-    it("sets a cookie and retrieves it", async () => {
-      const page = pageManager.getActivePage();
-      await page.goto(INTERACTION_FIXTURE, { waitUntil: "load" });
+  describe("cookies", () => {
+    beforeEach(async () => {
+      await harness.callTool("charlotte_navigate", { url: `${baseUrl}/simple.html` });
+      // Start each test from a clean slate via the handler under test.
+      await harness.callTool("charlotte_clear_cookies", {});
+    });
 
-      // Set a cookie with explicit URL (required for non-HTTP pages)
-      await page.setCookie({
-        name: "test_session",
-        value: "abc123",
-        url: "http://localhost",
+    it("set_cookies then get_cookies round-trips a single cookie", async () => {
+      const setResult = await harness.callTool("charlotte_set_cookies", {
+        cookies: [{ name: "test_session", value: "abc123", domain: cookieDomain }],
+      });
+      expect(setResult.isError).toBeFalsy();
+      const setParsed = parseToolJson<{ success: boolean; cookies_set: number }>(setResult);
+      expect(setParsed.success).toBe(true);
+      expect(setParsed.cookies_set).toBe(1);
+
+      const getResult = await harness.callTool("charlotte_get_cookies", {});
+      expect(getResult.isError).toBeFalsy();
+      const getParsed = parseToolJson<{
+        cookies: Array<{ name: string; value: string }>;
+        count: number;
+      }>(getResult);
+      const cookie = getParsed.cookies.find((c) => c.name === "test_session");
+      expect(cookie).toBeDefined();
+      expect(cookie!.value).toBe("abc123");
+    });
+
+    it("set_cookies sets multiple cookies at once", async () => {
+      await harness.callTool("charlotte_set_cookies", {
+        cookies: [
+          { name: "cookie_a", value: "value_a", domain: cookieDomain },
+          { name: "cookie_b", value: "value_b", domain: cookieDomain },
+        ],
       });
 
-      // Verify via page.cookies with matching URL
-      const cookies = await page.cookies("http://localhost");
-      const testCookie = cookies.find((c) => c.name === "test_session");
-      expect(testCookie).toBeDefined();
-      expect(testCookie!.value).toBe("abc123");
-    });
-
-    it("sets multiple cookies at once", async () => {
-      const page = pageManager.getActivePage();
-
-      await page.setCookie(
-        {
-          name: "cookie_a",
-          value: "value_a",
-          url: "http://localhost",
-        },
-        {
-          name: "cookie_b",
-          value: "value_b",
-          url: "http://localhost",
-        },
+      const getParsed = parseToolJson<{ cookies: Array<{ name: string; value: string }> }>(
+        await harness.callTool("charlotte_get_cookies", {}),
       );
-
-      const cookies = await page.cookies("http://localhost");
-      const cookieA = cookies.find((c) => c.name === "cookie_a");
-      const cookieB = cookies.find((c) => c.name === "cookie_b");
-      expect(cookieA).toBeDefined();
-      expect(cookieB).toBeDefined();
-      expect(cookieA!.value).toBe("value_a");
-      expect(cookieB!.value).toBe("value_b");
+      expect(getParsed.cookies.find((c) => c.name === "cookie_a")?.value).toBe("value_a");
+      expect(getParsed.cookies.find((c) => c.name === "cookie_b")?.value).toBe("value_b");
     });
 
-    it("sets cookies with httpOnly flag", async () => {
-      const page = pageManager.getActivePage();
-
-      await page.setCookie({
-        name: "http_only_cookie",
-        value: "secret",
-        url: "http://localhost",
-        httpOnly: true,
+    it("set_cookies honors the httpOnly flag", async () => {
+      await harness.callTool("charlotte_set_cookies", {
+        cookies: [
+          { name: "http_only_cookie", value: "secret", domain: cookieDomain, httpOnly: true },
+        ],
       });
 
-      const cookies = await page.cookies("http://localhost");
-      const httpOnlyCookie = cookies.find((c) => c.name === "http_only_cookie");
-      expect(httpOnlyCookie).toBeDefined();
-      expect(httpOnlyCookie!.httpOnly).toBe(true);
+      const getParsed = parseToolJson<{
+        cookies: Array<{ name: string; httpOnly: boolean }>;
+      }>(await harness.callTool("charlotte_get_cookies", {}));
+      const cookie = getParsed.cookies.find((c) => c.name === "http_only_cookie");
+      expect(cookie).toBeDefined();
+      expect(cookie!.httpOnly).toBe(true);
     });
-  });
 
-  describe("get_cookies", () => {
-    it("returns cookies for the current page", async () => {
-      const page = pageManager.getActivePage();
-      await page.goto(INTERACTION_FIXTURE, { waitUntil: "load" });
+    it("clear_cookies with no filter removes all cookies", async () => {
+      await harness.callTool("charlotte_set_cookies", {
+        cookies: [
+          { name: "to_clear_a", value: "val_a", domain: cookieDomain },
+          { name: "to_clear_b", value: "val_b", domain: cookieDomain },
+        ],
+      });
 
-      // Clear any leftover cookies from previous tests
-      const existing = await page.cookies("http://localhost");
-      if (existing.length) await page.deleteCookie(...existing);
+      const clearResult = await harness.callTool("charlotte_clear_cookies", {});
+      expect(clearResult.isError).toBeFalsy();
+      const clearParsed = parseToolJson<{ success: boolean; cleared: number }>(clearResult);
+      expect(clearParsed.success).toBe(true);
+      expect(clearParsed.cleared).toBeGreaterThanOrEqual(2);
 
-      // Set cookies with http URL (CDP requires http/https for cookie operations)
-      await page.setCookie(
-        { name: "session_id", value: "s123", url: "http://localhost" },
-        { name: "pref_lang", value: "en", url: "http://localhost" },
+      const getParsed = parseToolJson<{ count: number }>(
+        await harness.callTool("charlotte_get_cookies", {}),
       );
-
-      // Retrieve via page.cookies() with matching URL
-      const cookies = await page.cookies("http://localhost");
-      expect(cookies.length).toBeGreaterThanOrEqual(2);
-      const sessionCookie = cookies.find((c) => c.name === "session_id");
-      expect(sessionCookie).toBeDefined();
-      expect(sessionCookie!.value).toBe("s123");
+      expect(getParsed.count).toBe(0);
     });
 
-    it("returns an empty list when no cookies are set", async () => {
-      const page = pageManager.getActivePage();
-      await page.goto(INTERACTION_FIXTURE, { waitUntil: "load" });
+    it("clear_cookies with a names filter removes only the named cookies", async () => {
+      await harness.callTool("charlotte_set_cookies", {
+        cookies: [
+          { name: "keep_me", value: "keep", domain: cookieDomain },
+          { name: "delete_me", value: "delete", domain: cookieDomain },
+        ],
+      });
 
-      // Clear all cookies
-      const existing = await page.cookies("http://localhost");
-      if (existing.length) await page.deleteCookie(...existing);
-
-      const cookies = await page.cookies("http://localhost");
-      expect(cookies.length).toBe(0);
-    });
-  });
-
-  describe("clear_cookies", () => {
-    it("clears all cookies for the page", async () => {
-      const page = pageManager.getActivePage();
-      await page.goto(INTERACTION_FIXTURE, { waitUntil: "load" });
-
-      // CDP requires http/https URLs for cookie operations
-      await page.setCookie(
-        { name: "to_clear_a", value: "val_a", url: "http://localhost" },
-        { name: "to_clear_b", value: "val_b", url: "http://localhost" },
+      const clearParsed = parseToolJson<{ cleared: number; names: string[] }>(
+        await harness.callTool("charlotte_clear_cookies", { names: ["delete_me"] }),
       );
+      expect(clearParsed.names).toEqual(["delete_me"]);
 
-      // Verify cookies exist
-      let cookies = await page.cookies("http://localhost");
-      expect(cookies.some((c) => c.name === "to_clear_a")).toBe(true);
-
-      // Delete all
-      await page.deleteCookie(...cookies);
-
-      cookies = await page.cookies("http://localhost");
-      expect(cookies.length).toBe(0);
-    });
-
-    it("clears specific cookies by name", async () => {
-      const page = pageManager.getActivePage();
-      await page.goto(INTERACTION_FIXTURE, { waitUntil: "load" });
-
-      // Clear any existing first
-      const existing = await page.cookies("http://localhost");
-      if (existing.length) await page.deleteCookie(...existing);
-
-      // CDP requires http/https URLs for cookie operations
-      await page.setCookie(
-        { name: "keep_me", value: "keep", url: "http://localhost" },
-        { name: "delete_me", value: "delete", url: "http://localhost" },
+      const getParsed = parseToolJson<{ cookies: Array<{ name: string }> }>(
+        await harness.callTool("charlotte_get_cookies", {}),
       );
-
-      // Delete only "delete_me"
-      const allCookies = await page.cookies("http://localhost");
-      const toDelete = allCookies.filter((c) => c.name === "delete_me");
-      await page.deleteCookie(...toDelete);
-
-      const remaining = await page.cookies("http://localhost");
-      expect(remaining.some((c) => c.name === "keep_me")).toBe(true);
-      expect(remaining.some((c) => c.name === "delete_me")).toBe(false);
+      const names = getParsed.cookies.map((c) => c.name);
+      expect(names).toContain("keep_me");
+      expect(names).not.toContain("delete_me");
     });
   });
 
   describe("set_headers", () => {
-    it("sets extra HTTP headers on the page", async () => {
-      const page = pageManager.getActivePage();
-
-      // Set extra headers — this configures headers for future requests
-      await page.setExtraHTTPHeaders({
-        "X-Custom-Header": "test-value",
-        Authorization: "Bearer token123",
+    it("sets extra HTTP headers and reports the header names", async () => {
+      const result = await harness.callTool("charlotte_set_headers", {
+        headers: { "X-Custom-Header": "test-value", Authorization: "Bearer token123" },
       });
+      expect(result.isError).toBeFalsy();
+      const parsed = parseToolJson<{ success: boolean; headers_set: string[] }>(result);
+      expect(parsed.success).toBe(true);
+      expect(parsed.headers_set).toContain("X-Custom-Header");
+      expect(parsed.headers_set).toContain("Authorization");
 
-      // The headers will be sent with subsequent requests.
-      // For file:// URLs we can't easily verify headers, but we verify the API call succeeds.
-      // Navigate to trigger the headers to be applied
-      await page.goto(INTERACTION_FIXTURE, { waitUntil: "load" });
-
-      // Verify the page loaded successfully after setting headers
-      const title = await page.title();
-      expect(title).toBe("Interaction Test Page");
+      // Subsequent navigation must still succeed with the headers applied.
+      const navResult = await harness.callTool("charlotte_navigate", {
+        url: `${baseUrl}/simple.html`,
+      });
+      expect(navResult.isError).toBeFalsy();
+      expect(parseToolJson<{ title: string }>(navResult).title).toBe("Simple Test Page");
     });
 
-    it("overwrites previously set headers", async () => {
-      const page = pageManager.getActivePage();
-
-      await page.setExtraHTTPHeaders({
-        "X-First": "first-value",
+    it("a later set_headers call replaces the prior header set", async () => {
+      await harness.callTool("charlotte_set_headers", { headers: { "X-First": "first-value" } });
+      const parsed = parseToolJson<{ headers_set: string[] }>(
+        await harness.callTool("charlotte_set_headers", {
+          headers: { "X-Second": "second-value" },
+        }),
+      );
+      // setExtraHTTPHeaders replaces the whole set, so only the latest names appear.
+      expect(parsed.headers_set).toEqual(["X-Second"]);
+      const navResult = await harness.callTool("charlotte_navigate", {
+        url: `${baseUrl}/simple.html`,
       });
+      expect(navResult.isError).toBeFalsy();
+    });
+  });
 
-      // Set new headers — this replaces all extra headers
-      await page.setExtraHTTPHeaders({
-        "X-Second": "second-value",
+  describe("configure", () => {
+    it("updates snapshot depth, auto-snapshot mode, and iframe settings", async () => {
+      const result = await harness.callTool("charlotte_configure", {
+        snapshot_depth: 25,
+        auto_snapshot: "observe_only",
+        include_iframes: true,
+        iframe_depth: 5,
       });
+      expect(result.isError).toBeFalsy();
+      const parsed = parseToolJson<{
+        success: boolean;
+        config: {
+          snapshot_depth: number;
+          auto_snapshot: string;
+          include_iframes: boolean;
+          iframe_depth: number;
+        };
+      }>(result);
+      expect(parsed.config.snapshot_depth).toBe(25);
+      expect(parsed.config.auto_snapshot).toBe("observe_only");
+      expect(parsed.config.include_iframes).toBe(true);
+      expect(parsed.config.iframe_depth).toBe(5);
+      // Effect is observable on the shared deps the handler mutated.
+      expect(harness.deps.config.autoSnapshot).toBe("observe_only");
+      expect(harness.deps.config.includeIframes).toBe(true);
 
-      // Navigate to apply headers
-      await page.goto(INTERACTION_FIXTURE, { waitUntil: "load" });
-      const title = await page.title();
-      expect(title).toBe("Interaction Test Page");
+      // Restore defaults so later tests aren't affected.
+      await harness.callTool("charlotte_configure", {
+        snapshot_depth: 50,
+        auto_snapshot: "every_action",
+        include_iframes: false,
+        iframe_depth: 3,
+      });
+    });
+
+    it("clamps snapshot depth into the allowed range", async () => {
+      const parsed = parseToolJson<{ config: { snapshot_depth: number } }>(
+        await harness.callTool("charlotte_configure", { snapshot_depth: 9999 }),
+      );
+      expect(parsed.config.snapshot_depth).toBe(500);
+      await harness.callTool("charlotte_configure", { snapshot_depth: 50 });
+    });
+
+    it("rejects a screenshot_dir outside the workspace root (#203)", async () => {
+      // Pin a workspace root on the shared config so the boundary check has a
+      // concrete root to validate against, then point screenshot_dir well
+      // outside it.
+      const previousRoot = harness.deps.config.allowedWorkspaceRoot;
+      harness.deps.config.allowedWorkspaceRoot = FIXTURES_DIR;
+      try {
+        const result = await harness.callTool("charlotte_configure", {
+          screenshot_dir: path.resolve("/tmp/charlotte-escape-screenshots"),
+        });
+        expect(result.isError).toBe(true);
+        const text = (result.content as Array<{ type: string; text: string }>)[0].text;
+        expect(text).toContain("outside the allowed workspace root");
+        // The screenshot dir must NOT have been repointed.
+        expect(harness.deps.config.screenshotDir).not.toBe(
+          path.resolve("/tmp/charlotte-escape-screenshots"),
+        );
+      } finally {
+        harness.deps.config.allowedWorkspaceRoot = previousRoot;
+      }
+    });
+  });
+
+  describe("viewport", () => {
+    beforeEach(async () => {
+      await harness.callTool("charlotte_navigate", { url: `${baseUrl}/simple.html` });
+    });
+
+    it("applies a device preset and re-renders the page", async () => {
+      const result = await harness.callTool("charlotte_viewport", { device: "mobile" });
+      expect(result.isError).toBeFalsy();
+      const parsed = parseToolJson<{ viewport: { width: number; height: number } }>(result);
+      expect(parsed.viewport.width).toBe(393);
+      expect(parsed.viewport.height).toBe(852);
+    });
+
+    it("applies explicit width/height", async () => {
+      const parsed = parseToolJson<{ viewport: { width: number; height: number } }>(
+        await harness.callTool("charlotte_viewport", { width: 1024, height: 768 }),
+      );
+      expect(parsed.viewport.width).toBe(1024);
+      expect(parsed.viewport.height).toBe(768);
+    });
+  });
+
+  describe("tabs", () => {
+    it("tab_open, tabs, tab_switch, tab_close manage tab lifecycle", async () => {
+      const openParsed = parseToolJson<{ tab_id: string; url: string }>(
+        await harness.callTool("charlotte_tab_open", { url: `${baseUrl}/simple.html` }),
+      );
+      expect(openParsed.tab_id).toBeTruthy();
+
+      const listParsed = parseToolJson<{
+        tabs: Array<{ id: string; active: boolean }>;
+      }>(await harness.callTool("charlotte_tabs", {}));
+      expect(listParsed.tabs.length).toBeGreaterThanOrEqual(2);
+      const newTab = listParsed.tabs.find((t) => t.id === openParsed.tab_id);
+      expect(newTab).toBeDefined();
+      expect(newTab!.active).toBe(true);
+
+      // Switch back to the first tab, then close the one we opened.
+      const firstTabId = listParsed.tabs.find((t) => t.id !== openParsed.tab_id)!.id;
+      const switchResult = await harness.callTool("charlotte_tab_switch", { tab_id: firstTabId });
+      expect(switchResult.isError).toBeFalsy();
+
+      const closeParsed = parseToolJson<{
+        success: boolean;
+        closed: string;
+        remaining_tabs: Array<{ id: string }>;
+      }>(await harness.callTool("charlotte_tab_close", { tab_id: openParsed.tab_id }));
+      expect(closeParsed.success).toBe(true);
+      expect(closeParsed.closed).toBe(openParsed.tab_id);
+      expect(closeParsed.remaining_tabs.some((t) => t.id === openParsed.tab_id)).toBe(false);
+    });
+  });
+
+  describe("network", () => {
+    it("applies a throttle preset and reports it", async () => {
+      await harness.callTool("charlotte_navigate", { url: `${baseUrl}/simple.html` });
+      const parsed = parseToolJson<{ success: boolean; network: { throttle?: string } }>(
+        await harness.callTool("charlotte_network", { throttle: "3g" }),
+      );
+      expect(parsed.success).toBe(true);
+      expect(parsed.network.throttle).toBe("3g");
+      // Clear throttling so it doesn't slow later tests on the shared page.
+      await harness.callTool("charlotte_network", { throttle: "none" });
+    });
+
+    it("block actually blocks a request through the handler, not a silent no-op (#192)", async () => {
+      // The #192 fix enables the Network domain on the cached session before
+      // setBlockedURLs; without it the block silently does nothing. The
+      // network-block fixture exposes window.testFetch(url) so we can probe a
+      // blocked request from page context via charlotte_evaluate.
+      await harness.callTool("charlotte_navigate", { url: `${baseUrl}/network-block.html` });
+      const blockedUrl = `${baseUrl}/simple.html`;
+
+      await harness.callTool("charlotte_network", { block: [blockedUrl] });
+      const blockedProbe = parseToolJson<{ value: { ok: boolean } }>(
+        await harness.callTool("charlotte_evaluate", {
+          expression: `window.testFetch(${JSON.stringify(blockedUrl)})`,
+        }),
+      );
+      expect(blockedProbe.value.ok).toBe(false);
+
+      // Clear the block — the same URL must become reachable again.
+      await harness.callTool("charlotte_network", { block: [] });
+      const unblockedProbe = parseToolJson<{ value: { ok: boolean; status: number } }>(
+        await harness.callTool("charlotte_evaluate", {
+          expression: `window.testFetch(${JSON.stringify(blockedUrl)})`,
+        }),
+      );
+      expect(unblockedProbe.value.ok).toBe(true);
+      expect(unblockedProbe.value.status).toBe(200);
     });
   });
 });

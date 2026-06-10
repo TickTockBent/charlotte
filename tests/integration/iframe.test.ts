@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import * as path from "node:path";
 import * as os from "node:os";
+import * as fs from "node:fs/promises";
 import { BrowserManager } from "../../src/browser/browser-manager.js";
 import { PageManager } from "../../src/browser/page-manager.js";
-import { CDPSessionManager } from "../../src/browser/cdp-session.js";
+import { CDPSessionManager, frameClient } from "../../src/browser/cdp-session.js";
 import { RendererPipeline } from "../../src/renderer/renderer-pipeline.js";
 import { ElementIdGenerator } from "../../src/renderer/element-id-generator.js";
 import { SnapshotStore } from "../../src/state/snapshot-store.js";
@@ -34,6 +35,7 @@ describe("Iframe content extraction", () => {
   let deps: ToolDependencies;
   let staticServer: StaticServer;
   let baseUrl: string;
+  let artifactDirectory: string;
 
   beforeAll(async () => {
     // Serve fixtures over HTTP (iframes need HTTP, not file://)
@@ -41,7 +43,7 @@ describe("Iframe content extraction", () => {
     const serverInfo = await staticServer.start({ directoryPath: FIXTURES_DIR });
     baseUrl = serverInfo.url;
 
-    browserManager = new BrowserManager();
+    browserManager = new BrowserManager(undefined, { noSandbox: true });
     await browserManager.launch();
     cdpSessionManager = new CDPSessionManager();
     pageManager = new PageManager(undefined, cdpSessionManager);
@@ -53,9 +55,8 @@ describe("Iframe content extraction", () => {
     config.iframeDepth = 3;
 
     const rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator, config);
-    const artifactStore = new ArtifactStore(
-      path.join(os.tmpdir(), "charlotte-iframe-test-artifacts"),
-    );
+    artifactDirectory = await fs.mkdtemp(path.join(os.tmpdir(), "charlotte-iframe-test-"));
+    const artifactStore = new ArtifactStore(artifactDirectory);
     await artifactStore.initialize();
 
     deps = {
@@ -73,6 +74,7 @@ describe("Iframe content extraction", () => {
   afterAll(async () => {
     await browserManager.close();
     await staticServer.stop();
+    await fs.rm(artifactDirectory, { recursive: true, force: true }).catch(() => {});
   });
 
   it("extracts iframe content when includeIframes is enabled", async () => {
@@ -129,6 +131,97 @@ describe("Iframe content extraction", () => {
       expect(iframeButton.bounds.x).toBeGreaterThanOrEqual(iframeInfo.bounds.x);
       expect(iframeButton.bounds.y).toBeGreaterThanOrEqual(iframeInfo.bounds.y);
     }
+  });
+
+  // Regression for #183: same-origin iframe content shares the main-frame CDP
+  // session, so DOM.getBoxModel already returns page-viewport coordinates. The
+  // iframe contentOffset must NOT be applied a second time. We assert that
+  // Charlotte's reported bounds match Puppeteer's boundingBox() ground truth
+  // (which is computed independently against the live page) within a few px.
+  // The old >= assertion above passes under the double-offset bug; this one
+  // does not. We compare center points because Charlotte's bounds use the AX
+  // content box while boundingBox() uses the border box.
+  it("same-origin iframe element bounds match Puppeteer ground truth (no double offset)", async () => {
+    const page = pageManager.getActivePage();
+    await page.goto(`${baseUrl}/iframe-parent.html`, { waitUntil: "networkidle0" });
+
+    const representation = await renderActivePage(deps, { detail: "summary" });
+
+    const childFrame = page.frames().find((f) => f.url().includes("iframe-child.html"));
+    expect(childFrame).toBeDefined();
+
+    const centerOf = (b: { x: number; y: number; w: number; h: number }) => ({
+      x: b.x + b.w / 2,
+      y: b.y + b.h / 2,
+    });
+
+    // Check several element types inside the iframe against their selectors.
+    const cases: { label: string; selector: string }[] = [
+      { label: "Iframe Button", selector: "#iframe-btn" },
+      { label: "Iframe Input", selector: "#iframe-input" },
+      { label: "Iframe Select", selector: "#iframe-select" },
+    ];
+
+    const TOLERANCE_PX = 6;
+
+    for (const { label, selector } of cases) {
+      const element = representation.interactive.find((el) => el.label === label);
+      expect(element, `expected to find iframe element "${label}"`).toBeDefined();
+      expect(element!.bounds, `expected bounds for "${label}"`).toBeDefined();
+
+      const handle = await childFrame!.$(selector);
+      expect(handle, `expected DOM node for ${selector}`).not.toBeNull();
+      const groundTruth = await handle!.boundingBox();
+      expect(groundTruth, `expected boundingBox for ${selector}`).not.toBeNull();
+
+      const charlotteCenter = centerOf(element!.bounds!);
+      const truthCenter = centerOf({
+        x: groundTruth!.x,
+        y: groundTruth!.y,
+        w: groundTruth!.width,
+        h: groundTruth!.height,
+      });
+
+      // Under the double-offset bug the y is off by the iframe's ~150px top
+      // offset (and x by ~10px), far outside tolerance.
+      expect(
+        Math.abs(charlotteCenter.x - truthCenter.x),
+        `${label} x center off: charlotte=${charlotteCenter.x} truth=${truthCenter.x}`,
+      ).toBeLessThanOrEqual(TOLERANCE_PX);
+      expect(
+        Math.abs(charlotteCenter.y - truthCenter.y),
+        `${label} y center off: charlotte=${charlotteCenter.y} truth=${truthCenter.y}`,
+      ).toBeLessThanOrEqual(TOLERANCE_PX);
+    }
+  });
+
+  // Regression for #183: nested same-origin iframe (grandchild) is also
+  // same-process and must not be double-offset by the accumulated content
+  // offset of two iframe levels.
+  it("nested same-origin iframe element bounds match Puppeteer ground truth", async () => {
+    const page = pageManager.getActivePage();
+    await page.goto(`${baseUrl}/iframe-parent.html`, { waitUntil: "networkidle0" });
+
+    const representation = await renderActivePage(deps, { detail: "summary" });
+
+    const grandchildFrame = page.frames().find((f) => f.url().includes("iframe-grandchild.html"));
+    expect(grandchildFrame).toBeDefined();
+
+    const nestedButton = representation.interactive.find((el) => el.label === "Nested Button");
+    expect(nestedButton).toBeDefined();
+    expect(nestedButton!.bounds).toBeDefined();
+
+    const handle = await grandchildFrame!.$("button");
+    const groundTruth = await handle!.boundingBox();
+    expect(groundTruth).not.toBeNull();
+
+    const charlotteCenterX = nestedButton!.bounds!.x + nestedButton!.bounds!.w / 2;
+    const charlotteCenterY = nestedButton!.bounds!.y + nestedButton!.bounds!.h / 2;
+    const truthCenterX = groundTruth!.x + groundTruth!.width / 2;
+    const truthCenterY = groundTruth!.y + groundTruth!.height / 2;
+
+    expect(Math.abs(charlotteCenterX - truthCenterX)).toBeLessThanOrEqual(6);
+    expect(Math.abs(charlotteCenterY - truthCenterY)).toBeLessThanOrEqual(6);
   });
 
   it("iframe element IDs are resolvable via resolveElement", async () => {
@@ -230,6 +323,63 @@ describe("Iframe content extraction", () => {
 
     // Restore depth for subsequent tests
     deps.config.iframeDepth = 3;
+  });
+
+  // #68: with detail=minimal and iframes enabled, the interactive summary must
+  // preserve per-landmark grouping for BOTH main-frame and iframe elements,
+  // instead of collapsing everything into "(page root)" / "(iframe)".
+  describe("interactive summary preserves landmark context with iframes (#68)", () => {
+    it("groups iframe elements under their frame + landmark, not a flat (iframe) bucket", async () => {
+      const page = pageManager.getActivePage();
+      await page.goto(`${baseUrl}/iframe-parent.html`, { waitUntil: "networkidle0" });
+
+      const representation = await renderActivePage(deps, { detail: "minimal" });
+
+      const summary = representation.interactive_summary;
+      expect(summary).toBeDefined();
+
+      const keys = Object.keys(summary!.by_landmark);
+
+      // The old buildInteractiveSummaryFromElements produced exactly these two
+      // keys and nothing else; the fix must NOT collapse into them.
+      expect(keys).not.toContain("(iframe)");
+
+      // Main-frame elements retain landmark grouping: the parent link lives in
+      // a <nav> landmark, so a "navigation" key must exist (not "(page root)").
+      const navKey = keys.find((k) => k.startsWith("navigation") && !k.includes("iframe ("));
+      expect(
+        navKey,
+        `expected a main-frame navigation landmark key in ${JSON.stringify(keys)}`,
+      ).toBeDefined();
+      expect(summary!.by_landmark[navKey!].link).toBeGreaterThanOrEqual(1);
+
+      // Iframe elements are attributed to their frame and inner landmark. The
+      // child iframe wraps its controls in <main>.
+      const childMainKey = keys.find(
+        (k) => k.includes("iframe-child.html") && k.endsWith("> main"),
+      );
+      expect(
+        childMainKey,
+        `expected an iframe-child main landmark key in ${JSON.stringify(keys)}`,
+      ).toBeDefined();
+      const childCounts = summary!.by_landmark[childMainKey!];
+      expect(childCounts.button).toBeGreaterThanOrEqual(1);
+      expect(childCounts.link).toBeGreaterThanOrEqual(1);
+      expect(childCounts.text_input).toBeGreaterThanOrEqual(1);
+
+      // Grandchild iframe content is also grouped under its own frame key.
+      const grandchildKey = keys.find((k) => k.includes("iframe-grandchild.html"));
+      expect(
+        grandchildKey,
+        `expected an iframe-grandchild key in ${JSON.stringify(keys)}`,
+      ).toBeDefined();
+
+      // Total must still equal the number of interactive elements found.
+      const sumOfCounts = Object.values(summary!.by_landmark)
+        .flatMap((counts) => Object.values(counts))
+        .reduce((acc, n) => acc + n, 0);
+      expect(summary!.total).toBe(sumOfCounts);
+    });
   });
 
   describe("frame session cleanup", () => {
@@ -391,22 +541,45 @@ describe("Iframe content extraction", () => {
   });
 
   describe("Puppeteer internals smoke test", () => {
-    it("Frame._id is a non-empty string", () => {
+    // #84: Frame._id has no public Puppeteer accessor in 24.x, so
+    // CDPSessionManager.getFrameId still reads the internal field. Assert it
+    // exists so a Puppeteer upgrade that removes it fails loudly here.
+    it("Frame._id is a non-empty string (still required, no public accessor)", () => {
       const page = pageManager.getActivePage();
       const mainFrame = page.mainFrame();
-      const frameId = (mainFrame as any)._id;
+      const frameId = (mainFrame as unknown as { _id?: unknown })._id;
 
       expect(typeof frameId).toBe("string");
-      expect(frameId.length).toBeGreaterThan(0);
+      expect((frameId as string).length).toBeGreaterThan(0);
     });
 
-    it("Frame.client is a CDPSession-like object with a send method", () => {
+    // #84: Frame.client is not on the public abstract Frame type in puppeteer
+    // 24.x (only the internal CdpFrame subclass exposes it), so we read it via
+    // the frameClient() helper. Assert it resolves so an upgrade that removes
+    // it fails loudly here.
+    it("Frame.client resolves to a CDPSession with a send method", () => {
       const page = pageManager.getActivePage();
       const mainFrame = page.mainFrame();
-      const client = (mainFrame as any).client;
+      const client = frameClient(mainFrame);
 
       expect(client).toBeDefined();
-      expect(typeof client.send).toBe("function");
+      expect(typeof client!.send).toBe("function");
+    });
+
+    // #183: same-process child frames share the main frame's client; OOPIFs do
+    // not. Our offset logic depends on this identity holding for same-origin
+    // frames. The fixtures are all same-origin, so every discovered frame must
+    // share the main frame client.
+    it("same-origin child frames share the main frame CDP client", async () => {
+      const page = pageManager.getActivePage();
+      await page.goto(`${baseUrl}/iframe-parent.html`, { waitUntil: "networkidle0" });
+
+      const mainFrameClient = frameClient(page.mainFrame());
+      const childFrames = page.frames().filter((f) => f !== page.mainFrame());
+      expect(childFrames.length).toBeGreaterThan(0);
+      for (const child of childFrames) {
+        expect(frameClient(child)).toBe(mainFrameClient);
+      }
     });
   });
 });

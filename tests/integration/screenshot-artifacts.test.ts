@@ -22,7 +22,7 @@ describe("Screenshot artifacts integration", () => {
   let testDir: string;
 
   beforeAll(async () => {
-    browserManager = new BrowserManager();
+    browserManager = new BrowserManager(undefined, { noSandbox: true });
     await browserManager.launch();
     pageManager = new PageManager();
     await pageManager.openTab(browserManager);

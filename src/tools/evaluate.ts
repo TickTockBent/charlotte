@@ -51,6 +51,10 @@ export function registerEvaluateTools(
       const shouldAwaitPromise = await_promise ?? true;
 
       const cdpSession = await page.createCDPSession();
+      // Track the race fallback timer so it can be cleared once the CDP call
+      // settles — otherwise it leaks a pending timer (and keeps the event loop
+      // alive ~500ms past resolution / through teardown) (#204).
+      let raceTimer: ReturnType<typeof setTimeout> | undefined;
       try {
         const evalResult = await Promise.race([
           cdpSession.send("Runtime.evaluate", {
@@ -59,12 +63,12 @@ export function registerEvaluateTools(
             awaitPromise: shouldAwaitPromise,
             timeout: evaluationTimeout,
           }),
-          new Promise<never>((_, reject) =>
-            setTimeout(
+          new Promise<never>((_, reject) => {
+            raceTimer = setTimeout(
               () => reject(new Error("TIMEOUT")),
               evaluationTimeout + 500, // slightly longer than CDP timeout as fallback
-            ),
-          ),
+            );
+          }),
         ]);
 
         // Check for exceptions
@@ -161,6 +165,9 @@ export function registerEvaluateTools(
           isError: true,
         };
       } finally {
+        // Clear the race fallback timer so it never fires after the CDP call
+        // settled (prevents a leaked timer keeping the loop alive) (#204).
+        if (raceTimer) clearTimeout(raceTimer);
         await cdpSession.detach();
       }
     },

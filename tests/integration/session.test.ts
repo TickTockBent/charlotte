@@ -208,6 +208,28 @@ describe("session-group handlers", () => {
       expect(parsed.config.snapshot_depth).toBe(500);
       await harness.callTool("charlotte_configure", { snapshot_depth: 50 });
     });
+
+    it("rejects a screenshot_dir outside the workspace root (#203)", async () => {
+      // Pin a workspace root on the shared config so the boundary check has a
+      // concrete root to validate against, then point screenshot_dir well
+      // outside it.
+      const previousRoot = harness.deps.config.allowedWorkspaceRoot;
+      harness.deps.config.allowedWorkspaceRoot = FIXTURES_DIR;
+      try {
+        const result = await harness.callTool("charlotte_configure", {
+          screenshot_dir: path.resolve("/tmp/charlotte-escape-screenshots"),
+        });
+        expect(result.isError).toBe(true);
+        const text = (result.content as Array<{ type: string; text: string }>)[0].text;
+        expect(text).toContain("outside the allowed workspace root");
+        // The screenshot dir must NOT have been repointed.
+        expect(harness.deps.config.screenshotDir).not.toBe(
+          path.resolve("/tmp/charlotte-escape-screenshots"),
+        );
+      } finally {
+        harness.deps.config.allowedWorkspaceRoot = previousRoot;
+      }
+    });
   });
 
   describe("viewport", () => {

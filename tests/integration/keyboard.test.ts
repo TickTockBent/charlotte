@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import * as path from "node:path";
 import * as os from "node:os";
+import * as fs from "node:fs/promises";
 import type { KeyInput } from "puppeteer";
 import { BrowserManager } from "../../src/browser/browser-manager.js";
 import { PageManager } from "../../src/browser/page-manager.js";
@@ -21,6 +22,7 @@ describe("Keyboard integration", () => {
   let pageManager: PageManager;
   let elementIdGenerator: ElementIdGenerator;
   let deps: ToolDependencies;
+  let artifactDirectory: string;
 
   beforeAll(async () => {
     browserManager = new BrowserManager(undefined, { noSandbox: true });
@@ -31,9 +33,8 @@ describe("Keyboard integration", () => {
     const cdpSessionManager = new CDPSessionManager();
     elementIdGenerator = new ElementIdGenerator();
     const rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator);
-    const artifactStore = new ArtifactStore(
-      path.join(os.tmpdir(), "charlotte-keyboard-test-artifacts"),
-    );
+    artifactDirectory = await fs.mkdtemp(path.join(os.tmpdir(), "charlotte-keyboard-test-"));
+    const artifactStore = new ArtifactStore(artifactDirectory);
     await artifactStore.initialize();
     deps = {
       browserManager,
@@ -49,6 +50,7 @@ describe("Keyboard integration", () => {
 
   afterAll(async () => {
     await browserManager.close();
+    await fs.rm(artifactDirectory, { recursive: true, force: true }).catch(() => {});
   });
 
   beforeEach(async () => {

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import * as path from "node:path";
 import * as os from "node:os";
+import * as fs from "node:fs/promises";
 import { BrowserManager } from "../../src/browser/browser-manager.js";
 import { PageManager } from "../../src/browser/page-manager.js";
 import { CDPSessionManager } from "../../src/browser/cdp-session.js";
@@ -23,6 +24,7 @@ describe("Tabs, viewport, and network integration", () => {
   let elementIdGenerator: ElementIdGenerator;
   let rendererPipeline: RendererPipeline;
   let deps: ToolDependencies;
+  let artifactDirectory: string;
 
   beforeAll(async () => {
     browserManager = new BrowserManager(undefined, { noSandbox: true });
@@ -33,7 +35,8 @@ describe("Tabs, viewport, and network integration", () => {
     elementIdGenerator = new ElementIdGenerator();
     rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator);
     const config = createDefaultConfig();
-    const artifactStore = new ArtifactStore(path.join(os.tmpdir(), "charlotte-tvn-test-artifacts"));
+    artifactDirectory = await fs.mkdtemp(path.join(os.tmpdir(), "charlotte-tvn-test-"));
+    const artifactStore = new ArtifactStore(artifactDirectory);
     await artifactStore.initialize();
     deps = {
       browserManager,
@@ -49,6 +52,7 @@ describe("Tabs, viewport, and network integration", () => {
 
   afterAll(async () => {
     await browserManager.close();
+    await fs.rm(artifactDirectory, { recursive: true, force: true }).catch(() => {});
   });
 
   describe("tab management", () => {

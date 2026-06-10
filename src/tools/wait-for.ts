@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { Page } from "puppeteer";
 import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
+import { isTransientEvalError } from "../utils/wait.js";
 import { logger } from "../utils/logger.js";
 import type { RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ToolDependencies } from "./tool-helpers.js";
@@ -211,8 +212,21 @@ async function pollWaitForCondition(
         if (err instanceof CharlotteError) {
           throw err;
         }
-        // Protocol/serialization errors count as "not satisfied"
-        allSatisfied = false;
+        // Transient protocol errors (navigation/context teardown) can clear on
+        // the next poll iteration — treat as "not satisfied" and keep polling.
+        if (isTransientEvalError(err)) {
+          allSatisfied = false;
+        } else {
+          // Non-transient protocol/serialization errors (e.g. a cyclic or
+          // non-serializable result requested under returnByValue) will never
+          // be fixed by polling. Surface them immediately. (#198)
+          const message = err instanceof Error ? err.message : String(err);
+          throw new CharlotteError(
+            CharlotteErrorCode.INVALID_ARGUMENT,
+            `The 'js' condition could not be evaluated: ${message}`,
+            "The expression returned a value that cannot be serialized (e.g. a cyclic object or `window`). Return a primitive or a plain serializable value instead.",
+          );
+        }
       } finally {
         await cdpSession.detach().catch(() => {});
       }

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import * as path from "node:path";
 import * as os from "node:os";
+import * as fs from "node:fs/promises";
 import { BrowserManager } from "../../src/browser/browser-manager.js";
 import { PageManager } from "../../src/browser/page-manager.js";
 import { CDPSessionManager, frameClient } from "../../src/browser/cdp-session.js";
@@ -34,6 +35,7 @@ describe("Iframe content extraction", () => {
   let deps: ToolDependencies;
   let staticServer: StaticServer;
   let baseUrl: string;
+  let artifactDirectory: string;
 
   beforeAll(async () => {
     // Serve fixtures over HTTP (iframes need HTTP, not file://)
@@ -53,9 +55,8 @@ describe("Iframe content extraction", () => {
     config.iframeDepth = 3;
 
     const rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator, config);
-    const artifactStore = new ArtifactStore(
-      path.join(os.tmpdir(), "charlotte-iframe-test-artifacts"),
-    );
+    artifactDirectory = await fs.mkdtemp(path.join(os.tmpdir(), "charlotte-iframe-test-"));
+    const artifactStore = new ArtifactStore(artifactDirectory);
     await artifactStore.initialize();
 
     deps = {
@@ -73,6 +74,7 @@ describe("Iframe content extraction", () => {
   afterAll(async () => {
     await browserManager.close();
     await staticServer.stop();
+    await fs.rm(artifactDirectory, { recursive: true, force: true }).catch(() => {});
   });
 
   it("extracts iframe content when includeIframes is enabled", async () => {

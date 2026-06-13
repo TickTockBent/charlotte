@@ -2,6 +2,12 @@
 
 All notable changes to Charlotte will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- **CDP attach now recovers from a dropped transport.** Previously, once the control websocket to a `--cdp-endpoint` browser was lost (most commonly after the host slept), every subsequent tool call failed with "Cannot reconnect in CDP mode" until Charlotte was restarted. Charlotte now re-attaches to the endpoint on the next tool call and re-runs page adoption, reusing the existing crash-recovery state reset (#201). A clear error is only raised if the re-attach itself fails (the remote browser is genuinely gone).
+
 ## [0.7.0] - 2026-06-09
 
 This release hardens Charlotte for untrusted pages, fixes a long tail of silent-failure and lifecycle bugs, cuts per-render overhead, and adds a JSON configuration file. Read the **Behavior changes** below before upgrading — two of them (sandbox default, element-ID format) can affect existing setups.

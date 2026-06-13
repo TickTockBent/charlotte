@@ -190,8 +190,38 @@ describe("BrowserManager", () => {
       expect(onFirstConnect).toHaveBeenCalledTimes(1);
     });
 
-    it("ensureConnected() throws when remote browser disconnects", async () => {
-      const mockBrowser = {
+    it("ensureConnected() re-attaches when the remote browser disconnects", async () => {
+      // After a host sleep the CDP transport drops while Chrome stays alive.
+      // ensureConnected() should re-attach (puppeteer.connect again) instead of
+      // failing permanently.
+      const makeBrowser = () => ({
+        connected: true,
+        on: vi.fn(),
+        close: vi.fn(),
+        disconnect: vi.fn(),
+        process: () => null,
+        pages: vi.fn().mockResolvedValue([]),
+      });
+      const first = makeBrowser();
+      const second = makeBrowser();
+      (puppeteer.connect as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce(first)
+        .mockResolvedValueOnce(second);
+
+      const manager = new BrowserManager(undefined, undefined, "http://localhost:9222");
+      await manager.launch();
+      expect(puppeteer.connect).toHaveBeenCalledTimes(1);
+
+      // Simulate the transport dropping.
+      first.connected = false;
+
+      await manager.ensureConnected();
+      expect(puppeteer.connect).toHaveBeenCalledTimes(2);
+      expect(manager.isConnected()).toBe(true);
+    });
+
+    it("ensureConnected() surfaces a clear error if re-attach fails", async () => {
+      const first = {
         connected: true,
         on: vi.fn(),
         close: vi.fn(),
@@ -199,15 +229,17 @@ describe("BrowserManager", () => {
         process: () => null,
         pages: vi.fn().mockResolvedValue([]),
       };
-      (puppeteer.connect as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockBrowser);
+      (puppeteer.connect as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce(first)
+        .mockRejectedValueOnce(new Error("ECONNREFUSED"));
 
       const manager = new BrowserManager(undefined, undefined, "http://localhost:9222");
       await manager.launch();
 
-      // Simulate disconnection
-      mockBrowser.connected = false;
+      // Transport drops, and the remote browser is genuinely gone.
+      first.connected = false;
 
-      await expect(manager.ensureConnected()).rejects.toThrow("Remote browser disconnected");
+      await expect(manager.ensureConnected()).rejects.toThrow(/re-attach .* failed/);
     });
   });
 

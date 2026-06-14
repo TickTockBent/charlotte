@@ -198,19 +198,33 @@ export class BrowserManager {
     }
 
     if (this.cdpEndpoint) {
-      // A lost transport cannot be recovered in CDP mode: only fail once the
-      // browser is actually gone (a connected-but-unadopted session falls
-      // through to retry adoption below).
-      if (this.firstConnectDone && (!this.browser || !this.browser.connected)) {
-        throw new CharlotteError(
-          CharlotteErrorCode.SESSION_ERROR,
-          "Remote browser disconnected. Cannot reconnect in CDP mode — restart the remote browser and Charlotte.",
-        );
+      // A previously-established CDP transport was lost, most often because the
+      // host slept and the control websocket dropped while the remote browser
+      // itself stayed alive. Re-attach instead of failing permanently: for
+      // browserURL and channel endpoints puppeteer.connect re-resolves the live
+      // target, so the session transparently recovers on the next tool call.
+      // handleDisconnect() has already reset per-session state (#201) and
+      // connectAndAdopt() re-runs page adoption, so we land on a clean tab.
+      const reconnecting = this.firstConnectDone && (!this.browser || !this.browser.connected);
+      if (reconnecting) {
+        logger.warn("Remote browser transport lost; re-attaching via CDP", {
+          endpoint: this.cdpEndpoint,
+        });
       }
 
       this.launching = this.connectAndAdopt();
       try {
         await this.launching;
+      } catch (error) {
+        // Reconnect genuinely failed (e.g. the remote browser is really gone).
+        // Surface a clear, actionable error rather than a raw puppeteer stack.
+        const detail = error instanceof Error ? error.message : String(error);
+        throw new CharlotteError(
+          CharlotteErrorCode.SESSION_ERROR,
+          reconnecting
+            ? `Remote browser disconnected and re-attach to ${this.cdpEndpoint} failed; is the remote browser still running? (${detail})`
+            : `Failed to connect to remote browser at ${this.cdpEndpoint} (${detail})`,
+        );
       } finally {
         this.launching = null;
       }

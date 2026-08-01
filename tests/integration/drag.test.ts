@@ -11,8 +11,8 @@ import { SnapshotStore } from "../../src/state/snapshot-store.js";
 import { ArtifactStore } from "../../src/state/artifact-store.js";
 import { createDefaultConfig } from "../../src/types/config.js";
 import type { CharlotteConfig } from "../../src/types/config.js";
-import type { ToolDependencies } from "../../src/tools/tool-helpers.js";
-import { renderActivePage, renderAfterAction } from "../../src/tools/tool-helpers.js";
+import type { ToolDependencies } from "../../src/core/tool-helpers.js";
+import { renderActivePage, renderAfterAction } from "../../src/core/tool-helpers.js";
 import { setupMcpHarness, parseToolJson, type McpHarness } from "../helpers/mcp-harness.js";
 import type { InteractiveElement } from "../../src/types/page-representation.js";
 

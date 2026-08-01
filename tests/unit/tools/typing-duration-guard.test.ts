@@ -4,7 +4,7 @@ import {
   resolveCharacterDelay,
   MAX_TYPING_DURATION_MS,
   DEFAULT_SLOW_TYPING_DELAY_MS,
-} from "../../../src/tools/interaction-helpers.js";
+} from "../../../src/core/interaction-helpers.js";
 import { CharlotteError, CharlotteErrorCode } from "../../../src/types/errors.js";
 
 describe("resolveCharacterDelay", () => {

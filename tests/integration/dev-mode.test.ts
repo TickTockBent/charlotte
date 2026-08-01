@@ -12,8 +12,8 @@ import { ArtifactStore } from "../../src/state/artifact-store.js";
 import { createDefaultConfig } from "../../src/types/config.js";
 import { DevModeState } from "../../src/dev/dev-mode-state.js";
 import { Auditor } from "../../src/dev/auditor.js";
-import type { ToolDependencies } from "../../src/tools/tool-helpers.js";
-import { renderActivePage, renderAfterAction } from "../../src/tools/tool-helpers.js";
+import type { ToolDependencies } from "../../src/core/tool-helpers.js";
+import { renderActivePage, renderAfterAction } from "../../src/core/tool-helpers.js";
 
 let TEMP_FIXTURES_DIR: string;
 let FIXTURES_DIR = path.resolve(import.meta.dirname, "../fixtures/pages");

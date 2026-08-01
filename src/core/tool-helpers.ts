@@ -1,15 +1,9 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { Page, CDPSession } from "puppeteer";
-import type { PageManager } from "../browser/page-manager.js";
-import type { BrowserManager } from "../browser/browser-manager.js";
-import type { CDPSessionManager } from "../browser/cdp-session.js";
-import type { RendererPipeline } from "../renderer/renderer-pipeline.js";
-import type { ElementIdGenerator, DomQueryRegistration } from "../renderer/element-id-generator.js";
-import type { SnapshotStore } from "../state/snapshot-store.js";
-import type { ArtifactStore } from "../state/artifact-store.js";
+import type { DomQueryRegistration } from "../renderer/element-id-generator.js";
 import type { CharlotteConfig } from "../types/config.js";
-import type { DevModeState } from "../dev/dev-mode-state.js";
+import type { SessionContext } from "./types.js";
 import type { PageRepresentation, InteractiveElement } from "../types/page-representation.js";
 import type { DetailLevel } from "../renderer/renderer-pipeline.js";
 import { z } from "zod";
@@ -27,17 +21,12 @@ export const coercedBoolean = z.preprocess(
   z.boolean(),
 );
 
-export interface ToolDependencies {
-  browserManager: BrowserManager;
-  pageManager: PageManager;
-  cdpSessionManager: CDPSessionManager;
-  rendererPipeline: RendererPipeline;
-  elementIdGenerator: ElementIdGenerator;
-  snapshotStore: SnapshotStore;
-  artifactStore: ArtifactStore;
-  config: CharlotteConfig;
-  devModeState?: DevModeState;
-}
+/**
+ * @deprecated Historical name for {@link SessionContext}. Kept so existing
+ * imports (`import type { ToolDependencies } from ".../tool-helpers.js"`)
+ * keep compiling; new code should use `SessionContext`.
+ */
+export type ToolDependencies = SessionContext;
 
 /**
  * Ensure the browser is connected and at least one tab is open.
@@ -51,7 +40,7 @@ export interface ToolDependencies {
 let initializing: Promise<void> | null = null;
 
 export async function ensureReady(
-  deps: Pick<ToolDependencies, "browserManager" | "pageManager">,
+  deps: Pick<SessionContext, "browserManager" | "pageManager">,
 ): Promise<void> {
   await deps.browserManager.ensureConnected();
   if (deps.pageManager.hasPages()) return;
@@ -89,7 +78,7 @@ export interface RenderOptions {
  * returns a minimal stub representation with the pending_dialog info attached.
  */
 export async function renderActivePage(
-  deps: ToolDependencies,
+  deps: SessionContext,
   options: RenderOptions = {},
 ): Promise<PageRepresentation> {
   const {
@@ -176,7 +165,7 @@ export interface ResolvedElement {
  * with a findSimilar suggestion.
  */
 export async function resolveElement(
-  deps: ToolDependencies,
+  deps: SessionContext,
   elementId: string,
 ): Promise<ResolvedElement> {
   const page = deps.pageManager.getActivePage();
@@ -236,7 +225,7 @@ export async function resolveElement(
  * Updates the durable registration so subsequent lookups stay cheap.
  */
 async function reResolveDomQueryId(
-  deps: ToolDependencies,
+  deps: SessionContext,
   elementId: string,
   registration: DomQueryRegistration,
 ): Promise<ResolvedElement | null> {
@@ -277,7 +266,7 @@ async function reResolveDomQueryId(
  * Returns the frame-specific session for iframe elements, or the main page session.
  */
 export async function getSessionForElement(
-  deps: ToolDependencies,
+  deps: SessionContext,
   resolved: ResolvedElement,
 ): Promise<CDPSession> {
   if (resolved.frameId) {
@@ -300,7 +289,7 @@ export async function getSessionForElement(
  * Captures the pre-action snapshot (latest in store), renders post-action
  * state, and computes a structural diff between them.
  */
-export async function renderAfterAction(deps: ToolDependencies): Promise<PageRepresentation> {
+export async function renderAfterAction(deps: SessionContext): Promise<PageRepresentation> {
   const preActionSnapshot = deps.snapshotStore.getLatest();
 
   const representation = await renderActivePage(deps, { source: "action" });

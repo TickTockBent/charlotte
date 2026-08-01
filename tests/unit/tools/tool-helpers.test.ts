@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { handleToolError, ensureReady } from "../../../src/tools/tool-helpers.js";
-import type { ToolDependencies } from "../../../src/tools/tool-helpers.js";
+import { handleToolError, ensureReady } from "../../../src/core/tool-helpers.js";
+import type { ToolDependencies } from "../../../src/core/tool-helpers.js";
 import { CharlotteError, CharlotteErrorCode } from "../../../src/types/errors.js";
 import type { BrowserManager } from "../../../src/browser/browser-manager.js";
 import type { PageManager } from "../../../src/browser/page-manager.js";

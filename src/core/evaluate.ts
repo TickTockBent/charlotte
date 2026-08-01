@@ -1,0 +1,216 @@
+import { z } from "zod";
+import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
+import { logger } from "../utils/logger.js";
+import { defineTool, type ToolDefinition } from "./types.js";
+import { ensureReady } from "./tool-helpers.js";
+
+/**
+ * Default cap for evaluate results.
+ *
+ * The live ceiling comes from `config.limits.maxEvaluateBytes` (#188); this is
+ * the fallback for a context whose config does not carry one.
+ */
+const DEFAULT_MAX_EVALUATE_BYTES = 256_000;
+
+const evaluateTool = defineTool({
+  name: "charlotte_evaluate",
+  description:
+    "Execute JavaScript in page context. Supports single expressions and multi-statement code. Returns the completion value of the last expression-statement.",
+  inputSchema: {
+    expression: z.string().describe("JS expression or multi-statement code to evaluate"),
+    timeout: z.number().optional().describe("Max execution time in ms (default: 5000)"),
+    await_promise: z
+      .boolean()
+      .optional()
+      .describe("If the expression returns a Promise, await it before returning (default: true)"),
+  },
+  async handler(deps, { expression, timeout, await_promise }) {
+    await ensureReady(deps);
+    const page = deps.pageManager.getActivePage();
+
+    const evaluationTimeout = timeout ?? 5000;
+    const shouldAwaitPromise = await_promise ?? true;
+
+    const cdpSession = await page.createCDPSession();
+    // Track the race fallback timer so it can be cleared once the CDP call
+    // settles — otherwise it leaks a pending timer (and keeps the event loop
+    // alive ~500ms past resolution / through teardown) (#204).
+    let raceTimer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const evalResult = await Promise.race([
+        cdpSession.send("Runtime.evaluate", {
+          expression,
+          returnByValue: true,
+          awaitPromise: shouldAwaitPromise,
+          timeout: evaluationTimeout,
+        }),
+        new Promise<never>((_, reject) => {
+          raceTimer = setTimeout(
+            () => reject(new Error("TIMEOUT")),
+            evaluationTimeout + 500, // slightly longer than CDP timeout as fallback
+          );
+        }),
+      ]);
+
+      // Check for exceptions
+      if (evalResult.exceptionDetails) {
+        const exceptionMessage =
+          evalResult.exceptionDetails.exception?.description ??
+          evalResult.exceptionDetails.text ??
+          "Unknown evaluation error";
+        throw new CharlotteError(
+          CharlotteErrorCode.EVALUATION_ERROR,
+          `Evaluation error: ${exceptionMessage}`,
+        );
+      }
+
+      // Serialize the RemoteObject result
+      const remoteObject = evalResult.result;
+      const result = serializeRemoteObject(remoteObject);
+
+      // Cap the serialized result so a query like document.documentElement.outerHTML
+      // can't round-trip an entire multi-MB document straight into the response (#188).
+      const maxBytes = deps.config.limits.maxEvaluateBytes ?? DEFAULT_MAX_EVALUATE_BYTES;
+      const serialized = JSON.stringify(result, null, 2);
+      if (Buffer.byteLength(serialized, "utf-8") > maxBytes) {
+        const truncatedPayload = {
+          type: result.type,
+          value: truncateToBytes(serialized, maxBytes),
+          truncated: {
+            reason: `Evaluate result exceeded ${maxBytes} bytes and was truncated.`,
+            total_bytes: Buffer.byteLength(serialized, "utf-8"),
+            suggestion:
+              "Return a smaller value (e.g. select a subtree, project specific fields), " +
+              "or write the full result to disk yourself via the page before reading it back.",
+          },
+        };
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify(truncatedPayload, null, 2),
+            },
+          ],
+        };
+      }
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: serialized,
+          },
+        ],
+      };
+    } catch (error: unknown) {
+      if (error instanceof CharlotteError) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify(error.toResponse()),
+            },
+          ],
+          isError: true,
+        };
+      }
+
+      if (error instanceof Error && error.message === "TIMEOUT") {
+        const timeoutError = new CharlotteError(
+          CharlotteErrorCode.TIMEOUT,
+          `Expression evaluation exceeded ${evaluationTimeout}ms. The expression may have had side effects before termination.`,
+        );
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify(timeoutError.toResponse()),
+            },
+          ],
+          isError: true,
+        };
+      }
+
+      logger.error("Unexpected error in evaluate", error);
+      const sessionError = new CharlotteError(
+        CharlotteErrorCode.SESSION_ERROR,
+        `Unexpected error: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify(sessionError.toResponse()),
+          },
+        ],
+        isError: true,
+      };
+    } finally {
+      // Clear the race fallback timer so it never fires after the CDP call
+      // settled (prevents a leaked timer keeping the loop alive) (#204).
+      if (raceTimer) clearTimeout(raceTimer);
+      await cdpSession.detach();
+    }
+  },
+});
+
+export const evaluateTools: ToolDefinition[] = [evaluateTool];
+
+/**
+ * Truncate a string so its UTF-8 encoding fits within `maxBytes`, appending a
+ * marker. Slices on a character boundary (a generous over-slice by character
+ * count is fine — JSON-escaped text is at most a few bytes per char) so we
+ * never split a multi-byte sequence.
+ */
+function truncateToBytes(text: string, maxBytes: number): string {
+  const marker = "…[truncated]";
+  // Reserve room for the marker; conservatively cap characters at maxBytes
+  // (UTF-8 is >=1 byte/char, so this is always within budget).
+  const budget = Math.max(0, maxBytes - Buffer.byteLength(marker, "utf-8"));
+  let sliced = text.slice(0, budget);
+  while (Buffer.byteLength(sliced, "utf-8") > budget && sliced.length > 0) {
+    sliced = sliced.slice(0, -1);
+  }
+  return sliced + marker;
+}
+
+/**
+ * Convert a CDP RemoteObject to a { value, type } result.
+ */
+function serializeRemoteObject(remoteObject: {
+  type: string;
+  subtype?: string;
+  value?: unknown;
+  description?: string;
+  className?: string;
+}): { value: unknown; type: string } {
+  const { type, subtype, value, description, className } = remoteObject;
+
+  if (type === "undefined") {
+    return { value: null, type: "undefined" };
+  }
+
+  if (subtype === "null") {
+    return { value: null, type: "null" };
+  }
+
+  if (type === "function") {
+    return { value: description ?? "[function]", type: "function" };
+  }
+
+  if (type === "object" && subtype === "node") {
+    return { value: description ?? "[Node]", type: className ?? "Node" };
+  }
+
+  if (type === "object" && subtype === "error") {
+    return { value: description ?? "[Error]", type: "Error" };
+  }
+
+  // For primitives and serializable objects, returnByValue gives us the value directly
+  if (value !== undefined) {
+    return { value, type };
+  }
+
+  // Fallback for non-serializable objects
+  return { value: description ?? `[${className ?? type}]`, type: className ?? type };
+}

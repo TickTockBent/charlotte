@@ -11,13 +11,13 @@ import { SnapshotStore } from "../../src/state/snapshot-store.js";
 import { ArtifactStore } from "../../src/state/artifact-store.js";
 import { createDefaultConfig } from "../../src/types/config.js";
 import type { CharlotteConfig } from "../../src/types/config.js";
-import type { ToolDependencies } from "../../src/tools/tool-helpers.js";
+import type { ToolDependencies } from "../../src/core/tool-helpers.js";
 import {
   renderActivePage,
   renderAfterAction,
   resolveElement,
-} from "../../src/tools/tool-helpers.js";
-import { waitForPossibleNavigation } from "../../src/tools/interaction.js";
+} from "../../src/core/tool-helpers.js";
+import { waitForPossibleNavigation } from "../../src/core/interaction.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createServer } from "../../src/server.js";

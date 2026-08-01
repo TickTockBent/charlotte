@@ -2,23 +2,9 @@ import { readFileSync } from "node:fs";
 
 const { version } = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf-8"));
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { BrowserManager } from "./browser/browser-manager.js";
-import type { PageManager } from "./browser/page-manager.js";
-import type { CDPSessionManager } from "./browser/cdp-session.js";
-import type { RendererPipeline } from "./renderer/renderer-pipeline.js";
-import type { ElementIdGenerator } from "./renderer/element-id-generator.js";
-import type { SnapshotStore } from "./state/snapshot-store.js";
-import type { ArtifactStore } from "./state/artifact-store.js";
-import type { CharlotteConfig } from "./types/config.js";
-import { registerEvaluateTools } from "./tools/evaluate.js";
-import { registerNavigationTools } from "./tools/navigation.js";
-import { registerObservationTools } from "./tools/observation.js";
-import { registerInteractionTools } from "./tools/interaction.js";
-import { registerDialogTools } from "./tools/dialog.js";
-import { registerSessionTools } from "./tools/session.js";
-import { registerMonitoringTools } from "./tools/monitoring.js";
-import { registerDevModeTools } from "./tools/dev-mode.js";
+import type { SessionContext } from "./core/types.js";
 import { registerMetaTool, type ToolRegistry } from "./tools/meta-tool.js";
+import { registerCoreTools } from "./transports/stdio.js";
 import {
   type ToolProfile,
   type ToolGroupName,
@@ -28,19 +14,15 @@ import {
   ALL_GROUP_NAMES,
   GROUP_DESCRIPTIONS,
 } from "./tools/tool-groups.js";
-import type { DevModeState } from "./dev/dev-mode-state.js";
 
-export interface ServerDeps {
-  browserManager: BrowserManager;
-  pageManager: PageManager;
-  cdpSessionManager: CDPSessionManager;
-  rendererPipeline: RendererPipeline;
-  elementIdGenerator: ElementIdGenerator;
-  snapshotStore: SnapshotStore;
-  artifactStore: ArtifactStore;
-  config: CharlotteConfig;
-  devModeState?: DevModeState;
-}
+export type { SessionContext } from "./core/types.js";
+
+/**
+ * @deprecated Historical name for {@link SessionContext}. Retained so existing
+ * callers and tests (`import type { ServerDeps } from "./server.js"`) compile
+ * unchanged.
+ */
+export type ServerDeps = SessionContext;
 
 export interface ServerOptions {
   profile?: ToolProfile;
@@ -129,40 +111,11 @@ export function createServer(deps: ServerDeps, options: ServerOptions = {}): Cre
   );
 
   // ─── Register all tools and collect references ───
+  // Every tool handler lives in src/core/ as a transport-agnostic
+  // ToolDefinition; the stdio adapter binds them to this server, in the
+  // canonical charlotteTools order.
 
-  const registry: ToolRegistry = {};
-
-  // Evaluate tool (different deps signature)
-  Object.assign(
-    registry,
-    registerEvaluateTools(server, {
-      browserManager: deps.browserManager,
-      pageManager: deps.pageManager,
-      getActivePage: () => deps.pageManager.getActivePage(),
-      maxEvaluateBytes: deps.config.limits.maxEvaluateBytes,
-    }),
-  );
-
-  // All other tool modules share the same dependency bundle
-  const toolDeps = {
-    browserManager: deps.browserManager,
-    pageManager: deps.pageManager,
-    cdpSessionManager: deps.cdpSessionManager,
-    rendererPipeline: deps.rendererPipeline,
-    elementIdGenerator: deps.elementIdGenerator,
-    snapshotStore: deps.snapshotStore,
-    artifactStore: deps.artifactStore,
-    config: deps.config,
-    devModeState: deps.devModeState,
-  };
-
-  Object.assign(registry, registerNavigationTools(server, toolDeps));
-  Object.assign(registry, registerObservationTools(server, toolDeps));
-  Object.assign(registry, registerInteractionTools(server, toolDeps));
-  Object.assign(registry, registerDialogTools(server, toolDeps));
-  Object.assign(registry, registerSessionTools(server, toolDeps));
-  Object.assign(registry, registerMonitoringTools(server, toolDeps));
-  Object.assign(registry, registerDevModeTools(server, toolDeps));
+  const registry: ToolRegistry = registerCoreTools(server, deps);
 
   // ─── Apply profile: disable tools not in the enabled set ───
   // Set .enabled directly to batch state changes before a single

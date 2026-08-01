@@ -1,11 +1,9 @@
 import { z } from "zod";
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { Page } from "puppeteer";
 import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 import { isTransientEvalError } from "../utils/wait.js";
 import { logger } from "../utils/logger.js";
-import type { RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { ToolDependencies } from "./tool-helpers.js";
+import { defineTool, type SessionContext, type ToolDefinition } from "./types.js";
 import {
   ensureReady,
   renderActivePage,
@@ -15,109 +13,100 @@ import {
   handleToolError,
 } from "./tool-helpers.js";
 
-export function registerWaitForTools(
-  server: McpServer,
-  deps: ToolDependencies,
-): Record<string, RegisteredTool> {
-  const tools: Record<string, RegisteredTool> = {};
+// ─── charlotte_wait_for ───
+const waitForTool = defineTool({
+  name: "charlotte_wait_for",
+  description:
+    "Wait for a condition to be met on the page. Returns page representation when the condition is satisfied, or a TIMEOUT error.",
+  inputSchema: {
+    element_id: z.string().optional().describe("Wait for specific element to appear/change"),
+    state: z
+      .enum(["visible", "hidden", "enabled", "disabled", "exists", "removed"])
+      .optional()
+      .describe("Target element state to wait for"),
+    text: z.string().optional().describe("Wait for text to appear on the page"),
+    selector: z.string().optional().describe("Wait for CSS selector to match"),
+    js: z.string().optional().describe("Wait for JS expression to return truthy"),
+    timeout: z.number().optional().describe("Max wait in ms (default: 10000)"),
+  },
+  async handler(deps, { element_id, state, text, selector, js, timeout }) {
+    try {
+      await ensureReady(deps);
+      const page = deps.pageManager.getActivePage();
+      const waitTimeout = timeout ?? 10000;
 
-  // ─── charlotte_wait_for ───
-  tools["charlotte_wait_for"] = server.registerTool(
-    "charlotte_wait_for",
-    {
-      description:
-        "Wait for a condition to be met on the page. Returns page representation when the condition is satisfied, or a TIMEOUT error.",
-      inputSchema: {
-        element_id: z.string().optional().describe("Wait for specific element to appear/change"),
-        state: z
-          .enum(["visible", "hidden", "enabled", "disabled", "exists", "removed"])
-          .optional()
-          .describe("Target element state to wait for"),
-        text: z.string().optional().describe("Wait for text to appear on the page"),
-        selector: z.string().optional().describe("Wait for CSS selector to match"),
-        js: z.string().optional().describe("Wait for JS expression to return truthy"),
-        timeout: z.number().optional().describe("Max wait in ms (default: 10000)"),
-      },
-    },
-    async ({ element_id, state, text, selector, js, timeout }) => {
-      try {
-        await ensureReady(deps);
-        const page = deps.pageManager.getActivePage();
-        const waitTimeout = timeout ?? 10000;
-
-        // Validate that at least one condition is provided
-        if (!element_id && !text && !selector && !js) {
-          throw new CharlotteError(
-            CharlotteErrorCode.INVALID_ARGUMENT,
-            "At least one wait condition is required (element_id, text, selector, or js).",
-          );
-        }
-
-        // `state` only applies to an element target. Without element_id it is
-        // silently ignored, which masks caller mistakes — reject it (#204).
-        if (state && !element_id) {
-          throw new CharlotteError(
-            CharlotteErrorCode.INVALID_ARGUMENT,
-            "'state' requires 'element_id' — it describes the target element's state.",
-            "Provide an element_id, or drop 'state' and wait on text/selector/js instead.",
-          );
-        }
-
-        logger.info("Waiting for condition", {
-          element_id,
-          state,
-          text,
-          selector,
-          js,
-          timeout: waitTimeout,
-        });
-
-        // Build a composite wait condition
-        let lastExceptionText: string | undefined;
-        const satisfied = await pollWaitForCondition(
-          deps,
-          page,
-          { element_id, state, text, selector, js },
-          waitTimeout,
-          (exceptionText) => {
-            lastExceptionText = exceptionText;
-          },
+      // Validate that at least one condition is provided
+      if (!element_id && !text && !selector && !js) {
+        throw new CharlotteError(
+          CharlotteErrorCode.INVALID_ARGUMENT,
+          "At least one wait condition is required (element_id, text, selector, or js).",
         );
-
-        if (!satisfied) {
-          const representation = await renderAfterAction(deps);
-          const timeoutMessage = lastExceptionText
-            ? `Wait condition not met within ${waitTimeout}ms. JS expression threw: ${lastExceptionText}`
-            : `Wait condition not met within ${waitTimeout}ms.`;
-          const timeoutError = new CharlotteError(
-            CharlotteErrorCode.TIMEOUT,
-            timeoutMessage,
-            "The current page state is included in the response. Consider increasing timeout or adjusting your condition.",
-          );
-          return {
-            content: [
-              {
-                type: "text" as const,
-                text: JSON.stringify({
-                  ...timeoutError.toResponse(),
-                  page: stripEmptyFields(representation),
-                }),
-              },
-            ],
-            isError: true,
-          };
-        }
-
-        const representation = await renderAfterAction(deps);
-        return formatPageResponse(representation);
-      } catch (error: unknown) {
-        return handleToolError(error);
       }
-    },
-  );
 
-  return tools;
-}
+      // `state` only applies to an element target. Without element_id it is
+      // silently ignored, which masks caller mistakes — reject it (#204).
+      if (state && !element_id) {
+        throw new CharlotteError(
+          CharlotteErrorCode.INVALID_ARGUMENT,
+          "'state' requires 'element_id' — it describes the target element's state.",
+          "Provide an element_id, or drop 'state' and wait on text/selector/js instead.",
+        );
+      }
+
+      logger.info("Waiting for condition", {
+        element_id,
+        state,
+        text,
+        selector,
+        js,
+        timeout: waitTimeout,
+      });
+
+      // Build a composite wait condition
+      let lastExceptionText: string | undefined;
+      const satisfied = await pollWaitForCondition(
+        deps,
+        page,
+        { element_id, state, text, selector, js },
+        waitTimeout,
+        (exceptionText) => {
+          lastExceptionText = exceptionText;
+        },
+      );
+
+      if (!satisfied) {
+        const representation = await renderAfterAction(deps);
+        const timeoutMessage = lastExceptionText
+          ? `Wait condition not met within ${waitTimeout}ms. JS expression threw: ${lastExceptionText}`
+          : `Wait condition not met within ${waitTimeout}ms.`;
+        const timeoutError = new CharlotteError(
+          CharlotteErrorCode.TIMEOUT,
+          timeoutMessage,
+          "The current page state is included in the response. Consider increasing timeout or adjusting your condition.",
+        );
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify({
+                ...timeoutError.toResponse(),
+                page: stripEmptyFields(representation),
+              }),
+            },
+          ],
+          isError: true,
+        };
+      }
+
+      const representation = await renderAfterAction(deps);
+      return formatPageResponse(representation);
+    } catch (error: unknown) {
+      return handleToolError(error);
+    }
+  },
+});
+
+export const waitForTools: ToolDefinition[] = [waitForTool];
 
 /**
  * Poll for complex wait_for conditions that may involve element state checks.
@@ -129,7 +118,7 @@ export function registerWaitForTools(
  *   the JS expression throws; the last recorded text is included in timeout errors.
  */
 async function pollWaitForCondition(
-  deps: ToolDependencies,
+  deps: SessionContext,
   page: Page,
   condition: {
     element_id?: string;
@@ -247,7 +236,7 @@ async function pollWaitForCondition(
  * Check if an element meets a specific state condition.
  */
 async function checkElementCondition(
-  deps: ToolDependencies,
+  deps: SessionContext,
   elementId: string,
   targetState: string,
 ): Promise<boolean> {

@@ -11,19 +11,19 @@ import { SnapshotStore } from "../../src/state/snapshot-store.js";
 import { ArtifactStore } from "../../src/state/artifact-store.js";
 import { createDefaultConfig } from "../../src/types/config.js";
 import { StaticServer } from "../../src/dev/static-server.js";
-import type { ToolDependencies } from "../../src/tools/tool-helpers.js";
+import type { ToolDependencies } from "../../src/core/tool-helpers.js";
 import {
   renderActivePage,
   resolveElement,
   getSessionForElement,
-} from "../../src/tools/tool-helpers.js";
+} from "../../src/core/tool-helpers.js";
 import {
   clickElementByBackendNodeId,
   hoverElementByBackendNodeId,
   typeIntoElement,
   selectOptionByBackendNodeId,
   focusElementByBackendNodeId,
-} from "../../src/tools/interaction-helpers.js";
+} from "../../src/core/interaction-helpers.js";
 
 const FIXTURES_DIR = path.resolve(import.meta.dirname, "../fixtures/pages");
 

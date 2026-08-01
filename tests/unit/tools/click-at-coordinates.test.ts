@@ -8,7 +8,7 @@
  */
 import { describe, it, expect, vi } from "vitest";
 import type { Page } from "puppeteer";
-import { clickAtCoordinates } from "../../../src/tools/interaction-helpers.js";
+import { clickAtCoordinates } from "../../../src/core/interaction-helpers.js";
 
 interface RecordedCall {
   kind: string;

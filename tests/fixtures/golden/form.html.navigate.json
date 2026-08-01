@@ -1,0 +1,283 @@
+{
+  "url": "{{BASE}}/form.html",
+  "title": "Form Test Page",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "snapshot_id": 3,
+  "timestamp": "{{TS}}",
+  "structure": {
+    "landmarks": [
+      {
+        "id": "rgn-ac5799",
+        "role": "main",
+        "label": "Form test content",
+        "bounds": {
+          "x": 20,
+          "y": 20,
+          "w": 1400,
+          "h": 1033
+        }
+      },
+      {
+        "id": "rgn-7d7c83",
+        "role": "form",
+        "label": "Registration",
+        "bounds": {
+          "x": 20,
+          "y": 57,
+          "w": 1400,
+          "h": 864
+        }
+      },
+      {
+        "id": "rgn-3db46a",
+        "role": "form",
+        "label": "Search",
+        "bounds": {
+          "x": 20,
+          "y": 949,
+          "w": 1400,
+          "h": 104
+        }
+      }
+    ],
+    "headings": [
+      {
+        "level": 1,
+        "text": "Registration Form",
+        "id": "hdg-59f02a"
+      },
+      {
+        "level": 2,
+        "text": "Search",
+        "id": "hdg-f6cafb"
+      }
+    ],
+    "content_summary": "Form test content: 2 headings; Registration: 2 buttons, 10 inputs; Search: 1 buttons, 1 inputs",
+    "full_content": "Registration Form\nPersonal Information\nFirst Name\nLast Name\nEmail\nPhone\nPreferences\nCountry\nBio\nNotification preference:\nRegister\nReset\nSearch\nSearch\nGo"
+  },
+  "interactive": [
+    {
+      "id": "inp-8c0d28",
+      "type": "text_input",
+      "label": "First Name",
+      "bounds": {
+        "x": 48,
+        "y": 123,
+        "w": 280,
+        "h": 15
+      },
+      "state": {
+        "required": true
+      },
+      "value": ""
+    },
+    {
+      "id": "inp-faa7c0",
+      "type": "text_input",
+      "label": "Last Name",
+      "bounds": {
+        "x": 48,
+        "y": 192,
+        "w": 280,
+        "h": 15
+      },
+      "state": {
+        "required": true
+      },
+      "value": ""
+    },
+    {
+      "id": "inp-c3e638",
+      "type": "text_input",
+      "label": "Email",
+      "bounds": {
+        "x": 48,
+        "y": 261,
+        "w": 280,
+        "h": 15
+      },
+      "state": {
+        "required": true
+      },
+      "value": ""
+    },
+    {
+      "id": "inp-be47e7",
+      "type": "text_input",
+      "label": "Phone",
+      "bounds": {
+        "x": 48,
+        "y": 330,
+        "w": 280,
+        "h": 15
+      },
+      "state": {},
+      "value": ""
+    },
+    {
+      "id": "sel-7a1ee3",
+      "type": "select",
+      "label": "Country",
+      "bounds": {
+        "x": 47,
+        "y": 470,
+        "w": 282,
+        "h": 17
+      },
+      "state": {
+        "expanded": false
+      },
+      "value": "Select a country",
+      "options": [
+        "Select a country",
+        "United States",
+        "United Kingdom",
+        "Canada",
+        "Australia"
+      ]
+    },
+    {
+      "id": "inp-eb0b9b",
+      "type": "text_input",
+      "label": "Bio",
+      "bounds": {
+        "x": 47,
+        "y": 539,
+        "w": 282,
+        "h": 60
+      },
+      "state": {},
+      "value": ""
+    },
+    {
+      "id": "chk-a32777",
+      "type": "checkbox",
+      "label": "Subscribe to newsletter",
+      "bounds": {
+        "x": 38,
+        "y": 620,
+        "w": 300,
+        "h": 13
+      },
+      "state": {}
+    },
+    {
+      "id": "rad-6977f2",
+      "type": "radio",
+      "label": "Email",
+      "bounds": {
+        "x": 38,
+        "y": 707,
+        "w": 300,
+        "h": 13
+      },
+      "state": {
+        "checked": true
+      }
+    },
+    {
+      "id": "rad-1071da",
+      "type": "radio",
+      "label": "SMS",
+      "bounds": {
+        "x": 38,
+        "y": 754,
+        "w": 300,
+        "h": 13
+      },
+      "state": {}
+    },
+    {
+      "id": "rad-b9b1ab",
+      "type": "radio",
+      "label": "None",
+      "bounds": {
+        "x": 38,
+        "y": 801,
+        "w": 300,
+        "h": 13
+      },
+      "state": {}
+    },
+    {
+      "id": "btn-e6274f",
+      "type": "button",
+      "label": "Register",
+      "bounds": {
+        "x": 38,
+        "y": 896,
+        "w": 50,
+        "h": 15
+      },
+      "state": {}
+    },
+    {
+      "id": "btn-7a7ae2",
+      "type": "button",
+      "label": "Reset",
+      "bounds": {
+        "x": 136,
+        "y": 896,
+        "w": 35,
+        "h": 15
+      },
+      "state": {}
+    },
+    {
+      "id": "inp-a8d96f",
+      "type": "text_input",
+      "label": "Search",
+      "bounds": {
+        "x": 30,
+        "y": 981,
+        "w": 280,
+        "h": 15
+      },
+      "state": {},
+      "value": ""
+    },
+    {
+      "id": "btn-8d6bdb",
+      "type": "button",
+      "label": "Go",
+      "bounds": {
+        "x": 38,
+        "y": 1028,
+        "w": 18,
+        "h": 15
+      },
+      "state": {}
+    }
+  ],
+  "forms": [
+    {
+      "id": "frm-c9c840",
+      "fields": [
+        "inp-8c0d28",
+        "inp-faa7c0",
+        "inp-c3e638",
+        "inp-be47e7",
+        "sel-7a1ee3",
+        "inp-eb0b9b",
+        "chk-a32777",
+        "rad-6977f2",
+        "rad-1071da",
+        "rad-b9b1ab",
+        "btn-e6274f",
+        "btn-7a7ae2"
+      ],
+      "submit": null
+    },
+    {
+      "id": "frm-5a4671",
+      "fields": [
+        "inp-a8d96f",
+        "btn-8d6bdb"
+      ],
+      "submit": null
+    }
+  ]
+}

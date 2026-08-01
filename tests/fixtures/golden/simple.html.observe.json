@@ -1,0 +1,250 @@
+{
+  "url": "{{BASE}}/simple.html",
+  "title": "Simple Test Page",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "snapshot_id": 2,
+  "timestamp": "{{TS}}",
+  "structure": {
+    "landmarks": [
+      {
+        "id": "rgn-5eae67",
+        "role": "banner",
+        "label": "banner",
+        "bounds": {
+          "x": 20,
+          "y": 0,
+          "w": 1400,
+          "h": 64
+        }
+      },
+      {
+        "id": "rgn-a482cf",
+        "role": "navigation",
+        "label": "Main navigation",
+        "bounds": {
+          "x": 20,
+          "y": 84,
+          "w": 200,
+          "h": 796
+        }
+      },
+      {
+        "id": "rgn-adc926",
+        "role": "main",
+        "label": "Dashboard content",
+        "bounds": {
+          "x": 260,
+          "y": 148,
+          "w": 1160,
+          "h": 622
+        }
+      }
+    ],
+    "headings": [
+      {
+        "level": 1,
+        "text": "Test Dashboard",
+        "id": "hdg-869e0a"
+      },
+      {
+        "level": 2,
+        "text": "Recent Activity",
+        "id": "hdg-a43ce3"
+      },
+      {
+        "level": 2,
+        "text": "Metrics",
+        "id": "hdg-2fc765"
+      },
+      {
+        "level": 3,
+        "text": "Active Projects",
+        "id": "hdg-bb6162"
+      },
+      {
+        "level": 3,
+        "text": "Open Tasks",
+        "id": "hdg-a44006"
+      },
+      {
+        "level": 3,
+        "text": "Team Members",
+        "id": "hdg-9cd7bc"
+      },
+      {
+        "level": 3,
+        "text": "Completion Rate",
+        "id": "hdg-aa196f"
+      },
+      {
+        "level": 2,
+        "text": "Settings",
+        "id": "hdg-d2c259"
+      }
+    ],
+    "content_summary": "banner: 1 headings; Main navigation: 5 links, 1 lists; Dashboard content: 7 headings, 5 paragraphs, 3 buttons, 3 inputs, 1 lists"
+  },
+  "interactive": [
+    {
+      "id": "lnk-fbd00c",
+      "type": "link",
+      "label": "Dashboard",
+      "bounds": {
+        "x": 20,
+        "y": 84,
+        "w": 78,
+        "h": 17
+      },
+      "state": {}
+    },
+    {
+      "id": "lnk-f10800",
+      "type": "link",
+      "label": "Projects",
+      "bounds": {
+        "x": 20,
+        "y": 112,
+        "w": 58,
+        "h": 17
+      },
+      "state": {}
+    },
+    {
+      "id": "lnk-253223",
+      "type": "link",
+      "label": "Tasks",
+      "bounds": {
+        "x": 20,
+        "y": 140,
+        "w": 41,
+        "h": 17
+      },
+      "state": {}
+    },
+    {
+      "id": "lnk-730915",
+      "type": "link",
+      "label": "Reports",
+      "bounds": {
+        "x": 20,
+        "y": 168,
+        "w": 56,
+        "h": 17
+      },
+      "state": {}
+    },
+    {
+      "id": "lnk-bc9ec2",
+      "type": "link",
+      "label": "Settings",
+      "bounds": {
+        "x": 20,
+        "y": 196,
+        "w": 58,
+        "h": 17
+      },
+      "state": {}
+    },
+    {
+      "id": "inp-2dc200",
+      "type": "text_input",
+      "label": "Search",
+      "bounds": {
+        "x": 325,
+        "y": 158,
+        "w": 280,
+        "h": 15
+      },
+      "state": {},
+      "value": ""
+    },
+    {
+      "id": "btn-0cfa12",
+      "type": "button",
+      "label": "Create New Project",
+      "bounds": {
+        "x": 278,
+        "y": 213,
+        "w": 116,
+        "h": 15
+      },
+      "state": {}
+    },
+    {
+      "id": "btn-91dee1",
+      "type": "button",
+      "label": "Export Data",
+      "bounds": {
+        "x": 434,
+        "y": 213,
+        "w": 70,
+        "h": 15
+      },
+      "state": {
+        "enabled": false
+      }
+    },
+    {
+      "id": "sel-e45971",
+      "type": "select",
+      "label": "Theme",
+      "bounds": {
+        "x": 315,
+        "y": 649,
+        "w": 49,
+        "h": 17
+      },
+      "state": {
+        "expanded": false
+      },
+      "value": "Light",
+      "options": [
+        "Light",
+        "Dark",
+        "Auto"
+      ]
+    },
+    {
+      "id": "chk-cfb922",
+      "type": "checkbox",
+      "label": " Enable notifications",
+      "bounds": {
+        "x": 260,
+        "y": 686,
+        "w": 13,
+        "h": 13
+      },
+      "state": {}
+    },
+    {
+      "id": "btn-05f592",
+      "type": "button",
+      "label": "Save Settings",
+      "bounds": {
+        "x": 262,
+        "y": 723,
+        "w": 82,
+        "h": 15
+      },
+      "state": {}
+    }
+  ],
+  "errors": {
+    "console": [
+      {
+        "level": "error",
+        "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      }
+    ],
+    "network": [
+      {
+        "url": "{{BASE}}/favicon.ico",
+        "status": 404,
+        "statusText": "Not Found"
+      }
+    ]
+  }
+}

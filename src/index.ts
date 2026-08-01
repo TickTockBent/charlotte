@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { BrowserManager } from "./browser/browser-manager.js";
 import { PageManager } from "./browser/page-manager.js";
 import { CDPSessionManager } from "./browser/cdp-session.js";

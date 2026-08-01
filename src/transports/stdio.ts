@@ -7,8 +7,7 @@
  * the meta-tool that mutates that registry. Handlers themselves never see the
  * server.
  */
-
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/server";
 import { charlotteTools } from "../core/index.js";
 import { waitForTools } from "../core/wait-for.js";
 import type { SessionContext, ToolDefinition } from "../core/types.js";
@@ -32,6 +31,11 @@ export function registerToolDefinitions(
   const registry: ToolRegistry = {};
 
   for (const definition of definitions) {
+    // `inputSchema` is a zod raw shape, which SDK v2 still accepts (deprecated
+    // overload — it wraps the shape in `z.object()` itself). Kept deliberately:
+    // the raw shape is what `ToolDefinition`'s generic infers each handler's
+    // `args` type from, and it keeps `src/core/` free of Standard-Schema
+    // plumbing. Switching to `z.object()`-wrapped schemas is a separate change.
     registry[definition.name] = server.registerTool(
       definition.name,
       {

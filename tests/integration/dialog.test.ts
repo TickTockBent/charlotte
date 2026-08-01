@@ -18,8 +18,7 @@ import {
   resolveElement,
 } from "../../src/core/tool-helpers.js";
 import { waitForPossibleNavigation } from "../../src/core/interaction.js";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 import { createServer } from "../../src/server.js";
 import { pollUntil } from "../helpers/poll.js";
 import type { PendingDialog } from "../../src/types/page-representation.js";

@@ -2,9 +2,8 @@
  * Lightweight MCP client for benchmark harness.
  * Spawns an MCP server over stdio, sends tool calls, captures responses with timing.
  */
-
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
+import { Client } from "@modelcontextprotocol/client";
 import { ToolCallMetrics, captureToolCall } from "./metrics.js";
 
 export interface ServerConfig {

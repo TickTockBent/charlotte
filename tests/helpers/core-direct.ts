@@ -19,7 +19,7 @@ import * as path from "node:path";
 import * as os from "node:os";
 import * as fs from "node:fs/promises";
 import { z } from "zod";
-import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import type { CallToolResult } from "@modelcontextprotocol/server";
 import { charlotteTools } from "../../src/core/index.js";
 import type { SessionContext, ToolResult } from "../../src/core/types.js";
 import { BrowserManager } from "../../src/browser/browser-manager.js";
@@ -152,9 +152,9 @@ export async function setupCoreDirectHarness(
 
 /**
  * Look up `name` in `charlotteTools`, validate `args` against its zod
- * `inputSchema` the way the SDK would (`z.object(shape).parse` — see
- * `@modelcontextprotocol/sdk/server/mcp.js`'s `safeParseAsync(objectFromShape(...))`
- * path), and invoke `handler(ctx, args)` directly. No `McpServer`, no
+ * `inputSchema` the way the SDK would (`z.object(shape).parse` — SDK v2 wraps a
+ * raw shape in `z.object()` itself and validates through the resulting Standard
+ * Schema), and invoke `handler(ctx, args)` directly. No `McpServer`, no
  * transport, no `RegisteredTool` in between.
  *
  * Returns the handler's `ToolResult` as-is — structurally identical to the

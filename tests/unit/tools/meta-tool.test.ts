@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer } from "@modelcontextprotocol/server";
+import type { RegisteredTool } from "@modelcontextprotocol/server";
 import { registerMetaTool, type ToolRegistry } from "../../../src/tools/meta-tool.js";
 import { TOOL_GROUPS, ALL_GROUP_NAMES } from "../../../src/tools/tool-groups.js";
 
@@ -27,10 +27,24 @@ function createMockRegistry(): ToolRegistry {
   return registry;
 }
 
+/**
+ * SDK v2 types the bare `RegisteredTool["handler"]` for the no-inputSchema
+ * registration form, whose callback receives the request context as its only
+ * argument. charlotte_tools is registered WITH a schema, so its real callback
+ * is `(args, ctx)`; these tests invoke it directly (no client, no transport)
+ * through this locally-typed view of the same function.
+ */
+type MetaToolWithArgsHandler = Omit<RegisteredTool, "handler"> & {
+  handler: (
+    args: { action?: string; group?: string },
+    ctx: unknown,
+  ) => Promise<{ content: Array<{ type: string; text: string }>; isError?: boolean }>;
+};
+
 describe("meta-tool", () => {
   let server: McpServer;
   let registry: ToolRegistry;
-  let metaTool: RegisteredTool;
+  let metaTool: MetaToolWithArgsHandler;
   let sendToolListChangedSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
@@ -39,7 +53,7 @@ describe("meta-tool", () => {
       { capabilities: { tools: {} } },
     );
     registry = createMockRegistry();
-    metaTool = registerMetaTool(server, registry);
+    metaTool = registerMetaTool(server, registry) as unknown as MetaToolWithArgsHandler;
     sendToolListChangedSpy = vi.spyOn(server, "sendToolListChanged");
   });
 

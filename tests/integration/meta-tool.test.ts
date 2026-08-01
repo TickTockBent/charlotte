@@ -15,6 +15,7 @@
  *      tools is now both listed AND callable through the same client.
  */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { ProtocolError, ProtocolErrorCode } from "@modelcontextprotocol/client";
 import { setupMcpHarness, parseToolJson, type McpHarness } from "../helpers/mcp-harness.js";
 import { TOOL_GROUPS, ALL_GROUP_NAMES } from "../../src/tools/tool-groups.js";
 
@@ -58,10 +59,22 @@ describe("charlotte_tools meta-tool (via MCP client)", () => {
     }
   });
 
+  // D9 (docs/remote/decisions.md): under SDK v1 calling a disabled tool came
+  // back as an in-band `isError` result; SDK v2 raises it as a -32602 protocol
+  // error instead. The channel change is a signed-off v2 divergence, not a
+  // regression — assert the code and the message, so a silent drift in either
+  // still fails.
   it("a disabled tool is not callable before its group is enabled", async () => {
-    const result = await harness.callTool(MONITORING_TOOL, {});
-    // Calling a disabled/unknown tool surfaces an error through the same client.
-    expect(result.isError).toBe(true);
+    const rejection = await harness.callTool(MONITORING_TOOL, {}).then(
+      () => {
+        throw new Error(`expected callTool(${MONITORING_TOOL}) to reject while disabled`);
+      },
+      (error: unknown) => error,
+    );
+
+    expect(rejection).toBeInstanceOf(ProtocolError);
+    expect((rejection as ProtocolError).code).toBe(ProtocolErrorCode.InvalidParams);
+    expect((rejection as ProtocolError).message).toContain(`Tool ${MONITORING_TOOL} disabled`);
   });
 
   it("enabling the group via the meta-tool makes its tool listed and callable", async () => {

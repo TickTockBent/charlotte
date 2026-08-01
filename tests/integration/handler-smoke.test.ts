@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import * as path from "node:path";
-import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import type { CallToolResult } from "@modelcontextprotocol/server";
 import { setupMcpHarness, parseToolJson, type McpHarness } from "../helpers/mcp-harness.js";
 import { pollUntil } from "../helpers/poll.js";
 

@@ -5,12 +5,8 @@
  * MCP transports; stdio (and, later, HTTP) adapters are thin consumers of the
  * definitions assembled in {@link ./index.ts}.
  */
-
-import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import type {
-  ShapeOutput,
-  ZodRawShapeCompat,
-} from "@modelcontextprotocol/sdk/server/zod-compat.js";
+import type { z } from "zod";
+import type { CallToolResult } from "@modelcontextprotocol/server";
 import type { BrowserManager } from "../browser/browser-manager.js";
 import type { PageManager } from "../browser/page-manager.js";
 import type { CDPSessionManager } from "../browser/cdp-session.js";
@@ -61,10 +57,31 @@ export interface SessionContext {
 export type ToolResult = CallToolResult;
 
 /**
+ * A tool's input schema in zod "raw shape" form: one zod type per parameter.
+ *
+ * Local replacement for the SDK v1 type `ZodRawShapeCompat`, whose module
+ * (`sdk/server/zod-compat.js`) no longer exists in the v2 package family — v2
+ * takes Standard Schema objects and keeps no zod-specific type surface. Owning
+ * the alias here is what lets `src/core/` stay free of transport-facing SDK
+ * types (slice-1 risk note); the shape is still handed verbatim to
+ * `registerTool()` by the adapter in `src/transports/`.
+ */
+export type ToolInputShape = Record<string, z.ZodType>;
+
+/**
+ * The parsed argument object a handler receives, inferred from its own raw
+ * shape — i.e. exactly what `registerTool()` infers for its callback.
+ *
+ * Local replacement for the SDK v1 type `ShapeOutput<Shape>`; see
+ * {@link ToolInputShape}.
+ */
+export type ToolInputArgs<Shape extends ToolInputShape> = z.infer<z.ZodObject<Shape>>;
+
+/**
  * A transport-agnostic tool: its MCP-facing metadata plus the handler.
  *
  * Generic over the zod raw shape so `args` keeps exactly the type
- * `server.registerTool()` infers today (`ShapeOutput<Shape>`), with no `any`
+ * `server.registerTool()` infers today ({@link ToolInputArgs}), with no `any`
  * in any handler signature.
  *
  * `handler` is declared with method syntax deliberately: that makes it
@@ -72,12 +89,12 @@ export type ToolResult = CallToolResult;
  * `ToolDefinition[]` (the assembled `charlotteTools`) without an unsafe cast
  * per module.
  */
-export interface ToolDefinition<Shape extends ZodRawShapeCompat = ZodRawShapeCompat> {
+export interface ToolDefinition<Shape extends ToolInputShape = ToolInputShape> {
   name: string;
   description: string;
   /** Zod raw shape — passed verbatim to the transport's tool registration. */
   inputSchema: Shape;
-  handler(ctx: SessionContext, args: ShapeOutput<Shape>): Promise<ToolResult>;
+  handler(ctx: SessionContext, args: ToolInputArgs<Shape>): Promise<ToolResult>;
 }
 
 /**
@@ -85,7 +102,7 @@ export interface ToolDefinition<Shape extends ZodRawShapeCompat = ZodRawShapeCom
  * handler's destructured args are typed from its own zod schema without the
  * author writing the shape type out by hand.
  */
-export function defineTool<Shape extends ZodRawShapeCompat>(
+export function defineTool<Shape extends ToolInputShape>(
   definition: ToolDefinition<Shape>,
 ): ToolDefinition<Shape> {
   return definition;

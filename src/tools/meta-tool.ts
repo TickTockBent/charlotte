@@ -6,8 +6,7 @@
  */
 
 import { z } from "zod";
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer, RegisteredTool } from "@modelcontextprotocol/server";
 import { DEFAULT_SESSION_ID } from "../core/types.js";
 import {
   TOOL_GROUPS,

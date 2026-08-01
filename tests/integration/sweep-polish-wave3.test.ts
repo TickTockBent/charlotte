@@ -17,7 +17,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import * as path from "node:path";
 import { setupMcpHarness, parseToolJson, type McpHarness } from "../helpers/mcp-harness.js";
 import type { PageRepresentation } from "../../src/types/page-representation.js";
-import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import type { CallToolResult } from "@modelcontextprotocol/server";
 
 const FIXTURES_DIR = path.resolve(import.meta.dirname, "../fixtures/pages");
 const INTERACTION_FIXTURE = `file://${path.join(FIXTURES_DIR, "interaction.html")}`;

@@ -34,7 +34,7 @@
  * regression in ordering should fail the test) and element IDs (hash-based,
  * the entire point of the I1 invariant — must stay exact).
  */
-import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import type { CallToolResult } from "@modelcontextprotocol/server";
 import { parseToolJson } from "./mcp-harness.js";
 
 /**

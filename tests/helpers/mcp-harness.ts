@@ -18,9 +18,7 @@
 import * as path from "node:path";
 import * as os from "node:os";
 import * as fs from "node:fs/promises";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { Client, InMemoryTransport, type CallToolResult } from "@modelcontextprotocol/client";
 import { createServer } from "../../src/server.js";
 import type { ServerDeps, ServerOptions } from "../../src/server.js";
 import { BrowserManager } from "../../src/browser/browser-manager.js";

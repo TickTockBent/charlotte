@@ -2,7 +2,8 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import * as path from "node:path";
 import { PROFILE_TOOLS, ALL_TOOL_NAMES } from "../../src/tools/tool-groups.js";
 import { setupMcpHarness, parseToolJson, type McpHarness } from "../helpers/mcp-harness.js";
-import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import type { CallToolResult } from "@modelcontextprotocol/server";
+import { ProtocolError, ProtocolErrorCode } from "@modelcontextprotocol/client";
 
 const SIMPLE_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/simple.html")}`;
 
@@ -128,12 +129,24 @@ describe("MCP protocol end-to-end", () => {
   // ─── Error handling ───
 
   describe("error handling", () => {
-    it("returns isError for an unknown tool name", async () => {
-      const result = await harness.callTool("charlotte_nonexistent", {});
+    // D9 (docs/remote/decisions.md): under SDK v1 an unknown tool name came back
+    // as an in-band `isError` result; SDK v2 raises it as a -32602 protocol
+    // error instead. The channel change is a signed-off v2 divergence, not a
+    // regression — assert the code and the message, so a silent drift in either
+    // still fails.
+    it("rejects an unknown tool name with a -32602 protocol error", async () => {
+      const rejection = await harness.callTool("charlotte_nonexistent", {}).then(
+        () => {
+          throw new Error("expected callTool to reject for an unknown tool name");
+        },
+        (error: unknown) => error,
+      );
 
-      expect(result.isError).toBe(true);
-      const errorText = (result.content as Array<{ type: string; text: string }>)[0].text;
-      expect(errorText).toContain("not found");
+      expect(rejection).toBeInstanceOf(ProtocolError);
+      expect((rejection as ProtocolError).code).toBe(ProtocolErrorCode.InvalidParams);
+      expect((rejection as ProtocolError).message).toContain(
+        "Tool charlotte_nonexistent not found",
+      );
     });
 
     it("returns isError when a required parameter is missing", async () => {

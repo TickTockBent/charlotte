@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import * as path from "node:path";
 import * as os from "node:os";
 import * as fs from "node:fs/promises";
-import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import type { CallToolResult } from "@modelcontextprotocol/server";
 import { setupMcpHarness, type McpHarness } from "../helpers/mcp-harness.js";
 import { pollUntil } from "../helpers/poll.js";
 import { ALL_TOOL_NAMES } from "../../src/tools/tool-groups.js";

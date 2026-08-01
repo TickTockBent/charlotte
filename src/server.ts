@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 
 const { version } = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf-8"));
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer } from "@modelcontextprotocol/server";
 import type { SessionContext } from "./core/types.js";
 import { registerMetaTool, type ToolRegistry } from "./tools/meta-tool.js";
 import { registerCoreTools } from "./transports/stdio.js";

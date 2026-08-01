@@ -1,3 +1,5 @@
+import type { ToolProfile } from "../tools/tool-groups.js";
+
 export type AutoSnapshotMode = "every_action" | "observe_only" | "manual";
 export type DialogAutoDismiss = "none" | "accept_alerts" | "accept_all" | "dismiss_all";
 export type DeviceType = "mobile" | "tablet" | "desktop";
@@ -31,6 +33,62 @@ export interface OutputLimits {
   /** Byte ceiling for a charlotte_evaluate result before truncation. */
   maxEvaluateBytes: number;
 }
+
+/** How screenshot artifacts are delivered to a remote client ⟨D6⟩. */
+export type ArtifactDelivery = "inline" | "resource";
+
+/**
+ * The `http` config block — settings for the remote streamable-HTTP transport
+ * (`charlotte --http`), in the full shape reserved by the remote design spec §5.
+ *
+ * Deliberately NOT part of {@link CharlotteConfig}: that bundle is per-session
+ * browser/render state owned by the tool core, while these are process-level
+ * transport settings resolved once at startup. Transports consume the core;
+ * the core never sees transport config (design principle 0.3).
+ *
+ * Slice 1 consumes `port`, `host`, `authToken`, and `profile`. The remaining
+ * fields are validated and documented, and their consumers are noted per field.
+ */
+export interface HttpTransportConfig {
+  /** TCP port to listen on. */
+  port: number;
+  /** Bind address. */
+  host: string;
+  /** Static bearer token; `undefined` means "not configured" (startup error). */
+  authToken?: string;
+  /** Tool profile, fixed for the lifetime of the process. */
+  profile: ToolProfile;
+  /** RESERVED (slice 2): idle ms before a session's pages are closed. */
+  sessionIdleTtlMs: number;
+  /** RESERVED (post-MVP): concurrent sessions per server; MVP is a hard 1. */
+  maxSessions: number;
+  /** RESERVED (slice 2): CIDR allowlist for the SSRF guard. Empty = deny all. */
+  allowPrivateNetworks: string[];
+  /** RESERVED (slice 2): expose filesystem-serving dev tools over HTTP. */
+  enableDevTools: boolean;
+  /** RESERVED (slice 2 ⟨D6⟩): inline base64 vs resource-style artifacts. */
+  artifactDelivery: ArtifactDelivery;
+}
+
+/**
+ * Built-in defaults for {@link HttpTransportConfig}. `authToken` is absent on
+ * purpose — there is no default token, ever.
+ */
+export const DEFAULT_HTTP_CONFIG: Omit<HttpTransportConfig, "authToken"> = {
+  // ⟨tune⟩ — an arbitrary high port, not yet calibrated against anything.
+  port: 3737,
+  // Loopback only. Remote reach comes from a tunnel in front, never from
+  // binding a wider interface by default (pillar 5).
+  host: "127.0.0.1",
+  // Excludes dev_mode, evaluate, and monitoring groups by construction.
+  profile: "browse",
+  // ⟨tune⟩ — 30 minutes. RESERVED, not consumed in slice 1.
+  sessionIdleTtlMs: 1_800_000,
+  maxSessions: 1,
+  allowPrivateNetworks: [],
+  enableDevTools: false,
+  artifactDelivery: "inline",
+};
 
 export interface CharlotteConfig {
   /** Root directory boundary for dev_serve to prevent path traversal */

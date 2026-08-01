@@ -48,6 +48,10 @@ Options:
                          untrusted pages. Env: CHARLOTTE_NO_SANDBOX=1
   --cdp-endpoint <url>   Connect to an existing Chrome via CDP endpoint
                          (http://..., ws://..., or channel:chrome)
+  --http                 Serve streamable HTTP instead of stdio. Requires a
+                         bearer token (env CHARLOTTE_AUTH_TOKEN or config
+                         http.authToken); binds http.host (default 127.0.0.1)
+  --port <n>             Port for --http (default 3737)
   --help                 Show this help message
 `;
 
@@ -61,6 +65,8 @@ interface RawCliValues {
   "no-headless"?: boolean;
   "no-sandbox"?: boolean;
   "cdp-endpoint"?: string;
+  http?: boolean;
+  port?: string;
   help?: boolean;
 }
 
@@ -75,6 +81,8 @@ function rawParse(argv: string[]): RawCliValues {
       "no-headless": { type: "boolean" },
       "no-sandbox": { type: "boolean" },
       "cdp-endpoint": { type: "string" },
+      http: { type: "boolean" },
+      port: { type: "string" },
       help: { type: "boolean" },
     },
     strict: false,
@@ -128,6 +136,34 @@ function validateCdpEndpoint(cdpEndpoint: string, values: RawCliValues): void {
 }
 
 /**
+ * Validate the `--http` / `--port` pair and return the parsed port.
+ *
+ * Transport modes are mutually exclusive in v1 (stdio is the default; `--http`
+ * replaces it), so there is no flag combination that asks for both — the only
+ * thing to reject here is `--port` without `--http`, which would otherwise be
+ * silently ignored.
+ */
+function resolveHttpFlags(values: RawCliValues): { http?: boolean; port?: number } {
+  const httpMode = values.http === true;
+  const rawPort = values.port;
+
+  if (rawPort === undefined) {
+    return httpMode ? { http: true } : {};
+  }
+
+  if (!httpMode) {
+    throw new Error("--port requires --http; stdio mode does not listen on a port");
+  }
+
+  const port = Number(rawPort);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error(`Invalid --port: ${rawPort}. Expected an integer between 1 and 65535.`);
+  }
+
+  return { http: true, port };
+}
+
+/**
  * Parse CLI arguments into explicit `CliInputs` (only the flags actually
  * passed) plus the optional `--config` path. This is the parser used by
  * config resolution so absent flags don't override lower-precedence
@@ -145,6 +181,13 @@ export function parseCliInputs(argv: string[] = process.argv.slice(2)): {
   }
 
   const { profile, toolGroups } = resolveProfileAndGroups(values);
+  const { http, port } = resolveHttpFlags(values);
+
+  if (http && toolGroups !== undefined) {
+    logger.warn(
+      "--tools is ignored in HTTP mode; the tool set is fixed at startup from http.profile (or --profile)",
+    );
+  }
 
   const cdpEndpoint = values["cdp-endpoint"];
   if (cdpEndpoint !== undefined) {
@@ -159,6 +202,8 @@ export function parseCliInputs(argv: string[] = process.argv.slice(2)): {
   if (values["no-headless"] === true) cli.headless = false;
   if (values["no-sandbox"] === true) cli.noSandbox = true;
   if (cdpEndpoint !== undefined) cli.cdpEndpoint = cdpEndpoint;
+  if (http !== undefined) cli.http = http;
+  if (port !== undefined) cli.port = port;
 
   return { cli, configPath: values.config };
 }

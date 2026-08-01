@@ -20,5 +20,16 @@
   },
   "output": {
     "dir": "./charlotte-output"
+  },
+  "http": {
+    "port": 3737,
+    "host": "127.0.0.1",
+    "authToken": null,
+    "profile": "browse",
+    "sessionIdleTtlMs": 1800000,
+    "maxSessions": 1,
+    "allowPrivateNetworks": [],
+    "enableDevTools": false,
+    "artifactDelivery": "inline"
   }
 }

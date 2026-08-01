@@ -58,6 +58,17 @@ Every section is optional. An empty `{}` is valid.
     "maxFullContentChars": 200000,
     "maxResponseBytes": 1000000,
     "maxEvaluateBytes": 256000
+  },
+  "http": {
+    "port": 3737,
+    "host": "127.0.0.1",
+    "authToken": null,
+    "profile": "browse",
+    "sessionIdleTtlMs": 1800000,
+    "maxSessions": 1,
+    "allowPrivateNetworks": [],
+    "enableDevTools": false,
+    "artifactDelivery": "inline"
   }
 }
 ```
@@ -79,6 +90,35 @@ Every section is optional. An empty `{}` is valid.
 | `limits.maxFullContentChars` | int > 0 | Max characters of `full_content` text before truncation. Default `200000`. |
 | `limits.maxResponseBytes` | int > 0 | Total byte ceiling for a formatted page response; above this the response degrades to a compact summary with an `output_file` suggestion. Default `1000000`. |
 | `limits.maxEvaluateBytes` | int > 0 | Byte ceiling for a `charlotte_evaluate` result before it is truncated. Default `256000`. |
+| `http.port` | int 1–65535 | Port for `--http`. Default `3737`. CLI: `--port`. |
+| `http.host` | string | Bind address for `--http`. Default `127.0.0.1` (loopback only). |
+| `http.authToken` | string \| null | Static bearer token. **Required** in HTTP mode — no default. `CHARLOTTE_AUTH_TOKEN` wins over this. |
+| `http.profile` | enum | Tool profile served over HTTP, fixed at startup. Default `browse`. `--profile` overrides it. |
+| `http.sessionIdleTtlMs` | int > 0 | *Reserved.* Idle ms before a session's pages close. Validated, not yet consumed. |
+| `http.maxSessions` | int > 0 | *Reserved.* Concurrent sessions; today there is exactly one. Validated, not yet consumed. |
+| `http.allowPrivateNetworks` | string[] | *Reserved.* CIDR allowlist for the private-network guard. Validated, not yet consumed. |
+| `http.enableDevTools` | boolean | *Reserved.* Expose filesystem-serving dev tools over HTTP. Validated, not yet consumed. |
+| `http.artifactDelivery` | enum | *Reserved.* `inline` or `resource`. Validated, not yet consumed. |
+
+### HTTP mode (`http`)
+
+`charlotte --http [--port N]` serves the MCP streamable HTTP endpoint instead of
+stdio. The two modes are mutually exclusive — one process serves one transport.
+
+- `POST /mcp` — the MCP endpoint. Requires `Authorization: Bearer <token>`;
+  anything else is answered `401 {"error":"unauthorized"}` before any browser or
+  session activity. The server **refuses to start** without a token.
+- `GET /healthz` — unauthenticated liveness: `{version, uptime_s,
+  browser_connected}`. No page data, no config echo.
+
+The tool set is fixed at startup from `http.profile` (`--profile` overrides;
+`--tools` is ignored with a warning), because a stateless HTTP transport has no
+per-connection registry to mutate — `charlotte_tools` is therefore not exposed
+over HTTP. Default `browse` excludes the dev-mode, evaluate, and monitoring
+groups.
+
+Keys marked *Reserved* above are validated and documented now so a config
+written today keeps working when their consumers land; they have no effect yet.
 
 ### Output-size limits (`limits`)
 
@@ -98,6 +138,7 @@ marker so agents can tell the output was clipped.
 | `CHARLOTTE_NO_SANDBOX` | `browser.noSandbox` | `1`/`true`/`yes`/`on` enable; `0`/`false`/`no`/`off` disable. |
 | `CHARLOTTE_OUTPUT_DIR` | `output.dir` | |
 | `CHARLOTTE_CDP_ENDPOINT` | `browser.cdpEndpoint` | |
+| `CHARLOTTE_AUTH_TOKEN` | `http.authToken` | HTTP-mode bearer token. Wins over the config file. Empty value = unset. |
 
 ## The Chromium sandbox (`--no-sandbox`)
 

@@ -180,4 +180,108 @@ describe("resolveOptions precedence (issue #19)", () => {
       expect(result.maxResponseBytes).toBeUndefined();
     });
   });
+
+  describe("http block (remote design spec §5, slice 1 step 2)", () => {
+    it("defaults to stdio mode", () => {
+      expect(resolveOptions(noCli, noEnv, noFile).http).toBe(false);
+    });
+
+    it("--http switches the mode", () => {
+      expect(resolveOptions({ http: true }, noEnv, noFile).http).toBe(true);
+    });
+
+    it("resolves the full default http config, with no default token", () => {
+      expect(resolveOptions(noCli, noEnv, noFile).httpConfig).toEqual({
+        port: 3737,
+        host: "127.0.0.1",
+        profile: "browse",
+        sessionIdleTtlMs: 1_800_000,
+        maxSessions: 1,
+        allowPrivateNetworks: [],
+        enableDevTools: false,
+        artifactDelivery: "inline",
+      });
+      expect(resolveOptions(noCli, noEnv, noFile).httpConfig.authToken).toBeUndefined();
+    });
+
+    it("reads reserved fields from the config file verbatim", () => {
+      const result = resolveOptions(noCli, noEnv, {
+        http: {
+          sessionIdleTtlMs: 60_000,
+          maxSessions: 4,
+          allowPrivateNetworks: ["192.168.0.0/16"],
+          enableDevTools: true,
+          artifactDelivery: "resource",
+        },
+      });
+      expect(result.httpConfig.sessionIdleTtlMs).toBe(60_000);
+      expect(result.httpConfig.maxSessions).toBe(4);
+      expect(result.httpConfig.allowPrivateNetworks).toEqual(["192.168.0.0/16"]);
+      expect(result.httpConfig.enableDevTools).toBe(true);
+      expect(result.httpConfig.artifactDelivery).toBe("resource");
+    });
+
+    it("does not share the default allowPrivateNetworks array between resolutions", () => {
+      const first = resolveOptions(noCli, noEnv, noFile);
+      first.httpConfig.allowPrivateNetworks.push("10.0.0.0/8");
+      expect(resolveOptions(noCli, noEnv, noFile).httpConfig.allowPrivateNetworks).toEqual([]);
+    });
+
+    describe("authToken", () => {
+      it("comes from the config file when no env var is set", () => {
+        const result = resolveOptions(noCli, noEnv, { http: { authToken: "from-file" } });
+        expect(result.httpConfig.authToken).toBe("from-file");
+      });
+
+      it("env wins over the config file", () => {
+        const result = resolveOptions(
+          noCli,
+          { authToken: "from-env" },
+          {
+            http: { authToken: "from-file" },
+          },
+        );
+        expect(result.httpConfig.authToken).toBe("from-env");
+      });
+
+      it("treats a null config value as unset", () => {
+        const result = resolveOptions(noCli, noEnv, { http: { authToken: null } });
+        expect(result.httpConfig.authToken).toBeUndefined();
+      });
+    });
+
+    describe("port", () => {
+      it("comes from the config file", () => {
+        expect(resolveOptions(noCli, noEnv, { http: { port: 8080 } }).httpConfig.port).toBe(8080);
+      });
+
+      it("--port overrides the config file", () => {
+        const result = resolveOptions({ port: 9000 }, noEnv, { http: { port: 8080 } });
+        expect(result.httpConfig.port).toBe(9000);
+      });
+    });
+
+    describe("profile", () => {
+      it("comes from the http block, not tools.profile", () => {
+        const result = resolveOptions(noCli, noEnv, {
+          tools: { profile: "full" },
+          http: { profile: "interact" },
+        });
+        expect(result.httpConfig.profile).toBe("interact");
+      });
+
+      it("--profile overrides http.profile (still fixed at startup)", () => {
+        const result = resolveOptions({ profile: "audit" }, noEnv, { http: { profile: "browse" } });
+        expect(result.httpConfig.profile).toBe("audit");
+      });
+    });
+
+    describe("host", () => {
+      it("comes from the config file", () => {
+        expect(resolveOptions(noCli, noEnv, { http: { host: "0.0.0.0" } }).httpConfig.host).toBe(
+          "0.0.0.0",
+        );
+      });
+    });
+  });
 });

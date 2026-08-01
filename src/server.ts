@@ -17,6 +17,11 @@ import {
 
 export type { SessionContext } from "./core/types.js";
 
+/** MCP server identity, shared by every transport adapter. */
+export const SERVER_NAME = "charlotte";
+/** Package version, read once from package.json and reported in `initialize`. */
+export const SERVER_VERSION: string = version;
+
 /**
  * @deprecated Historical name for {@link SessionContext}. Retained so existing
  * callers and tests (`import type { ServerDeps } from "./server.js"`) compile
@@ -34,6 +39,19 @@ export interface CreateServerResult {
   registry: ToolRegistry;
 }
 
+export interface InstructionsOptions {
+  /**
+   * Whether the `charlotte_tools` meta-tool is registered on this server.
+   *
+   * True over stdio, where the tool set is mutable per connection. False over
+   * HTTP, where the set is fixed at startup (a stateless transport has no
+   * per-connection registry to mutate) — the group listing stays, since it is
+   * still the honest inventory of what this deployment does and doesn't
+   * expose, but the call to action becomes "change the server config".
+   */
+  metaToolAvailable?: boolean;
+}
+
 /**
  * Build the server instructions string from the set of enabled tool names.
  *
@@ -44,7 +62,12 @@ export interface CreateServerResult {
  *
  * Exported (and pure) so it can be unit-tested without standing up a server.
  */
-export function buildServerInstructions(enabledTools: Set<string>, activeLabel: string): string {
+export function buildServerInstructions(
+  enabledTools: Set<string>,
+  activeLabel: string,
+  options: InstructionsOptions = {},
+): string {
+  const metaToolAvailable = options.metaToolAvailable ?? true;
   const fullyDisabledGroups: ToolGroupName[] = [];
   const partiallyEnabledGroups: Array<{ group: ToolGroupName; enabled: number; total: number }> =
     [];
@@ -60,24 +83,38 @@ export function buildServerInstructions(enabledTools: Set<string>, activeLabel: 
 
   const instructionLines = [`Charlotte browser automation server. ${activeLabel}`];
   if (fullyDisabledGroups.length > 0) {
-    instructionLines.push("Additional tool groups available via charlotte_tools:");
+    instructionLines.push(
+      metaToolAvailable
+        ? "Additional tool groups available via charlotte_tools:"
+        : "Tool groups not exposed by this server:",
+    );
     for (const group of fullyDisabledGroups) {
       instructionLines.push(`  - ${group}: ${GROUP_DESCRIPTIONS[group]}`);
     }
   }
   if (partiallyEnabledGroups.length > 0) {
-    instructionLines.push("Partially-enabled groups (enable via charlotte_tools for more tools):");
+    instructionLines.push(
+      metaToolAvailable
+        ? "Partially-enabled groups (enable via charlotte_tools for more tools):"
+        : "Partially-exposed groups:",
+    );
     for (const { group, enabled, total } of partiallyEnabledGroups) {
       const disabledTools = TOOL_GROUPS[group]
         .filter((t) => !enabledTools.has(t))
         .map((t) => t.replace(/^charlotte_/, ""));
       instructionLines.push(
-        `  - ${group} (${enabled}/${total} enabled — enable for ${disabledTools.join(", ")})`,
+        metaToolAvailable
+          ? `  - ${group} (${enabled}/${total} enabled — enable for ${disabledTools.join(", ")})`
+          : `  - ${group} (${enabled}/${total} exposed — not exposed: ${disabledTools.join(", ")})`,
       );
     }
   }
   if (fullyDisabledGroups.length > 0 || partiallyEnabledGroups.length > 0) {
-    instructionLines.push("Call charlotte_tools to list groups or enable/disable them.");
+    instructionLines.push(
+      metaToolAvailable
+        ? "Call charlotte_tools to list groups or enable/disable them."
+        : "The tool set is fixed for this server; change the server config (http.profile) to expose more.",
+    );
   }
 
   return instructionLines.join("\n");

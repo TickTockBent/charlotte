@@ -118,6 +118,77 @@ const LimitsConfigSchema = z
   })
   .strict();
 
+/** `http.artifactDelivery` — how screenshots reach a remote client. */
+const ArtifactDeliverySchema = z.enum(["inline", "resource"]);
+
+/**
+ * `http` section — the remote (streamable HTTP) transport, landed in its FULL
+ * shape per the remote design spec §5 even where this slice ignores fields
+ * (design principle 0.5, "reserve schema early"). Every reserved field is
+ * validated here and annotated with the slice that will consume it, so a
+ * config written today against the documented surface keeps working when the
+ * consumer lands.
+ *
+ * Consumed in slice 1: `port`, `host`, `authToken`, `profile`.
+ */
+const HttpConfigSchema = z
+  .object({
+    /** TCP port for `charlotte --http`. Default 3737 ⟨tune⟩. CLI: --port. */
+    port: z.number().int().min(1).max(65535).optional(),
+    /**
+     * Bind address. Default 127.0.0.1 — loopback-only is this slice's security
+     * posture (reach it through a tunnel, never by binding 0.0.0.0).
+     *
+     * NOT in design spec §5; added here because slice 3's container packaging
+     * has to bind 0.0.0.0 inside the container to be reachable at all.
+     */
+    host: z.string().min(1).optional(),
+    /**
+     * Static bearer token. REQUIRED in HTTP mode, no default — the server
+     * refuses to start without one. `CHARLOTTE_AUTH_TOKEN` takes precedence
+     * over this field; `null` means "not set here".
+     */
+    authToken: z.string().nullable().optional(),
+    /**
+     * Tool profile, fixed at startup in HTTP mode (the tool set cannot be
+     * mutated per-connection over a stateless transport). Default "browse",
+     * which already excludes the dev_mode/evaluate/monitoring groups.
+     */
+    profile: ToolProfileSchema.optional(),
+    /**
+     * RESERVED (slice 2 — session lifecycle): idle milliseconds before a
+     * session's browser pages are closed. Default 1800000 ⟨tune⟩. Validated
+     * and ignored in slice 1.
+     */
+    sessionIdleTtlMs: z.number().int().positive().optional(),
+    /**
+     * RESERVED (post-MVP — multi-session): concurrent sessions per server.
+     * MVP is a hard 1 (one implicit session). Validated and ignored.
+     */
+    maxSessions: z.number().int().positive().optional(),
+    /**
+     * RESERVED (slice 2 — SSRF guard): CIDR allowlist punching holes in the
+     * default-deny of loopback/RFC1918/link-local/cloud-metadata navigation.
+     * Empty = deny all private ranges. Validated and ignored in slice 1,
+     * where the interim posture is loopback binding + tunnel + token.
+     */
+    allowPrivateNetworks: z.array(z.string()).optional(),
+    /**
+     * RESERVED (slice 2 — remote threat posture): expose the filesystem-serving
+     * dev_mode tools over HTTP. Default false; enabling it will carry a loud
+     * startup warning. Validated and ignored in slice 1 (the default `browse`
+     * profile excludes those tools regardless).
+     */
+    enableDevTools: z.boolean().optional(),
+    /**
+     * RESERVED (slice 2 ⟨D6⟩ — artifact delivery): how screenshot artifacts
+     * reach a client that cannot read the server's filesystem. Default
+     * "inline". Validated and ignored in slice 1.
+     */
+    artifactDelivery: ArtifactDeliverySchema.optional(),
+  })
+  .strict();
+
 /**
  * Full Charlotte config-file schema. Every section is optional; an empty
  * `{}` is valid and simply falls through to defaults.
@@ -131,6 +202,7 @@ export const CharlotteFileConfigSchema = z
     dialog: DialogConfigSchema.optional(),
     output: OutputConfigSchema.optional(),
     limits: LimitsConfigSchema.optional(),
+    http: HttpConfigSchema.optional(),
   })
   .strict();
 

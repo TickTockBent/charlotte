@@ -37,6 +37,31 @@ describe("buildServerInstructions (#204 partial-group discoverability)", () => {
     expect(instructions).not.toContain("Call charlotte_tools");
   });
 
+  it("drops the charlotte_tools call-to-action when the meta-tool is absent (HTTP mode)", () => {
+    const enabled = resolveProfile("browse");
+    const instructions = buildServerInstructions(enabled, "Active profile: browse.", {
+      metaToolAvailable: false,
+    });
+
+    // The group inventory is still served — an agent should know what this
+    // deployment does not expose — but nothing tells it to call a tool that
+    // is not registered.
+    expect(instructions).not.toContain("charlotte_tools");
+    expect(instructions).toContain("Tool groups not exposed by this server:");
+    expect(instructions).toContain("interaction (7/13 exposed — not exposed:");
+    expect(instructions).toContain("fill_form");
+    expect(instructions).toContain(
+      "The tool set is fixed for this server; change the server config (http.profile) to expose more.",
+    );
+  });
+
+  it("keeps the stdio wording by default", () => {
+    const enabled = resolveProfile("browse");
+    expect(buildServerInstructions(enabled, "Active profile: browse.")).toBe(
+      buildServerInstructions(enabled, "Active profile: browse.", { metaToolAvailable: true }),
+    );
+  });
+
   it("treats a fully-enabled single group selection without partial markers", () => {
     const enabled = resolveGroups(["interaction"]);
     const instructions = buildServerInstructions(enabled, "Active groups: interaction.");

@@ -11,25 +11,22 @@ import { SnapshotStore } from "./state/snapshot-store.js";
 import { ArtifactStore } from "./state/artifact-store.js";
 import { createDefaultConfig } from "./types/config.js";
 import { createServer } from "./server.js";
+import type { SessionContext } from "./core/types.js";
+import { startHttpTransport } from "./transports/http.js";
 import { DevModeState } from "./dev/dev-mode-state.js";
 import { logger } from "./utils/logger.js";
 import { loadStartupConfig } from "./config/index.js";
+import type { ResolvedOptions } from "./config/resolve.js";
 
-async function main(): Promise<void> {
-  let resolved;
-  try {
-    resolved = loadStartupConfig();
-  } catch (error) {
-    // stdout is reserved for the MCP transport — config errors go to stderr.
-    logger.error((error as Error).message);
-    process.exit(1);
-  }
-  logger.info("Charlotte starting", {
-    profile: resolved.profile ?? (resolved.toolGroups ? undefined : "browse"),
-    toolGroups: resolved.toolGroups,
-    noSandbox: resolved.noSandbox,
-  });
-
+/**
+ * Build the process's single {@link SessionContext} — the browser, page, and
+ * render services every tool handler operates on.
+ *
+ * Both transports get the same graph: stdio binds it to an `McpServer`, HTTP
+ * binds it to the streamable endpoint. Nothing here launches Chromium; the
+ * browser stays lazy until the first tool call.
+ */
+async function buildSessionContext(resolved: ResolvedOptions): Promise<SessionContext> {
   // Initialize config first (needed by PageManager for dialog handling).
   // Config-file tunables (snapshot depth, dialog handling, iframe rendering)
   // override the built-in defaults; CLI/env precedence is already resolved.
@@ -90,39 +87,86 @@ async function main(): Promise<void> {
   // Initialize dev mode state
   const devModeState = new DevModeState(config);
 
-  // Create and configure MCP server
-  const { server: mcpServer } = createServer(
-    {
-      browserManager,
-      pageManager,
-      cdpSessionManager,
-      rendererPipeline,
-      elementIdGenerator,
-      snapshotStore,
-      artifactStore,
-      config,
-      devModeState,
-    },
-    { profile: resolved.profile, toolGroups: resolved.toolGroups },
-  );
+  return {
+    browserManager,
+    pageManager,
+    cdpSessionManager,
+    rendererPipeline,
+    elementIdGenerator,
+    snapshotStore,
+    artifactStore,
+    config,
+    devModeState,
+  };
+}
 
-  // Connect stdio transport
-  const transport = new StdioServerTransport();
-  await mcpServer.connect(transport);
-
-  logger.info("Charlotte MCP server running on stdio");
-
-  // Graceful shutdown
+/**
+ * Register SIGINT/SIGTERM handlers that stop the transport, then the session.
+ *
+ * The session (browser, dev servers) is owned by this process, not by the
+ * transport — the transport handle only stops accepting requests.
+ */
+function installShutdownHandlers(ctx: SessionContext, closeTransport: () => Promise<void>): void {
   const shutdown = async () => {
     logger.info("Shutting down");
-    await devModeState.stopAll();
-    await mcpServer.close();
-    await browserManager.close();
+    await ctx.devModeState?.stopAll();
+    await closeTransport();
+    await ctx.browserManager.close();
     process.exit(0);
   };
 
   process.on("SIGINT", shutdown);
   process.on("SIGTERM", shutdown);
+}
+
+async function main(): Promise<void> {
+  let resolved;
+  try {
+    resolved = loadStartupConfig();
+  } catch (error) {
+    // stdout is reserved for the MCP transport — config errors go to stderr.
+    logger.error((error as Error).message);
+    process.exit(1);
+  }
+  logger.info("Charlotte starting", {
+    mode: resolved.http ? "http" : "stdio",
+    profile: resolved.http
+      ? resolved.httpConfig.profile
+      : (resolved.profile ?? (resolved.toolGroups ? undefined : "browse")),
+    toolGroups: resolved.http ? undefined : resolved.toolGroups,
+    noSandbox: resolved.noSandbox,
+  });
+
+  const ctx = await buildSessionContext(resolved);
+
+  // ─── HTTP mode (--http) ───
+  // Mutually exclusive with stdio: the process serves one transport or the
+  // other, never both (remote design spec §3.3).
+  if (resolved.http) {
+    let httpTransport;
+    try {
+      httpTransport = await startHttpTransport(ctx, resolved.httpConfig);
+    } catch (error) {
+      logger.error((error as Error).message);
+      await ctx.browserManager.close();
+      process.exit(1);
+    }
+    installShutdownHandlers(ctx, () => httpTransport.close());
+    return;
+  }
+
+  // ─── stdio mode (default) ───
+  const { server: mcpServer } = createServer(ctx, {
+    profile: resolved.profile,
+    toolGroups: resolved.toolGroups,
+  });
+
+  const transport = new StdioServerTransport();
+  await mcpServer.connect(transport);
+
+  logger.info("Charlotte MCP server running on stdio");
+
+  installShutdownHandlers(ctx, () => mcpServer.close());
 }
 
 main().catch((error) => {

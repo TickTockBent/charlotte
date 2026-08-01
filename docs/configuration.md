@@ -64,6 +64,7 @@ Every section is optional. An empty `{}` is valid.
     "host": "127.0.0.1",
     "authToken": null,
     "profile": "browse",
+    "debugRequests": false,
     "sessionIdleTtlMs": 1800000,
     "maxSessions": 1,
     "allowPrivateNetworks": [],
@@ -94,6 +95,7 @@ Every section is optional. An empty `{}` is valid.
 | `http.host` | string | Bind address for `--http`. Default `127.0.0.1` (loopback only). |
 | `http.authToken` | string \| null | Static bearer token. **Required** in HTTP mode — no default. `CHARLOTTE_AUTH_TOKEN` wins over this. |
 | `http.profile` | enum | Tool profile served over HTTP, fixed at startup. Default `browse`. `--profile` overrides it. |
+| `http.debugRequests` | boolean | **Diagnostics only, not for production.** Logs every request's method, path, and headers (credentials redacted) plus its response status to stderr. Default `false`. Env: `CHARLOTTE_DEBUG_HTTP=1`. |
 | `http.sessionIdleTtlMs` | int > 0 | *Reserved.* Idle ms before a session's pages close. Validated, not yet consumed. |
 | `http.maxSessions` | int > 0 | *Reserved.* Concurrent sessions; today there is exactly one. Validated, not yet consumed. |
 | `http.allowPrivateNetworks` | string[] | *Reserved.* CIDR allowlist for the private-network guard. Validated, not yet consumed. |
@@ -117,8 +119,31 @@ per-connection registry to mutate — `charlotte_tools` is therefore not exposed
 over HTTP. Default `browse` excludes the dev-mode, evaluate, and monitoring
 groups.
 
+Any path that is neither `/mcp` nor `/healthz` answers `404
+{"error":"not_found"}`.
+
 Keys marked *Reserved* above are validated and documented now so a config
 written today keeps working when their consumers land; they have no effect yet.
+
+#### Request observation (`http.debugRequests` / `CHARLOTTE_DEBUG_HTTP`)
+
+Either switch turns on a **diagnostic** mode that logs, to stderr, every
+inbound request — method, path with query string, and headers — plus the
+response status once the request finishes. Unmatched paths are logged
+explicitly, which is the point: it exists to capture which discovery endpoints
+a connector client probes before that support is designed.
+
+`authorization`, `proxy-authorization`, `cookie`, `set-cookie`, `x-api-key`,
+and `x-auth-token` values are **never** logged. They are replaced by a marker
+recording that the header was present and, for auth headers, its scheme
+(`<redacted: present, scheme=Bearer>`).
+
+Leave it off in normal operation: it is noisy, it writes request metadata
+(paths, query strings, user agents) into your logs, and nothing depends on it.
+
+```bash
+CHARLOTTE_DEBUG_HTTP=1 charlotte --http    # one observation run, no config edit
+```
 
 ### Output-size limits (`limits`)
 
@@ -139,6 +164,7 @@ marker so agents can tell the output was clipped.
 | `CHARLOTTE_OUTPUT_DIR` | `output.dir` | |
 | `CHARLOTTE_CDP_ENDPOINT` | `browser.cdpEndpoint` | |
 | `CHARLOTTE_AUTH_TOKEN` | `http.authToken` | HTTP-mode bearer token. Wins over the config file. Empty value = unset. |
+| `CHARLOTTE_DEBUG_HTTP` | `http.debugRequests` | `1`/`true`/`yes`/`on` turn request logging on; anything else is off. Read directly by the HTTP transport, so it enables observation even when the config file says `false`. Diagnostics only. |
 
 ## The Chromium sandbox (`--no-sandbox`)
 

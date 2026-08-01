@@ -26,6 +26,7 @@
     "host": "127.0.0.1",
     "authToken": null,
     "profile": "browse",
+    "debugRequests": false,
     "sessionIdleTtlMs": 1800000,
     "maxSessions": 1,
     "allowPrivateNetworks": [],

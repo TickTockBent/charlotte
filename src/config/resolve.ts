@@ -147,6 +147,10 @@ export function resolveOptions(
     // `--profile` still wins in HTTP mode; the value is fixed at startup
     // either way, since a stateless transport has no per-connection registry.
     profile: cli.profile ?? httpFile.profile ?? DEFAULT_HTTP_CONFIG.profile,
+    // The env switch (CHARLOTTE_DEBUG_HTTP) is read by the transport itself,
+    // so an operator can observe a running deployment without a config edit;
+    // this field is the config-file half of the same OR.
+    debugRequests: httpFile.debugRequests ?? DEFAULT_HTTP_CONFIG.debugRequests,
     sessionIdleTtlMs: httpFile.sessionIdleTtlMs ?? DEFAULT_HTTP_CONFIG.sessionIdleTtlMs,
     maxSessions: httpFile.maxSessions ?? DEFAULT_HTTP_CONFIG.maxSessions,
     allowPrivateNetworks: httpFile.allowPrivateNetworks ?? [

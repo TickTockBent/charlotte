@@ -156,6 +156,14 @@ const HttpConfigSchema = z
      */
     profile: ToolProfileSchema.optional(),
     /**
+     * Log every inbound HTTP request (method, path, redacted headers) and its
+     * response status to stderr. Default false. Diagnostics only — it exists
+     * to capture which discovery endpoints a connector client probes (D2's
+     * observe-then-build path), not for normal operation.
+     * Env: CHARLOTTE_DEBUG_HTTP=1 turns it on independently of this field.
+     */
+    debugRequests: z.boolean().optional(),
+    /**
      * RESERVED (slice 2 — session lifecycle): idle milliseconds before a
      * session's browser pages are closed. Default 1800000 ⟨tune⟩. Validated
      * and ignored in slice 1.

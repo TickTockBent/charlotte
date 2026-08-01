@@ -46,8 +46,9 @@ export type ArtifactDelivery = "inline" | "resource";
  * transport settings resolved once at startup. Transports consume the core;
  * the core never sees transport config (design principle 0.3).
  *
- * Slice 1 consumes `port`, `host`, `authToken`, and `profile`. The remaining
- * fields are validated and documented, and their consumers are noted per field.
+ * Slice 1 consumes `port`, `host`, `authToken`, `profile`, and
+ * `debugRequests`. The remaining fields are validated and documented, and
+ * their consumers are noted per field.
  */
 export interface HttpTransportConfig {
   /** TCP port to listen on. */
@@ -58,6 +59,11 @@ export interface HttpTransportConfig {
   authToken?: string;
   /** Tool profile, fixed for the lifetime of the process. */
   profile: ToolProfile;
+  /**
+   * Log every request (method, path, redacted headers) and response status to
+   * stderr. Diagnostics only; `CHARLOTTE_DEBUG_HTTP` enables it independently.
+   */
+  debugRequests: boolean;
   /** RESERVED (slice 2): idle ms before a session's pages are closed. */
   sessionIdleTtlMs: number;
   /** RESERVED (post-MVP): concurrent sessions per server; MVP is a hard 1. */
@@ -82,6 +88,8 @@ export const DEFAULT_HTTP_CONFIG: Omit<HttpTransportConfig, "authToken"> = {
   host: "127.0.0.1",
   // Excludes dev_mode, evaluate, and monitoring groups by construction.
   profile: "browse",
+  // Off: request logging is a diagnostic tool, not a default posture.
+  debugRequests: false,
   // ⟨tune⟩ — 30 minutes. RESERVED, not consumed in slice 1.
   sessionIdleTtlMs: 1_800_000,
   maxSessions: 1,

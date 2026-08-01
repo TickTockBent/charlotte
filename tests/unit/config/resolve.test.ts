@@ -195,6 +195,7 @@ describe("resolveOptions precedence (issue #19)", () => {
         port: 3737,
         host: "127.0.0.1",
         profile: "browse",
+        debugRequests: false,
         sessionIdleTtlMs: 1_800_000,
         maxSessions: 1,
         allowPrivateNetworks: [],
@@ -273,6 +274,17 @@ describe("resolveOptions precedence (issue #19)", () => {
       it("--profile overrides http.profile (still fixed at startup)", () => {
         const result = resolveOptions({ profile: "audit" }, noEnv, { http: { profile: "browse" } });
         expect(result.httpConfig.profile).toBe("audit");
+      });
+    });
+
+    describe("debugRequests", () => {
+      it("defaults to off", () => {
+        expect(resolveOptions(noCli, noEnv, noFile).httpConfig.debugRequests).toBe(false);
+      });
+
+      it("is enabled by the config file", () => {
+        const result = resolveOptions(noCli, noEnv, { http: { debugRequests: true } });
+        expect(result.httpConfig.debugRequests).toBe(true);
       });
     });
 

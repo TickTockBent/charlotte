@@ -20,7 +20,7 @@ async function main(): Promise<void> {
   const harness = await setupMcpHarness({ profile: "full", serveDirectory: FIXTURES_DIR });
 
   try {
-    const scenarios = await captureGoldenScenarios(harness);
+    const scenarios = await captureGoldenScenarios(harness.callTool, harness.fixtureServer!.url);
 
     await fs.mkdir(GOLDEN_DIR, { recursive: true });
 

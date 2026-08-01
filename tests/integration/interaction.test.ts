@@ -97,11 +97,11 @@ describe("Interaction integration", () => {
 
   /** Find one interactive element on the harness page via charlotte_find. */
   async function harnessFind(criteria: Record<string, unknown>): Promise<InteractiveElement> {
-    const matches = parseToolJson<InteractiveElement[]>(
+    const { elements } = parseToolJson<{ elements: InteractiveElement[] }>(
       await harness.callTool("charlotte_find", criteria),
     );
-    expect(matches.length).toBeGreaterThan(0);
-    return matches[0];
+    expect(elements.length).toBeGreaterThan(0);
+    return elements[0];
   }
 
   /**
@@ -451,11 +451,11 @@ describe("Interaction integration", () => {
 
     /** The key-input is found by CSS selector since it has no accessible label. */
     async function keyInputId(): Promise<string> {
-      const matches = parseToolJson<Array<{ id: string }>>(
+      const { elements } = parseToolJson<{ elements: Array<{ id: string }> }>(
         await harness.callTool("charlotte_find", { selector: "#key-input" }),
       );
-      expect(matches.length).toBe(1);
-      return matches[0].id;
+      expect(elements.length).toBe(1);
+      return elements[0].id;
     }
 
     it("presses a simple key targeted at an element", async () => {
@@ -873,11 +873,11 @@ describe("Interaction integration", () => {
       // appears in representation.interactive (that array comes from the AX
       // tree). Before the fix fill_form rejected dom- IDs with ELEMENT_NOT_FOUND
       // before resolveElement ran; the CHANGELOG claims they work — verify it.
-      const matches = parseToolJson<Array<{ id: string }>>(
+      const { elements } = parseToolJson<{ elements: Array<{ id: string }> }>(
         await harness.callTool("charlotte_find", { selector: "#first-name" }),
       );
-      expect(matches.length).toBeGreaterThan(0);
-      const domId = matches[0].id;
+      expect(elements.length).toBeGreaterThan(0);
+      const domId = elements[0].id;
       expect(domId.startsWith("dom-")).toBe(true);
 
       const result = await harness.callTool("charlotte_fill_form", {
@@ -894,11 +894,11 @@ describe("Interaction integration", () => {
     });
 
     it("#191: rejects a dom- ID pointing at a non-fillable element", async () => {
-      const matches = parseToolJson<Array<{ id: string }>>(
+      const { elements } = parseToolJson<{ elements: Array<{ id: string }> }>(
         await harness.callTool("charlotte_find", { selector: "#submit-btn" }),
       );
-      expect(matches.length).toBeGreaterThan(0);
-      const domId = matches[0].id;
+      expect(elements.length).toBeGreaterThan(0);
+      const domId = elements[0].id;
       expect(domId.startsWith("dom-")).toBe(true);
 
       const result = await harness.callTool("charlotte_fill_form", {

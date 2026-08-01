@@ -10,6 +10,7 @@ import { z } from "zod";
 import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 import { diffRepresentations } from "../state/differ.js";
 import { logger } from "../utils/logger.js";
+import { DEFAULT_SESSION_ID } from "./types.js";
 
 /**
  * Boolean schema that accepts both native booleans and string representations
@@ -463,12 +464,12 @@ export function formatPageResponse(
 } {
   const { extra, maxResponseBytes = FALLBACK_MAX_RESPONSE_BYTES } = options;
   const cleaned = stripEmptyFields(representation);
-  const payload = extra ? { ...extra, ...cleaned } : cleaned;
+  const payload = { session_id: DEFAULT_SESSION_ID, ...(extra ?? {}), ...cleaned };
 
   let text = JSON.stringify(payload);
   if (Buffer.byteLength(text, "utf-8") > maxResponseBytes) {
     const degraded = degradeOversizedResponse(cleaned, representation, maxResponseBytes);
-    const degradedPayload = extra ? { ...extra, ...degraded } : degraded;
+    const degradedPayload = { session_id: DEFAULT_SESSION_ID, ...(extra ?? {}), ...degraded };
     text = JSON.stringify(degradedPayload);
   }
 
@@ -484,6 +485,12 @@ export function formatPageResponse(
 
 /**
  * Format an array of interactive elements as an MCP tool response.
+ *
+ * Wrapped under `elements` (rather than returned as a bare top-level JSON
+ * array) so the `session_id` envelope (I2) can sit alongside it — a JSON
+ * array cannot carry a named sibling field. This is a deliberate,
+ * spec-mandated shape change to `charlotte_find`'s non-selector response,
+ * landed together with the rest of the session_id envelope (slice-0.md Step 3).
  */
 export function formatElementsResponse(elements: InteractiveElement[]): {
   content: Array<{ type: "text"; text: string }>;
@@ -492,7 +499,7 @@ export function formatElementsResponse(elements: InteractiveElement[]): {
     content: [
       {
         type: "text" as const,
-        text: JSON.stringify(elements),
+        text: JSON.stringify({ session_id: DEFAULT_SESSION_ID, elements }),
       },
     ],
   };
@@ -509,7 +516,7 @@ export function formatErrorResponse(error: CharlotteError): {
     content: [
       {
         type: "text" as const,
-        text: JSON.stringify(error.toResponse()),
+        text: JSON.stringify({ session_id: DEFAULT_SESSION_ID, ...error.toResponse() }),
       },
     ],
     isError: true,
@@ -658,6 +665,7 @@ export async function writeOutputFile(
       {
         type: "text" as const,
         text: JSON.stringify({
+          session_id: DEFAULT_SESSION_ID,
           output_file: filePath,
           size: Buffer.byteLength(content, "utf-8"),
         }),
@@ -679,6 +687,7 @@ export async function writeBinaryOutputFile(
       {
         type: "text" as const,
         text: JSON.stringify({
+          session_id: DEFAULT_SESSION_ID,
           output_file: filePath,
           size: data.length,
         }),

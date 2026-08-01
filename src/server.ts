@@ -104,7 +104,9 @@ export function createServer(deps: ServerDeps, options: ServerOptions = {}): Cre
       capabilities: {
         // listChanged: prep for runtime tool toggling (e.g. profile switching)
         tools: { listChanged: true },
-        logging: {},
+        // `logging` capability dropped (slice-0.md Step 3): sendLoggingMessage
+        // is never called anywhere in this codebase (verified by grep), and
+        // the MCP logging capability itself is deprecated as of 2026-07-28.
       },
       instructions,
     },

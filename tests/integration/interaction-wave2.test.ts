@@ -255,10 +255,10 @@ describe("Wave 2 interaction correctness", () => {
     it("charlotte_drag does not hang when the drop handler opens a dialog", async () => {
       // The drag source/target are non-AX-tree divs; charlotte_drag needs element
       // IDs. charlotte_find selector mode returns durable dom- IDs.
-      const sourceMatches = parseToolJson<Array<{ id: string }>>(
+      const { elements: sourceMatches } = parseToolJson<{ elements: Array<{ id: string }> }>(
         await harness.callTool("charlotte_find", { selector: "#drag-source" }),
       );
-      const targetMatches = parseToolJson<Array<{ id: string }>>(
+      const { elements: targetMatches } = parseToolJson<{ elements: Array<{ id: string }> }>(
         await harness.callTool("charlotte_find", { selector: "#drag-target" }),
       );
       const sourceId = sourceMatches[0].id;
@@ -276,10 +276,10 @@ describe("Wave 2 interaction correctness", () => {
     it("drops the source into a target that is far below the fold", async () => {
       await harness.callTool("charlotte_navigate", { url: DRAG_SCROLL_FIXTURE });
 
-      const sourceMatches = parseToolJson<Array<{ id: string }>>(
+      const { elements: sourceMatches } = parseToolJson<{ elements: Array<{ id: string }> }>(
         await harness.callTool("charlotte_find", { selector: "#item-1" }),
       );
-      const targetMatches = parseToolJson<Array<{ id: string }>>(
+      const { elements: targetMatches } = parseToolJson<{ elements: Array<{ id: string }> }>(
         await harness.callTool("charlotte_find", { selector: "#zone-b" }),
       );
 

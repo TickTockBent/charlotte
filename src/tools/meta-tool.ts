@@ -8,6 +8,7 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { DEFAULT_SESSION_ID } from "../core/types.js";
 import {
   TOOL_GROUPS,
   ALL_GROUP_NAMES,
@@ -85,6 +86,7 @@ export function registerMetaTool(server: McpServer, registry: ToolRegistry): Reg
             {
               type: "text" as const,
               text: JSON.stringify({
+                session_id: DEFAULT_SESSION_ID,
                 error: "group is required for enable/disable actions",
               }),
             },
@@ -114,6 +116,7 @@ export function registerMetaTool(server: McpServer, registry: ToolRegistry): Reg
             {
               type: "text" as const,
               text: JSON.stringify({
+                session_id: DEFAULT_SESSION_ID,
                 action: "enable",
                 group,
                 tools_enabled: enabled,
@@ -143,6 +146,7 @@ export function registerMetaTool(server: McpServer, registry: ToolRegistry): Reg
             {
               type: "text" as const,
               text: JSON.stringify({
+                session_id: DEFAULT_SESSION_ID,
                 action: "disable",
                 group,
                 tools_disabled: disabled,
@@ -159,7 +163,7 @@ export function registerMetaTool(server: McpServer, registry: ToolRegistry): Reg
         content: [
           {
             type: "text" as const,
-            text: JSON.stringify({ groups: status }),
+            text: JSON.stringify({ session_id: DEFAULT_SESSION_ID, groups: status }),
           },
         ],
       };

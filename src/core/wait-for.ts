@@ -3,7 +3,7 @@ import type { Page } from "puppeteer";
 import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 import { isTransientEvalError } from "../utils/wait.js";
 import { logger } from "../utils/logger.js";
-import { defineTool, type SessionContext, type ToolDefinition } from "./types.js";
+import { defineTool, DEFAULT_SESSION_ID, type SessionContext, type ToolDefinition } from "./types.js";
 import {
   ensureReady,
   renderActivePage,
@@ -89,6 +89,7 @@ const waitForTool = defineTool({
             {
               type: "text" as const,
               text: JSON.stringify({
+                session_id: DEFAULT_SESSION_ID,
                 ...timeoutError.toResponse(),
                 page: stripEmptyFields(representation),
               }),

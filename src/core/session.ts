@@ -3,7 +3,7 @@ import * as path from "node:path";
 import { z } from "zod";
 import { logger } from "../utils/logger.js";
 import type { AutoSnapshotMode, DeviceType, DialogAutoDismiss } from "../types/config.js";
-import { defineTool, type ToolDefinition } from "./types.js";
+import { defineTool, DEFAULT_SESSION_ID, type ToolDefinition } from "./types.js";
 import {
   ensureReady,
   renderActivePage,
@@ -47,6 +47,7 @@ const getCookiesTool = defineTool({
           {
             type: "text" as const,
             text: JSON.stringify({
+              session_id: DEFAULT_SESSION_ID,
               cookies: cookies.map((c) => ({
                 name: c.name,
                 value: c.value,
@@ -98,6 +99,7 @@ const clearCookiesTool = defineTool({
           {
             type: "text" as const,
             text: JSON.stringify({
+              session_id: DEFAULT_SESSION_ID,
               success: true,
               cleared: cookiesToDelete.length,
               names: cookiesToDelete.map((c) => c.name),
@@ -143,6 +145,7 @@ const setCookiesTool = defineTool({
           {
             type: "text" as const,
             text: JSON.stringify({
+              session_id: DEFAULT_SESSION_ID,
               success: true,
               cookies_set: cookies.length,
               details: cookies.map((c) => ({
@@ -186,6 +189,7 @@ const setHeadersTool = defineTool({
           {
             type: "text" as const,
             text: JSON.stringify({
+              session_id: DEFAULT_SESSION_ID,
               success: true,
               headers_set: Object.keys(headers),
             }),
@@ -324,6 +328,7 @@ const configureTool = defineTool({
           {
             type: "text" as const,
             text: JSON.stringify({
+              session_id: DEFAULT_SESSION_ID,
               success: true,
               config: {
                 snapshot_depth: deps.config.snapshotDepth,
@@ -359,7 +364,7 @@ const tabsTool = defineTool({
         content: [
           {
             type: "text" as const,
-            text: JSON.stringify({ tabs }),
+            text: JSON.stringify({ session_id: DEFAULT_SESSION_ID, tabs }),
           },
         ],
       };
@@ -450,6 +455,7 @@ const tabCloseTool = defineTool({
           {
             type: "text" as const,
             text: JSON.stringify({
+              session_id: DEFAULT_SESSION_ID,
               success: true,
               closed: tab_id,
               remaining_tabs: remainingTabs,
@@ -617,6 +623,7 @@ const networkTool = defineTool({
           {
             type: "text" as const,
             text: JSON.stringify({
+              session_id: DEFAULT_SESSION_ID,
               success: true,
               network: appliedSettings,
             }),

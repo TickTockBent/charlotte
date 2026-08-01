@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 import { logger } from "../utils/logger.js";
-import { defineTool, type ToolDefinition } from "./types.js";
+import { defineTool, DEFAULT_SESSION_ID, type ToolDefinition } from "./types.js";
 import { ensureReady } from "./tool-helpers.js";
 
 /**
@@ -88,7 +88,11 @@ const evaluateTool = defineTool({
           content: [
             {
               type: "text" as const,
-              text: JSON.stringify(truncatedPayload, null, 2),
+              text: JSON.stringify(
+                { session_id: DEFAULT_SESSION_ID, ...truncatedPayload },
+                null,
+                2,
+              ),
             },
           ],
         };
@@ -98,7 +102,7 @@ const evaluateTool = defineTool({
         content: [
           {
             type: "text" as const,
-            text: serialized,
+            text: JSON.stringify({ session_id: DEFAULT_SESSION_ID, ...result }, null, 2),
           },
         ],
       };
@@ -108,7 +112,7 @@ const evaluateTool = defineTool({
           content: [
             {
               type: "text" as const,
-              text: JSON.stringify(error.toResponse()),
+              text: JSON.stringify({ session_id: DEFAULT_SESSION_ID, ...error.toResponse() }),
             },
           ],
           isError: true,
@@ -124,7 +128,10 @@ const evaluateTool = defineTool({
           content: [
             {
               type: "text" as const,
-              text: JSON.stringify(timeoutError.toResponse()),
+              text: JSON.stringify({
+                session_id: DEFAULT_SESSION_ID,
+                ...timeoutError.toResponse(),
+              }),
             },
           ],
           isError: true,
@@ -140,7 +147,7 @@ const evaluateTool = defineTool({
         content: [
           {
             type: "text" as const,
-            text: JSON.stringify(sessionError.toResponse()),
+            text: JSON.stringify({ session_id: DEFAULT_SESSION_ID, ...sessionError.toResponse() }),
           },
         ],
         isError: true,

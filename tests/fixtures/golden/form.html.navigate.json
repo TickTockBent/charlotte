@@ -1,4 +1,5 @@
 {
+  "session_id": "default",
   "url": "{{BASE}}/form.html",
   "title": "Form Test Page",
   "viewport": {

@@ -32,11 +32,11 @@ describe("charlotte_click modifier + click-type handling", () => {
 
   /** Resolve the modifier test button's Charlotte element ID via charlotte_find. */
   async function modifierButtonId(): Promise<string> {
-    const matches = parseToolJson<Array<{ id: string; label: string }>>(
+    const { elements } = parseToolJson<{ elements: Array<{ id: string; label: string }> }>(
       await harness.callTool("charlotte_find", { text: "modifier test button" }),
     );
-    expect(matches.length).toBeGreaterThan(0);
-    return matches[0].id;
+    expect(elements.length).toBeGreaterThan(0);
+    return elements[0].id;
   }
 
   /** Read the fixture's #result text via the evaluate handler. */

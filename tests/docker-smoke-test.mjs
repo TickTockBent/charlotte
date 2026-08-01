@@ -173,7 +173,7 @@ async function runTests(container) {
   response = await callTool(container, "charlotte_find", { type: "link" });
   content = assertOk(response, "find:links");
   json = getContentJson(content);
-  const linkCount = Array.isArray(json) ? json.length : 0;
+  const linkCount = Array.isArray(json?.elements) ? json.elements.length : 0;
   log("find (links)", linkCount > 0, `${linkCount} links found`);
 
   // 7. Navigate to forms page
@@ -192,7 +192,7 @@ async function runTests(container) {
   response = await callTool(container, "charlotte_find", { type: "text_input" });
   content = assertOk(response, "find:text_input");
   json = getContentJson(content);
-  const inputResults = Array.isArray(json) ? json : [];
+  const inputResults = Array.isArray(json?.elements) ? json.elements : [];
   const hasInputs = inputResults.length > 0;
   log("find (text_input)", hasInputs, `${inputResults.length} inputs found`);
 
@@ -218,7 +218,7 @@ async function runTests(container) {
   response = await callTool(container, "charlotte_find", { type: "button" });
   content = assertOk(response, "find:buttons");
   json = getContentJson(content);
-  const buttonResults = Array.isArray(json) ? json : [];
+  const buttonResults = Array.isArray(json?.elements) ? json.elements : [];
   log("find (buttons)", buttonResults.length > 0, `${buttonResults.length} buttons found`);
 
   // 13. Click a button (if found)

@@ -31,7 +31,9 @@ describe("MCP protocol end-to-end", () => {
       const capabilities = harness.client.getServerCapabilities();
       expect(capabilities).toBeDefined();
       expect(capabilities!.tools).toEqual({ listChanged: true });
-      expect(capabilities!.logging).toEqual({});
+      // `logging` capability dropped (slice-0.md Step 3): sendLoggingMessage
+      // was never called, and the capability is deprecated as of 2026-07-28.
+      expect(capabilities!.logging).toBeUndefined();
     });
 
     it("provides server instructions mentioning profile", () => {

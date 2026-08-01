@@ -22,6 +22,16 @@ import type { CharlotteConfig } from "../types/config.js";
 import type { DevModeState } from "../dev/dev-mode-state.js";
 
 /**
+ * The session identifier carried on every tool result's JSON payload (I2,
+ * founding spec §5's schema reservation). MVP-fixed to a single constant —
+ * post-MVP, once the HTTP transport (slice 1+) needs to distinguish concurrent
+ * sessions, this becomes a minted per-connection handle. Kept as a literal
+ * constant (not computed) so the shape of the reservation is visible at the
+ * call site.
+ */
+export const DEFAULT_SESSION_ID = "default";
+
+/**
  * Everything a tool handler needs to do its work: the browser-facing services,
  * the renderer pipeline, the stores, and the live config.
  *

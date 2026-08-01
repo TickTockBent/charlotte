@@ -39,7 +39,7 @@ describe("golden fixtures: tool-output stability", () => {
   });
 
   it("matches every committed golden fixture and keeps element IDs stable within the session", async () => {
-    const scenarios = await captureGoldenScenarios(harness);
+    const scenarios = await captureGoldenScenarios(harness.callTool, harness.fixtureServer!.url);
 
     const goldenFiles = (await fs.readdir(GOLDEN_DIR)).filter((file) => file.endsWith(".json"));
     expect(goldenFiles.length).toBeGreaterThan(0);

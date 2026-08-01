@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { logger } from "../utils/logger.js";
-import { defineTool, type ToolDefinition } from "./types.js";
+import { defineTool, DEFAULT_SESSION_ID, type ToolDefinition } from "./types.js";
 import {
   ensureReady,
   handleToolError,
@@ -62,7 +62,7 @@ const consoleTool = defineTool({
         content: [
           {
             type: "text" as const,
-            text: JSON.stringify(result),
+            text: JSON.stringify({ session_id: DEFAULT_SESSION_ID, ...result }),
           },
         ],
       };
@@ -161,7 +161,7 @@ const requestsTool = defineTool({
         content: [
           {
             type: "text" as const,
-            text: JSON.stringify(result),
+            text: JSON.stringify({ session_id: DEFAULT_SESSION_ID, ...result }),
           },
         ],
       };

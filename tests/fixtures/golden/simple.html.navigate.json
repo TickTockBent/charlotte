@@ -1,4 +1,5 @@
 {
+  "session_id": "default",
   "url": "{{BASE}}/simple.html",
   "title": "Simple Test Page",
   "viewport": {

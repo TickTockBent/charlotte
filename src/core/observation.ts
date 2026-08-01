@@ -4,7 +4,7 @@ import { logger } from "../utils/logger.js";
 import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 import { diffRepresentations } from "../state/differ.js";
 import type { DiffScope } from "../state/differ.js";
-import { defineTool, type SessionContext, type ToolDefinition } from "./types.js";
+import { defineTool, DEFAULT_SESSION_ID, type SessionContext, type ToolDefinition } from "./types.js";
 import type { Bounds } from "../types/page-representation.js";
 import {
   ensureReady,
@@ -284,7 +284,7 @@ const findTool = defineTool({
           content: [
             {
               type: "text" as const,
-              text: JSON.stringify(domElements),
+              text: JSON.stringify({ session_id: DEFAULT_SESSION_ID, elements: domElements }),
             },
           ],
         };
@@ -522,6 +522,7 @@ const screenshotTool = defineTool({
         content.push({
           type: "text" as const,
           text: JSON.stringify({
+            session_id: DEFAULT_SESSION_ID,
             artifact: {
               id: artifact.id,
               filename: artifact.filename,
@@ -556,6 +557,7 @@ const screenshotsTool = defineTool({
           {
             type: "text" as const,
             text: JSON.stringify({
+              session_id: DEFAULT_SESSION_ID,
               screenshots: artifacts.map((a) => ({
                 id: a.id,
                 filename: a.filename,
@@ -620,6 +622,7 @@ const screenshotGetTool = defineTool({
           {
             type: "text" as const,
             text: JSON.stringify({
+              session_id: DEFAULT_SESSION_ID,
               artifact: {
                 id: artifact.id,
                 filename: artifact.filename,
@@ -666,6 +669,7 @@ const screenshotDeleteTool = defineTool({
           {
             type: "text" as const,
             text: JSON.stringify({
+              session_id: DEFAULT_SESSION_ID,
               success: true,
               deleted: id,
               remaining: deps.artifactStore.count,
@@ -746,7 +750,7 @@ const diffTool = defineTool({
         content: [
           {
             type: "text" as const,
-            text: JSON.stringify(diff),
+            text: JSON.stringify({ session_id: DEFAULT_SESSION_ID, ...diff }),
           },
         ],
       };

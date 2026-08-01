@@ -4,7 +4,7 @@ import * as path from "node:path";
 import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 import { logger } from "../utils/logger.js";
 import { Auditor, type AuditCategory } from "../dev/auditor.js";
-import { defineTool, type ToolDefinition } from "./types.js";
+import { defineTool, DEFAULT_SESSION_ID, type ToolDefinition } from "./types.js";
 import {
   ensureReady,
   renderActivePage,
@@ -180,7 +180,7 @@ const devAuditTool = defineTool({
           content: [
             {
               type: "text" as const,
-              text: JSON.stringify(auditResult, null, 2),
+              text: JSON.stringify({ session_id: DEFAULT_SESSION_ID, ...auditResult }, null, 2),
             },
           ],
         };

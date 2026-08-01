@@ -34,8 +34,23 @@
  * regression in ordering should fail the test) and element IDs (hash-based,
  * the entire point of the I1 invariant — must stay exact).
  */
-import type { McpHarness } from "./mcp-harness.js";
+import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { parseToolJson } from "./mcp-harness.js";
+
+/**
+ * Minimal shape shared by both call paths that can execute a Charlotte tool:
+ * the real MCP client (`McpHarness.callTool`, a round-trip through the
+ * registered `McpServer`) and the core-direct harness (`callToolDirect`,
+ * which invokes a `ToolDefinition.handler` with no transport in between —
+ * `tests/helpers/core-direct.ts`). Parameterizing {@link captureGoldenScenarios}
+ * over this signature lets both `tests/integration/golden.test.ts` (I1) and
+ * `tests/integration/parity-core-direct.test.ts` (I3, stdio half) replay the
+ * exact same scenario script instead of maintaining two copies of it.
+ */
+export type CallToolFn = (
+  name: string,
+  args?: Record<string, unknown>,
+) => Promise<CallToolResult>;
 
 /** Keys whose string values are ISO-8601 timestamps, normalized to `"{{TS}}"`. */
 const TIMESTAMP_KEYS = new Set<string>(["timestamp"]);
@@ -110,41 +125,38 @@ interface NavigateResultShape {
 }
 
 /**
- * Run the fixed golden scenario script against a live harness and return the
+ * Run the fixed golden scenario script through `callTool` and return the
  * normalized result for every scenario, keyed by scenario name
  * (`"<page>.navigate"`, `"<page>.observe"`, `"<page>.find"`,
  * `"interaction.click"`).
  *
- * Requires a harness created with `serveDirectory: tests/fixtures/pages`.
+ * `callTool` and `baseUrl` are supplied by the caller rather than a harness
+ * object so the exact same scenario script runs unmodified over either
+ * execution path (see {@link CallToolFn}'s docstring): the real MCP harness
+ * (`harness.callTool`, `harness.fixtureServer!.url`) for I1, or the
+ * core-direct harness (`callToolDirect` bound to its `SessionContext`, its own
+ * fixture static server URL) for I3's stdio half.
  */
 export async function captureGoldenScenarios(
-  harness: McpHarness,
+  callTool: CallToolFn,
+  baseUrl: string,
 ): Promise<Record<string, unknown>> {
-  const baseUrl = harness.fixtureServer?.url;
-  if (!baseUrl) {
-    throw new Error(
-      "captureGoldenScenarios requires a harness set up with serveDirectory: tests/fixtures/pages",
-    );
-  }
-
   const scenarios: Record<string, unknown> = {};
   let clickElementId: string | undefined;
 
   for (const { file, findQuery } of SCENARIO_PAGES) {
     const navigateResult = parseToolJson<NavigateResultShape>(
-      await harness.callTool("charlotte_navigate", {
+      await callTool("charlotte_navigate", {
         url: `${baseUrl}/${file}`,
         detail: "full",
       }),
     );
     scenarios[`${file}.navigate`] = normalizeToolResult(navigateResult, baseUrl);
 
-    const observeResult = parseToolJson(
-      await harness.callTool("charlotte_observe", { detail: "summary" }),
-    );
+    const observeResult = parseToolJson(await callTool("charlotte_observe", { detail: "summary" }));
     scenarios[`${file}.observe`] = normalizeToolResult(observeResult, baseUrl);
 
-    const findResult = parseToolJson(await harness.callTool("charlotte_find", findQuery));
+    const findResult = parseToolJson(await callTool("charlotte_find", findQuery));
     scenarios[`${file}.find`] = normalizeToolResult(findResult, baseUrl);
 
     if (file === "interaction.html") {
@@ -165,7 +177,7 @@ export async function captureGoldenScenarios(
   }
 
   const clickResult = parseToolJson(
-    await harness.callTool("charlotte_click", { element_id: clickElementId }),
+    await callTool("charlotte_click", { element_id: clickElementId }),
   );
   scenarios["interaction.click"] = normalizeToolResult(clickResult, baseUrl);
 

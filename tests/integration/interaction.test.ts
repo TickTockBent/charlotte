@@ -24,6 +24,7 @@ import type { InteractiveElement } from "../../src/types/page-representation.js"
 
 const INTERACTION_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/interaction.html")}`;
 const FORM_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/form.html")}`;
+const CUSTOM_DROPDOWN_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/custom-dropdown.html")}`;
 
 describe("Interaction integration", () => {
   let browserManager: BrowserManager;
@@ -386,6 +387,39 @@ describe("Interaction integration", () => {
       expect(await harnessEval<string>("document.getElementById('color-select').value")).toBe(
         "blue",
       );
+    });
+
+    it("G6(b): rejects charlotte_select on a non-native (custom) dropdown with a clean INVALID_ARGUMENT error", async () => {
+      // Regression test for the raw in-page TypeError ("undefined is not
+      // iterable") that used to surface as ELEMENT_NOT_FOUND when
+      // selectOptionByBackendNodeId ran `Array.from(this.options)` against a
+      // non-<select> element (e.g. a custom ARIA listbox widget). Fixed by
+      // guarding `this instanceof HTMLSelectElement` first in the in-page
+      // function and throwing a clean CharlotteError otherwise.
+      await harnessGoto(CUSTOM_DROPDOWN_FIXTURE);
+
+      const { elements } = parseToolJson<{ elements: Array<{ id: string }> }>(
+        await harness.callTool("charlotte_find", { selector: "#custom-dd" }),
+      );
+      expect(elements.length).toBeGreaterThan(0);
+      const customDropdownId = elements[0].id;
+
+      const result = await harness.callTool("charlotte_select", {
+        element_id: customDropdownId,
+        value: "Option 1",
+      });
+
+      expect(result.isError).toBe(true);
+      const parsed = parseToolJson<{ error: { code: string; message: string; suggestion?: string } }>(
+        result,
+      );
+      expect(parsed.error.code).toBe("INVALID_ARGUMENT");
+      expect(parsed.error.message).toContain("not a native <select>");
+      expect(parsed.error.suggestion).toContain("charlotte_click the element to expand it");
+
+      const rawText = parseToolText(result);
+      expect(rawText).not.toContain("TypeError");
+      expect(rawText).not.toContain("not iterable");
     });
   });
 

@@ -470,6 +470,9 @@ export async function selectOptionByBackendNodeId(
     objectId: object.objectId,
     returnByValue: true,
     functionDeclaration: `function(targetValue) {
+      if (!(this instanceof HTMLSelectElement)) {
+        return { notNativeSelect: true, matched: false, available: [], value: null };
+      }
       const options = Array.from(this.options);
       const matchByValue = options.find(o => o.value === targetValue);
       const matchByText = options.find(o => o.textContent.trim() === targetValue);
@@ -490,8 +493,16 @@ export async function selectOptionByBackendNodeId(
   assertNoInPageException(callResult, { code: CharlotteErrorCode.ELEMENT_NOT_FOUND });
 
   const result = callResult.result?.value as
-    | { matched: boolean; available: string[]; value: string }
+    | { matched: boolean; available: string[]; value: string | null; notNativeSelect?: boolean }
     | undefined;
+
+  if (result?.notNativeSelect) {
+    throw new CharlotteError(
+      CharlotteErrorCode.INVALID_ARGUMENT,
+      `Element is not a native <select>; charlotte_select only operates on native select elements.`,
+      `For a custom dropdown widget, charlotte_click the element to expand it, then charlotte_click the desired option.`,
+    );
+  }
 
   if (!result || !result.matched) {
     const available = result?.available ?? [];

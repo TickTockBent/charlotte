@@ -199,6 +199,7 @@ describe("resolveOptions precedence (issue #19)", () => {
         sessionIdleTtlMs: 1_800_000,
         maxSessions: 1,
         allowPrivateNetworks: [],
+        allowedHosts: [],
         enableDevTools: false,
         artifactDelivery: "inline",
       });

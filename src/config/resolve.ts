@@ -156,6 +156,7 @@ export function resolveOptions(
     allowPrivateNetworks: httpFile.allowPrivateNetworks ?? [
       ...DEFAULT_HTTP_CONFIG.allowPrivateNetworks,
     ],
+    allowedHosts: httpFile.allowedHosts ?? [...DEFAULT_HTTP_CONFIG.allowedHosts],
     enableDevTools: httpFile.enableDevTools ?? DEFAULT_HTTP_CONFIG.enableDevTools,
     artifactDelivery: httpFile.artifactDelivery ?? DEFAULT_HTTP_CONFIG.artifactDelivery,
   };

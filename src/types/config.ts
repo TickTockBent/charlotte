@@ -76,6 +76,16 @@ export interface HttpTransportConfig {
   maxSessions: number;
   /** RESERVED (slice 2): CIDR allowlist for the SSRF guard. Empty = deny all. */
   allowPrivateNetworks: string[];
+  /**
+   * Extra `Host` header hostnames to accept, on top of the always-allowed set
+   * derived at startup (loopback trio + bind `host` + `publicOrigin` hostname).
+   * The inbound DNS-rebind guard (D16) 403s any request whose Host is not on the
+   * combined allowlist. Hostnames only, no ports; IPv6 in brackets (`[::1]`).
+   * Empty (the default) relies entirely on the derived set — correct for the
+   * loopback + tunnel deployment; add entries only for a reverse proxy that
+   * presents some other Host.
+   */
+  allowedHosts: string[];
   /** RESERVED (slice 2): expose filesystem-serving dev tools over HTTP. */
   enableDevTools: boolean;
   /** RESERVED (slice 2 ⟨D6⟩): inline base64 vs resource-style artifacts. */
@@ -102,6 +112,7 @@ export const DEFAULT_HTTP_CONFIG: Omit<HttpTransportConfig, "authToken" | "publi
   sessionIdleTtlMs: 1_800_000,
   maxSessions: 1,
   allowPrivateNetworks: [],
+  allowedHosts: [],
   enableDevTools: false,
   artifactDelivery: "inline",
 };

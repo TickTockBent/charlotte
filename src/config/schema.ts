@@ -194,6 +194,12 @@ const HttpConfigSchema = z
      */
     allowPrivateNetworks: z.array(z.string()).optional(),
     /**
+     * Consumed (slice 2 — D16 inbound host guard): extra `Host` header
+     * hostnames to accept beyond the derived set (loopback trio + bind host +
+     * publicOrigin hostname). Hostnames only, no ports; IPv6 in brackets.
+     */
+    allowedHosts: z.array(z.string()).optional(),
+    /**
      * RESERVED (slice 2 — remote threat posture): expose the filesystem-serving
      * dev_mode tools over HTTP. Default false; enabling it will carry a loud
      * startup warning. Validated and ignored in slice 1 (the default `browse`

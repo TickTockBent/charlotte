@@ -45,8 +45,12 @@
  */
 import type { Server as NodeHttpServer } from "node:http";
 import express, { type Request, type Response, type NextFunction } from "express";
-import { McpServer, createMcpHandler } from "@modelcontextprotocol/server";
-import { toNodeHandler } from "@modelcontextprotocol/node";
+import {
+  McpServer,
+  createMcpHandler,
+  localhostAllowedHostnames,
+} from "@modelcontextprotocol/server";
+import { toNodeHandler, hostHeaderValidation } from "@modelcontextprotocol/node";
 import { charlotteTools } from "../core/index.js";
 import type { SessionContext, ToolDefinition } from "../core/types.js";
 import { registerToolDefinitions } from "./stdio.js";
@@ -96,6 +100,12 @@ export interface HttpTransportOptions {
    * `10.0.5.0/24`). Empty (the default) denies every private range.
    */
   allowPrivateNetworks?: string[];
+  /**
+   * Extra `Host` header hostnames the inbound DNS-rebind guard (D16) accepts,
+   * on top of the derived set (loopback trio + bind `host` + `publicOrigin`
+   * hostname). Hostnames only, no ports; IPv6 in brackets.
+   */
+  allowedHosts?: string[];
   /**
    * The configured CDP endpoint, if any (`--cdpEndpoint` / config). Present here
    * only so HTTP-mode startup can REFUSE to run against an external browser: the
@@ -278,6 +288,25 @@ export async function startHttpTransport(
       ? undefined
       : normalizePublicOrigin(options.publicOrigin);
 
+  // Inbound DNS-rebind guard (D16, I10) allowlist, derived once at startup.
+  // Always admits the loopback trio (direct local clients send Host:
+  // 127.0.0.1:<port>) and the publicOrigin hostname (cloudflared forwards the
+  // original public Host verbatim — empirically confirmed, docs/logs.txt); plus
+  // the configured bind host and any operator-configured extras.
+  const allowedHostnames = Array.from(
+    new Set<string>(
+      [
+        ...localhostAllowedHostnames(),
+        options.host,
+        ...(publicOrigin !== undefined ? [new URL(publicOrigin).hostname] : []),
+        ...(options.allowedHosts ?? []),
+      ].filter(
+        (hostname): hostname is string =>
+          typeof hostname === "string" && hostname.trim() !== "",
+      ),
+    ),
+  );
+
   const enabledToolNames = resolveProfile(options.profile);
   const exposedTools = selectTools(enabledToolNames);
   // No charlotte_tools here, so the instructions must not tell the agent to
@@ -356,6 +385,20 @@ export async function startHttpTransport(
       next();
     });
   }
+
+  // ─── Inbound DNS-rebind guard (D16, I10), ahead of every route ───
+  // Refuses any request whose Host hostname is not allowlisted; the SDK
+  // middleware writes the 403. Whole-app (not just /mcp): /healthz and the OAuth
+  // facade routes are equally rebindable and the tunnel forwards the same Host
+  // to all of them. Runs before the /mcp auth middleware, so a rebind request
+  // never reaches the server factory or the browser (I10, mirroring I4).
+  const validateInboundHost = hostHeaderValidation(allowedHostnames);
+  app.use((request: Request, response: Response, next: NextFunction) => {
+    if (validateInboundHost(request, response)) {
+      next();
+    }
+    // else: the middleware already answered 403; do not call next().
+  });
 
   // ─── Unauthenticated liveness ───
   // Liveness only: version, uptime, and whether Chromium is up. No page data,
@@ -443,6 +486,7 @@ export async function startHttpTransport(
     `Charlotte MCP server running on http://${options.host}:${boundPort}/mcp ` +
       `(profile: ${options.profile}, auth: bearer required)`,
   );
+  logger.info(`Inbound host-header guard: allowed Host hostnames = ${allowedHostnames.join(", ")}`);
   if (publicOrigin !== undefined) {
     logger.info(
       `OAuth facade enabled at ${publicOrigin} — clients may authorize with the ` +

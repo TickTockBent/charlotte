@@ -87,6 +87,12 @@ export interface HttpHarnessOptions {
   /** Turn request observation on (method, path, redacted headers to stderr). */
   debugRequests?: boolean;
   /**
+   * Extra `Host` header hostnames the inbound DNS-rebind guard (D16) accepts,
+   * on top of the derived set. Host-guard tests set this to prove the operator
+   * escape hatch; every other HTTP test leaves it undefined.
+   */
+  allowedHosts?: string[];
+  /**
    * Enable the outbound SSRF guard (D14) with the given CIDR allowlist BEFORE
    * the initial tab is opened, so the pre-opened tab carries the guard. SSRF
    * tests set this; every other HTTP test leaves it undefined (guard off on the
@@ -281,6 +287,7 @@ async function buildHttpHarness(
       profile: options.profile ?? "full",
       ...(options.publicOrigin !== undefined ? { publicOrigin: options.publicOrigin } : {}),
       ...(options.debugRequests !== undefined ? { debugRequests: options.debugRequests } : {}),
+      ...(options.allowedHosts !== undefined ? { allowedHosts: options.allowedHosts } : {}),
     });
   } catch (error) {
     // Tests that assert on startup rejections (bad token, bad publicOrigin)

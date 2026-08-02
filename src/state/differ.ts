@@ -57,6 +57,58 @@ export function diffRepresentations(
   };
 }
 
+/**
+ * True when two URLs represent different documents (origin or pathname differ).
+ * Hash/query-only changes count as the same document. Unparseable URLs fall
+ * back to strict string inequality.
+ */
+export function isCrossDocumentNavigation(fromUrl: string, toUrl: string): boolean {
+  if (fromUrl === toUrl) return false;
+  try {
+    const fromParsed = new URL(fromUrl);
+    const toParsed = new URL(toUrl);
+    return fromParsed.origin !== toParsed.origin || fromParsed.pathname !== toParsed.pathname;
+  } catch {
+    return fromUrl !== toUrl;
+  }
+}
+
+/**
+ * Build a collapsed "navigation" diff: the page was replaced, so an
+ * element-level add/remove diff is pure noise. Carries only the url (and title,
+ * if changed) transition plus a human summary. Used by renderAfterAction when an
+ * interaction causes a cross-document navigation (finding G3 / decision D11).
+ */
+export function buildNavigationDiff(
+  fromRepresentation: PageRepresentation,
+  toRepresentation: PageRepresentation,
+  fromSnapshotId: number,
+  toSnapshotId: number,
+): SnapshotDiff {
+  const changes: DiffChange[] = [
+    {
+      type: "changed",
+      property: "url",
+      from: fromRepresentation.url,
+      to: toRepresentation.url,
+    },
+  ];
+  if (fromRepresentation.title !== toRepresentation.title) {
+    changes.push({
+      type: "changed",
+      property: "title",
+      from: fromRepresentation.title,
+      to: toRepresentation.title,
+    });
+  }
+  return {
+    from_snapshot: fromSnapshotId,
+    to_snapshot: toSnapshotId,
+    changes,
+    summary: `Navigation: ${fromRepresentation.url} → ${toRepresentation.url} (page replaced; element-level diff omitted).`,
+  };
+}
+
 // ─── Landmark diffing ────────────────────────────────────────────────
 
 function diffLandmarks(fromLandmarks: Landmark[], toLandmarks: Landmark[]): DiffChange[] {

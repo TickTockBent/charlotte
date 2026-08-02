@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { diffRepresentations } from "../../../src/state/differ.js";
+import {
+  diffRepresentations,
+  isCrossDocumentNavigation,
+  buildNavigationDiff,
+} from "../../../src/state/differ.js";
 import type {
   PageRepresentation,
   InteractiveElement,
@@ -617,5 +621,82 @@ describe("diffRepresentations", () => {
       expect(diff.summary).toContain("added");
       expect(diff.summary).toContain("changed");
     });
+  });
+});
+
+describe("isCrossDocumentNavigation", () => {
+  it("returns false for identical URLs", () => {
+    expect(isCrossDocumentNavigation("https://example.com/a", "https://example.com/a")).toBe(false);
+  });
+
+  it("returns false for a hash-only change", () => {
+    expect(
+      isCrossDocumentNavigation("https://example.com/a", "https://example.com/a#section"),
+    ).toBe(false);
+  });
+
+  it("returns false for a query-only change on the same path", () => {
+    expect(
+      isCrossDocumentNavigation("https://example.com/search?q=1", "https://example.com/search?q=2"),
+    ).toBe(false);
+  });
+
+  it("returns true for a different pathname on the same origin", () => {
+    expect(isCrossDocumentNavigation("https://example.com/a", "https://example.com/b")).toBe(true);
+  });
+
+  it("returns true for a different origin", () => {
+    expect(isCrossDocumentNavigation("https://example.com/a", "https://other.com/a")).toBe(true);
+  });
+
+  it("falls back to string inequality for an unparseable URL without throwing", () => {
+    expect(() => isCrossDocumentNavigation("not-a-url", "also-not-a-url")).not.toThrow();
+    expect(isCrossDocumentNavigation("not-a-url", "also-not-a-url")).toBe(true);
+    expect(isCrossDocumentNavigation("not-a-url", "not-a-url")).toBe(false);
+  });
+});
+
+describe("buildNavigationDiff", () => {
+  it("returns a single url change entry when the title is unchanged", () => {
+    const before = createMockRepresentation({ url: "https://example.com/a", title: "Page A" });
+    const after = createMockRepresentation({ url: "https://example.com/b", title: "Page A" });
+
+    const diff = buildNavigationDiff(before, after, 1, 2);
+
+    expect(diff.from_snapshot).toBe(1);
+    expect(diff.to_snapshot).toBe(2);
+    expect(diff.changes).toEqual([
+      {
+        type: "changed",
+        property: "url",
+        from: "https://example.com/a",
+        to: "https://example.com/b",
+      },
+    ]);
+    expect(diff.summary).toContain("https://example.com/a");
+    expect(diff.summary).toContain("https://example.com/b");
+    expect(diff.summary).toContain("page replaced");
+  });
+
+  it("includes a title entry when the title also changed", () => {
+    const before = createMockRepresentation({ url: "https://example.com/a", title: "Old Title" });
+    const after = createMockRepresentation({ url: "https://example.com/b", title: "New Title" });
+
+    const diff = buildNavigationDiff(before, after, 5, 6);
+
+    expect(diff.changes).toEqual([
+      {
+        type: "changed",
+        property: "url",
+        from: "https://example.com/a",
+        to: "https://example.com/b",
+      },
+      {
+        type: "changed",
+        property: "title",
+        from: "Old Title",
+        to: "New Title",
+      },
+    ]);
   });
 });

@@ -8,7 +8,11 @@ import type { PageRepresentation, InteractiveElement } from "../types/page-repre
 import type { DetailLevel } from "../renderer/renderer-pipeline.js";
 import { z } from "zod";
 import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
-import { diffRepresentations } from "../state/differ.js";
+import {
+  diffRepresentations,
+  isCrossDocumentNavigation,
+  buildNavigationDiff,
+} from "../state/differ.js";
 import { logger } from "../utils/logger.js";
 import { DEFAULT_SESSION_ID } from "./types.js";
 
@@ -295,15 +299,27 @@ export async function renderAfterAction(deps: SessionContext): Promise<PageRepre
 
   const representation = await renderActivePage(deps, { source: "action" });
 
-  // Compute delta if we have a pre-action snapshot to compare against
+  // Compute delta if we have a pre-action snapshot to compare against.
+  // A cross-document navigation (origin or pathname changed) collapses to a
+  // one-line navigation summary instead of a full element-level diff — see
+  // decision D11 / finding G3. Same-page mutations keep the full delta.
   if (preActionSnapshot) {
     const postSnapshotId = representation.snapshot_id;
-    representation.delta = diffRepresentations(
-      preActionSnapshot.representation,
-      representation,
-      preActionSnapshot.id,
-      postSnapshotId,
-    );
+    const fromUrl = preActionSnapshot.representation.url;
+    const toUrl = representation.url;
+    representation.delta = isCrossDocumentNavigation(fromUrl, toUrl)
+      ? buildNavigationDiff(
+          preActionSnapshot.representation,
+          representation,
+          preActionSnapshot.id,
+          postSnapshotId,
+        )
+      : diffRepresentations(
+          preActionSnapshot.representation,
+          representation,
+          preActionSnapshot.id,
+          postSnapshotId,
+        );
   }
 
   return representation;

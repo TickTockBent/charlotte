@@ -126,6 +126,23 @@ export interface CharlotteConfig {
   deviceViewportPresets: Record<DeviceType, { width: number; height: number }>;
   /** Output-size caps that bound tool response size (issue #188). */
   limits: OutputLimits;
+  /**
+   * Outbound SSRF / navigation guard (slice 2, decision D14). OFF by default so
+   * stdio mode is entirely unaffected; the HTTP transport turns it on at
+   * startup. When enabled, `PageManager.wirePageListeners` installs a CDP
+   * `Fetch` request-stage veto that refuses any navigation whose DNS-resolved
+   * IP falls in a private/loopback/link-local/metadata range, unless an
+   * `allowPrivateNetworks` CIDR carves it back out.
+   */
+  navigationGuard: {
+    /** When true, install the guard on every page. HTTP mode sets this. */
+    enabled: boolean;
+    /**
+     * CIDR carve-outs from the default deny-set (mirrored from the HTTP
+     * transport's `allowPrivateNetworks`; empty = deny all private ranges).
+     */
+    allowPrivateNetworks: string[];
+  };
 }
 
 /** Built-in defaults for {@link OutputLimits}. */
@@ -155,5 +172,8 @@ export function createDefaultConfig(): CharlotteConfig {
       tablet: { ...DEVICE_VIEWPORT_PRESETS.tablet },
     },
     limits: { ...DEFAULT_OUTPUT_LIMITS },
+    // Guard off by default: stdio mode never denies navigation. The HTTP
+    // transport flips `enabled` on at startup (deny-private-by-default, D14).
+    navigationGuard: { enabled: false, allowPrivateNetworks: [] },
   };
 }

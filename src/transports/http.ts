@@ -89,6 +89,20 @@ export interface HttpTransportOptions {
    * startup, before anything is listening.
    */
   publicOrigin?: string;
+  /**
+   * CIDR carve-outs for the outbound SSRF / navigation guard (D14). The guard
+   * itself is always ON in HTTP mode (deny-private-by-default); this list names
+   * the private ranges an operator opts back in to (e.g. an intranet
+   * `10.0.5.0/24`). Empty (the default) denies every private range.
+   */
+  allowPrivateNetworks?: string[];
+  /**
+   * The configured CDP endpoint, if any (`--cdpEndpoint` / config). Present here
+   * only so HTTP-mode startup can REFUSE to run against an external browser: the
+   * SSRF guard (D15) is enforced by a launch-time proxy and cannot front a
+   * browser Charlotte did not launch. Unset in the normal launch path.
+   */
+  cdpEndpoint?: string;
 }
 
 /** A running HTTP transport. */
@@ -225,6 +239,37 @@ export async function startHttpTransport(
         "HTTP without authentication.",
     );
   }
+
+  // Turn the outbound SSRF / navigation guard ON for HTTP mode (D14). It is off
+  // by default in the session config so stdio is unaffected; flipping it here is
+  // what makes "HTTP denies private ranges by default" true. PageManager reads
+  // this flag when it wires each page, so the guard is armed before the first
+  // navigation. The allowlist carves post-resolution exceptions (empty = deny
+  // all private ranges).
+  ctx.config.navigationGuard.enabled = true;
+  ctx.config.navigationGuard.allowPrivateNetworks = options.allowPrivateNetworks ?? [];
+
+  // Fail closed (S2-F2): the guard is enforced by a launch-time filtering proxy
+  // (D15), which can only front a browser Charlotte launches itself. Attaching
+  // to an external browser via a CDP endpoint would serve a remote HTTP endpoint
+  // driving an UNGUARDED browser — a silent absence of the security boundary
+  // (pillar 5). Refuse to start rather than warn-and-continue.
+  if (ctx.config.navigationGuard.enabled && options.cdpEndpoint) {
+    throw new Error(
+      "HTTP mode enables the SSRF navigation guard, which requires Charlotte to launch " +
+        "its own browser; it cannot be enforced when attaching to an external browser via " +
+        `CDP endpoint (${options.cdpEndpoint}). Remove the CDP endpoint so Charlotte ` +
+        "launches a guarded browser.",
+    );
+  }
+
+  logger.info(
+    `Outbound SSRF guard enabled (allowPrivateNetworks: ${
+      ctx.config.navigationGuard.allowPrivateNetworks.length > 0
+        ? ctx.config.navigationGuard.allowPrivateNetworks.join(", ")
+        : "none — all private ranges denied"
+    })`,
+  );
 
   // Validated before the listener exists: a mistyped origin must fail loudly at
   // startup, not by serving metadata that points somewhere else.

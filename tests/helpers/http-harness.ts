@@ -86,6 +86,13 @@ export interface HttpHarnessOptions {
   publicOrigin?: string;
   /** Turn request observation on (method, path, redacted headers to stderr). */
   debugRequests?: boolean;
+  /**
+   * Enable the outbound SSRF guard (D14) with the given CIDR allowlist BEFORE
+   * the initial tab is opened, so the pre-opened tab carries the guard. SSRF
+   * tests set this; every other HTTP test leaves it undefined (guard off on the
+   * pre-opened tab, matching production's guard-off-until-HTTP-startup posture).
+   */
+  navigationGuardAllowlist?: string[];
 }
 
 /** A JSON-RPC response envelope as it comes back off the wire. */
@@ -198,26 +205,38 @@ async function buildHttpHarness(
   options: HttpHarnessOptions,
   launchBrowser: boolean,
 ): Promise<HttpHarness> {
-  // Tests opt out of the Chromium sandbox: CI hosts and AppArmor-restricted
-  // dev machines cannot launch the sandboxed browser (see #184).
-  const browserManager = new BrowserManager(undefined, { noSandbox: true });
-
   const config = createDefaultConfig();
+  // Enable the SSRF guard (D15) before launch when a test asks for it, so the
+  // filtering proxy fronts the browser. Left off otherwise, matching production
+  // (guard off until HTTP startup flips it) — so existing HTTP tests are
+  // unaffected.
+  if (options.navigationGuardAllowlist !== undefined) {
+    config.navigationGuard.enabled = true;
+    config.navigationGuard.allowPrivateNetworks = options.navigationGuardAllowlist;
+  }
   options.configOverrides?.(config);
+
+  // Tests opt out of the Chromium sandbox: CI hosts and AppArmor-restricted
+  // dev machines cannot launch the sandboxed browser (see #184). Pass the shared
+  // config so BrowserManager sees `navigationGuard.enabled` at launch (D15).
+  const browserManager = new BrowserManager(config, { noSandbox: true });
 
   const cdpSessionManager = new CDPSessionManager();
   const pageManager = new PageManager(config, cdpSessionManager);
+
+  // Mirror src/index.ts: reset per-session state on disconnect (#201) and feed
+  // the filtering proxy's refusals to PageManager (D15). Both wired BEFORE
+  // launch so the proxy starts (and its denials are captured) from the first
+  // navigation.
+  browserManager.setOnDisconnected(() => {
+    pageManager.reset();
+  });
+  browserManager.setNavigationGuardOnDeny((info) => pageManager.recordNavigationBlock(info));
 
   if (launchBrowser) {
     await browserManager.launch();
     await pageManager.openTab(browserManager);
   }
-
-  // Mirror src/index.ts / core-direct.ts: reset PageManager + CDP caches when
-  // the browser transport drops so a crashed browser recovers (#201).
-  browserManager.setOnDisconnected(() => {
-    pageManager.reset();
-  });
 
   const elementIdGenerator = new ElementIdGenerator();
   const rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator, config);

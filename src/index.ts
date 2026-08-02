@@ -75,6 +75,11 @@ async function buildSessionContext(resolved: ResolvedOptions): Promise<SessionCo
     pageManager.reset();
   });
 
+  // Feed the SSRF filtering proxy's refusals (D15) to PageManager so the
+  // navigate tool can raise NAVIGATION_BLOCKED. No-op unless HTTP startup has
+  // set `config.navigationGuard.enabled` (stdio never starts the proxy).
+  browserManager.setNavigationGuardOnDeny((info) => pageManager.recordNavigationBlock(info));
+
   // Initialize renderer pipeline
   const elementIdGenerator = new ElementIdGenerator();
   const rendererPipeline = new RendererPipeline(cdpSessionManager, elementIdGenerator, config);
@@ -145,7 +150,12 @@ async function main(): Promise<void> {
   if (resolved.http) {
     let httpTransport;
     try {
-      httpTransport = await startHttpTransport(ctx, resolved.httpConfig);
+      // Pass the CDP endpoint so HTTP startup can fail closed when the SSRF
+      // guard cannot be enforced against an external browser (S2-F2).
+      httpTransport = await startHttpTransport(ctx, {
+        ...resolved.httpConfig,
+        cdpEndpoint: resolved.cdpEndpoint,
+      });
     } catch (error) {
       logger.error((error as Error).message);
       await ctx.browserManager.close();

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { Page } from "puppeteer";
 import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
+import type { NavigationDenyInfo } from "../browser/navigation-guard.js";
 import { logger } from "../utils/logger.js";
 import type { DetailLevel } from "../renderer/renderer-pipeline.js";
 import { defineTool, type ToolDefinition } from "./types.js";
@@ -45,6 +46,37 @@ async function getHistoryPosition(
   }
 }
 
+/**
+ * Turn a recorded SSRF-guard refusal (D14) into a legible NAVIGATION_BLOCKED
+ * error whose message names the resolved IP and the matched range, and whose
+ * suggestion is the exact copy-pasteable `allowPrivateNetworks` fix. The
+ * fail-closed-resolution case gets its own wording so a DNS failure is not
+ * misread as a private-range hit.
+ */
+function buildNavigationBlockedError(url: string, block: NavigationDenyInfo): CharlotteError {
+  if (block.reason === "resolution-failed") {
+    return new CharlotteError(
+      CharlotteErrorCode.NAVIGATION_BLOCKED,
+      `Navigation to '${url}' was refused: the host could not be resolved, so the ` +
+        `SSRF guard failed closed and no connection was attempted.`,
+      "Check that the hostname is correct and resolvable from the server. Security " +
+        "requires the guard to deny a host it cannot resolve.",
+    );
+  }
+  const resolvedIp = block.ip ?? "an address";
+  const matchedRange = block.matchedRange ?? "a private range";
+  // The suggestion snippet uses the ACTUAL matched CIDR so it is copy-pasteable.
+  const snippetRange = block.matchedRange ?? "10.0.5.0/24";
+  return new CharlotteError(
+    CharlotteErrorCode.NAVIGATION_BLOCKED,
+    `Navigation to '${url}' was blocked: it resolves to ${resolvedIp}, which is in the ` +
+      `denied range ${matchedRange}. Private, loopback, link-local, and cloud-metadata ` +
+      `address ranges are refused by default in HTTP mode.`,
+    `Add the range to allowPrivateNetworks in your config, e.g. ` +
+      `"allowPrivateNetworks": ["${snippetRange}"]`,
+  );
+}
+
 const navigateTool = defineTool({
   name: "charlotte_navigate",
   description:
@@ -86,6 +118,15 @@ const navigateTool = defineTool({
           timeout: navigationTimeout,
         });
       } catch (navigationError: unknown) {
+        // The SSRF guard (D14) records a refusal via onDeny before failRequest
+        // rejects the goto, so a recorded block here means this navigation was
+        // vetoed at the CDP Fetch stage — surface it as NAVIGATION_BLOCKED with
+        // the copy-pasteable fix, never as a raw net::ERR_ACCESS_DENIED.
+        const navigationBlock = deps.pageManager.getLastNavigationBlock();
+        if (navigationBlock) {
+          throw buildNavigationBlockedError(url, navigationBlock);
+        }
+
         const errorMessage =
           navigationError instanceof Error ? navigationError.message : String(navigationError);
 
@@ -117,6 +158,14 @@ const navigateTool = defineTool({
         maxResponseBytes: deps.config.limits.maxResponseBytes,
       });
     } catch (error: unknown) {
+      // A guard refusal (D14) recorded during this navigation, not already
+      // surfaced as a CharlotteError, becomes NAVIGATION_BLOCKED. Covers a
+      // history navigation (back/forward/reload) that redirect-hops into a
+      // denied host; navigate's own inner catch has already converted its case.
+      const navigationBlock = deps.pageManager.getLastNavigationBlock();
+      if (navigationBlock && !(error instanceof CharlotteError)) {
+        return handleToolError(buildNavigationBlockedError(navigationBlock.url, navigationBlock));
+      }
       return handleToolError(error);
     }
   },
@@ -163,6 +212,14 @@ const backTool = defineTool({
         maxResponseBytes: deps.config.limits.maxResponseBytes,
       });
     } catch (error: unknown) {
+      // A guard refusal (D14) recorded during this navigation, not already
+      // surfaced as a CharlotteError, becomes NAVIGATION_BLOCKED. Covers a
+      // history navigation (back/forward/reload) that redirect-hops into a
+      // denied host; navigate's own inner catch has already converted its case.
+      const navigationBlock = deps.pageManager.getLastNavigationBlock();
+      if (navigationBlock && !(error instanceof CharlotteError)) {
+        return handleToolError(buildNavigationBlockedError(navigationBlock.url, navigationBlock));
+      }
       return handleToolError(error);
     }
   },
@@ -208,6 +265,14 @@ const forwardTool = defineTool({
         maxResponseBytes: deps.config.limits.maxResponseBytes,
       });
     } catch (error: unknown) {
+      // A guard refusal (D14) recorded during this navigation, not already
+      // surfaced as a CharlotteError, becomes NAVIGATION_BLOCKED. Covers a
+      // history navigation (back/forward/reload) that redirect-hops into a
+      // denied host; navigate's own inner catch has already converted its case.
+      const navigationBlock = deps.pageManager.getLastNavigationBlock();
+      if (navigationBlock && !(error instanceof CharlotteError)) {
+        return handleToolError(buildNavigationBlockedError(navigationBlock.url, navigationBlock));
+      }
       return handleToolError(error);
     }
   },
@@ -257,6 +322,14 @@ const reloadTool = defineTool({
         maxResponseBytes: deps.config.limits.maxResponseBytes,
       });
     } catch (error: unknown) {
+      // A guard refusal (D14) recorded during this navigation, not already
+      // surfaced as a CharlotteError, becomes NAVIGATION_BLOCKED. Covers a
+      // history navigation (back/forward/reload) that redirect-hops into a
+      // denied host; navigate's own inner catch has already converted its case.
+      const navigationBlock = deps.pageManager.getLastNavigationBlock();
+      if (navigationBlock && !(error instanceof CharlotteError)) {
+        return handleToolError(buildNavigationBlockedError(navigationBlock.url, navigationBlock));
+      }
       return handleToolError(error);
     }
   },

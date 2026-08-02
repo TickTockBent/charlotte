@@ -288,6 +288,28 @@ describe("resolveOptions precedence (issue #19)", () => {
       });
     });
 
+    describe("publicOrigin (OAuth facade switch, ⟨D2⟩)", () => {
+      it("is absent by default, which is what keeps the facade off", () => {
+        const { httpConfig } = resolveOptions(noCli, noEnv, noFile);
+        expect(httpConfig.publicOrigin).toBeUndefined();
+        expect("publicOrigin" in httpConfig).toBe(false);
+      });
+
+      it("comes from the config file", () => {
+        const result = resolveOptions(noCli, noEnv, {
+          http: { publicOrigin: "https://charlotte.example.com" },
+        });
+        expect(result.httpConfig.publicOrigin).toBe("https://charlotte.example.com");
+      });
+
+      it("treats a null config value as unset", () => {
+        // Same rule as authToken: the key must not appear at all, or "unset"
+        // and "set to nothing" become indistinguishable downstream.
+        const result = resolveOptions(noCli, noEnv, { http: { publicOrigin: null } });
+        expect("publicOrigin" in result.httpConfig).toBe(false);
+      });
+    });
+
     describe("host", () => {
       it("comes from the config file", () => {
         expect(resolveOptions(noCli, noEnv, { http: { host: "0.0.0.0" } }).httpConfig.host).toBe(

@@ -162,6 +162,14 @@ export function resolveOptions(
   if (authToken !== undefined) {
     httpConfig.authToken = authToken;
   }
+  // Same "absent means unconfigured" treatment as the token: assigning
+  // `undefined` would put the key in the object and make "unset" and "set to
+  // nothing" indistinguishable downstream, where the difference is whether the
+  // OAuth facade exists at all.
+  const publicOrigin = httpFile.publicOrigin ?? undefined;
+  if (publicOrigin !== undefined) {
+    httpConfig.publicOrigin = publicOrigin;
+  }
 
   return {
     profile,

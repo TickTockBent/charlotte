@@ -164,6 +164,18 @@ const HttpConfigSchema = z
      */
     debugRequests: z.boolean().optional(),
     /**
+     * Public https origin clients reach this server at, e.g.
+     * "https://charlotte.example.com". No default. Setting it enables the
+     * minimal OAuth provider facade ⟨D2⟩ — discovery, dynamic client
+     * registration, a consent page, and a token endpoint — which is how
+     * claude.ai's connector authenticates (it cannot send a static bearer).
+     * Leave it unset for bearer-only mode. `null` means "not set here".
+     *
+     * Only the shape is checked here; the transport rejects non-https,
+     * credentialed, or path-bearing origins at startup with a specific message.
+     */
+    publicOrigin: z.string().nullable().optional(),
+    /**
      * RESERVED (slice 2 — session lifecycle): idle milliseconds before a
      * session's browser pages are closed. Default 1800000 ⟨tune⟩. Validated
      * and ignored in slice 1.

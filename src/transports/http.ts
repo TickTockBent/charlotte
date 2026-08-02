@@ -43,7 +43,6 @@
  * `{"error":"not_found"}` and, in observation mode, a log line, so the OAuth
  * facade can be designed against what claude.ai actually asks for.
  */
-import { createHash, timingSafeEqual } from "node:crypto";
 import type { Server as NodeHttpServer } from "node:http";
 import express, { type Request, type Response, type NextFunction } from "express";
 import { McpServer, createMcpHandler } from "@modelcontextprotocol/server";
@@ -53,6 +52,7 @@ import type { SessionContext, ToolDefinition } from "../core/types.js";
 import { registerToolDefinitions } from "./stdio.js";
 import { buildServerInstructions, SERVER_NAME, SERVER_VERSION } from "../server.js";
 import { resolveProfile, type ToolProfile } from "../tools/tool-groups.js";
+import { makeSecretMatcher, mountOauthFacade, normalizePublicOrigin } from "./oauth-facade.js";
 import { logger } from "../utils/logger.js";
 
 /** Startup settings for {@link startHttpTransport}. */
@@ -76,6 +76,19 @@ export interface HttpTransportOptions {
    * deployment without editing its config file.
    */
   debugRequests?: boolean;
+  /**
+   * Public https origin clients reach this server at, e.g.
+   * `https://charlotte.example.com`. Setting it turns the OAuth facade on
+   * (⟨D2⟩, `src/transports/oauth-facade.ts`): discovery, registration, consent
+   * and token endpoints are mounted, and the `/mcp` 401 gains a
+   * `WWW-Authenticate` challenge pointing at the metadata document.
+   *
+   * Unset (the default) is bearer-only mode — exactly the behavior before the
+   * facade existed: no facade routes, no `WWW-Authenticate`, and the operator
+   * token is the only credential `/mcp` accepts. Invalid values throw at
+   * startup, before anything is listening.
+   */
+  publicOrigin?: string;
 }
 
 /** A running HTTP transport. */
@@ -162,21 +175,26 @@ function summarizeHeaders(
 }
 
 /**
- * Constant-time bearer comparison.
+ * Constant-time `Authorization: Bearer` comparison against every credential
+ * this server accepts.
  *
- * Both sides are SHA-256 digests, so `timingSafeEqual` always gets two 32-byte
- * buffers — it throws on length mismatch, and comparing raw tokens would leak
- * the expected length through that throw.
+ * With the OAuth facade mounted there are two: the operator token and the
+ * facade's derived access token. The comparison itself lives in
+ * {@link makeSecretMatcher} — SHA-256 digests through `timingSafeEqual`, every
+ * candidate compared on every call with no short-circuit — so adding the
+ * second credential costs one more fixed-size comparison and leaks nothing
+ * about which one (if either) matched.
  */
-function makeTokenMatcher(authToken: string): (header: string | undefined) => boolean {
-  const expectedDigest = createHash("sha256").update(authToken, "utf8").digest();
+function makeTokenMatcher(
+  acceptedTokens: readonly string[],
+): (header: string | undefined) => boolean {
+  const matchesAcceptedToken = makeSecretMatcher(acceptedTokens);
 
   return (header: string | undefined): boolean => {
     if (typeof header !== "string") return false;
     const match = /^Bearer\s+(\S.*)$/i.exec(header.trim());
     if (!match) return false;
-    const presentedDigest = createHash("sha256").update(match[1], "utf8").digest();
-    return timingSafeEqual(expectedDigest, presentedDigest);
+    return matchesAcceptedToken(match[1]);
   };
 }
 
@@ -208,6 +226,13 @@ export async function startHttpTransport(
     );
   }
 
+  // Validated before the listener exists: a mistyped origin must fail loudly at
+  // startup, not by serving metadata that points somewhere else.
+  const publicOrigin =
+    options.publicOrigin === undefined || options.publicOrigin.trim() === ""
+      ? undefined
+      : normalizePublicOrigin(options.publicOrigin);
+
   const enabledToolNames = resolveProfile(options.profile);
   const exposedTools = selectTools(enabledToolNames);
   // No charlotte_tools here, so the instructions must not tell the agent to
@@ -218,7 +243,6 @@ export async function startHttpTransport(
     { metaToolAvailable: false },
   );
 
-  const isAuthorized = makeTokenMatcher(authToken);
   const startedAtMs = Date.now();
 
   // One fresh MCP shell per request; all state stays in the shared ctx.
@@ -260,6 +284,11 @@ export async function startHttpTransport(
   // Mounted ahead of everything so discovery probes and rejected requests are
   // both attributed: the request line is logged on arrival, the status on
   // finish, so a 401 or a 404 is visible with the path that produced it.
+  //
+  // Headers and the request line ONLY — never bodies. The OAuth facade's
+  // consent form POSTs the operator token in its body, so a body-logging
+  // middleware here would write the root credential to stderr on every
+  // approval. Nothing downstream may add one.
   const observationEnabled = options.debugRequests === true || debugRequestsFromEnv();
   if (observationEnabled) {
     app.use((req: Request, res: Response, next: NextFunction) => {
@@ -294,12 +323,38 @@ export async function startHttpTransport(
     });
   });
 
+  // ─── OAuth facade (⟨D2⟩), only when a public origin is configured ───
+  // Mounted after /healthz and before /mcp's auth middleware. Its routes are
+  // unauthenticated by design — discovery and registration are what a client
+  // does BEFORE it has a credential — and they sit outside /mcp, so the I4
+  // boundary is untouched: none of them can reach the session or the browser.
+  const oauthFacade =
+    publicOrigin === undefined
+      ? undefined
+      : mountOauthFacade(app, { publicOrigin, operatorToken: authToken });
+
+  // With the facade on, /mcp accepts the derived access token as well as the
+  // operator token; with it off, the operator token is the only credential.
+  const isAuthorized = makeTokenMatcher(
+    oauthFacade === undefined ? [authToken] : [authToken, oauthFacade.accessToken],
+  );
+
   // ─── Auth, ahead of everything MCP (I4) ───
   // Plain Express middleware mounted before the handler, so a request with a
   // missing or wrong token is answered 401 without the server factory ever
   // running: no MCP instance, no session touch, no browser activity.
   app.use("/mcp", (req: Request, res: Response, next: NextFunction) => {
     if (!isAuthorized(req.headers.authorization)) {
+      if (oauthFacade !== undefined) {
+        // RFC 9728 §5.1: point the client at the metadata document so it can
+        // discover the authorization server without guessing well-known paths.
+        // Emitted only with the facade on — advertising a resource_metadata URL
+        // that 404s would be worse than staying silent.
+        res.set(
+          "www-authenticate",
+          `Bearer resource_metadata="${oauthFacade.protectedResourceMetadataUrl}"`,
+        );
+      }
       res.status(401).json(UNAUTHORIZED_BODY);
       return;
     }
@@ -343,6 +398,12 @@ export async function startHttpTransport(
     `Charlotte MCP server running on http://${options.host}:${boundPort}/mcp ` +
       `(profile: ${options.profile}, auth: bearer required)`,
   );
+  if (publicOrigin !== undefined) {
+    logger.info(
+      `OAuth facade enabled at ${publicOrigin} — clients may authorize with the ` +
+        "operator token through the consent page (/oauth/authorize).",
+    );
+  }
   if (observationEnabled) {
     logger.warn(
       "Request observation is ON: every request's method, path, and redacted headers " +

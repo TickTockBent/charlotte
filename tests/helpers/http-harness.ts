@@ -76,6 +76,16 @@ export interface HttpHarnessOptions {
   profile?: ToolProfile;
   /** Bearer token the transport requires. Defaults to {@link HTTP_HARNESS_TOKEN}. */
   authToken?: string;
+  /**
+   * Public https origin to advertise. Setting it turns the OAuth facade on
+   * (⟨D2⟩); leaving it unset keeps the transport in bearer-only mode, which is
+   * what every pre-facade test expects. The value is metadata only — nothing
+   * ever dials it — so an unroutable `https://…` origin is correct here even
+   * though the harness itself listens on http loopback.
+   */
+  publicOrigin?: string;
+  /** Turn request observation on (method, path, redacted headers to stderr). */
+  debugRequests?: boolean;
 }
 
 /** A JSON-RPC response envelope as it comes back off the wire. */
@@ -243,12 +253,25 @@ async function buildHttpHarness(
   }
 
   const authToken = options.authToken ?? HTTP_HARNESS_TOKEN;
-  const transport = await startHttpTransport(ctx, {
-    port: 0,
-    host: "127.0.0.1",
-    authToken,
-    profile: options.profile ?? "full",
-  });
+  let transport: HttpTransportHandle;
+  try {
+    transport = await startHttpTransport(ctx, {
+      port: 0,
+      host: "127.0.0.1",
+      authToken,
+      profile: options.profile ?? "full",
+      ...(options.publicOrigin !== undefined ? { publicOrigin: options.publicOrigin } : {}),
+      ...(options.debugRequests !== undefined ? { debugRequests: options.debugRequests } : {}),
+    });
+  } catch (error) {
+    // Tests that assert on startup rejections (bad token, bad publicOrigin)
+    // never get a handle to tear down, so the resources built above — browser,
+    // fixture server, temp artifact dir — would leak once per case.
+    await staticServer?.stop().catch(() => {});
+    await browserManager.close().catch(() => {});
+    await fs.rm(artifactDirectory, { recursive: true, force: true }).catch(() => {});
+    throw error;
+  }
   const baseUrl = `http://${transport.host}:${transport.port}`;
   const mcpUrl = new URL(`${baseUrl}/mcp`);
 

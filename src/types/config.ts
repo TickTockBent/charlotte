@@ -64,6 +64,12 @@ export interface HttpTransportConfig {
    * stderr. Diagnostics only; `CHARLOTTE_DEBUG_HTTP` enables it independently.
    */
   debugRequests: boolean;
+  /**
+   * Public https origin clients reach this server at. Enables the OAuth facade
+   * ⟨D2⟩; `undefined` means "not configured" — bearer-only mode, no facade
+   * routes, no `WWW-Authenticate` on the /mcp 401.
+   */
+  publicOrigin?: string;
   /** RESERVED (slice 2): idle ms before a session's pages are closed. */
   sessionIdleTtlMs: number;
   /** RESERVED (post-MVP): concurrent sessions per server; MVP is a hard 1. */
@@ -78,9 +84,11 @@ export interface HttpTransportConfig {
 
 /**
  * Built-in defaults for {@link HttpTransportConfig}. `authToken` is absent on
- * purpose — there is no default token, ever.
+ * purpose — there is no default token, ever. `publicOrigin` likewise: only the
+ * operator knows the origin their tunnel publishes, and guessing it would turn
+ * the OAuth facade on with wrong metadata.
  */
-export const DEFAULT_HTTP_CONFIG: Omit<HttpTransportConfig, "authToken"> = {
+export const DEFAULT_HTTP_CONFIG: Omit<HttpTransportConfig, "authToken" | "publicOrigin"> = {
   // ⟨tune⟩ — an arbitrary high port, not yet calibrated against anything.
   port: 3737,
   // Loopback only. Remote reach comes from a tunnel in front, never from

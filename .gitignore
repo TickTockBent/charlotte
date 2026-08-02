@@ -40,3 +40,6 @@ docs/internal
 # Local operator config for HTTP/remote mode (holds publicOrigin etc; token via env, never here)
 charlotte.config.json
 charlotte.config.local.json
+
+# Throwaway spike/experiment scripts written to the repo root during design work
+/scratchpad/

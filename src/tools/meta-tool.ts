@@ -169,3 +169,79 @@ export function registerMetaTool(server: McpServer, registry: ToolRegistry): Reg
     },
   );
 }
+
+/**
+ * Register a READ-ONLY charlotte_tools reporter for transports whose tool set
+ * is fixed at startup (HTTP mode — stateless, no per-connection registry to
+ * mutate). Reports the exposed group/tool inventory (the #204 discoverability
+ * rationale) with no mutation path. enable/disable are accepted for schema
+ * parity with the stdio meta-tool but refuse+steer to the http.profile knob.
+ */
+export function registerMetaToolReporter(
+  server: McpServer,
+  registry: ToolRegistry,
+): RegisteredTool {
+  return server.registerTool(
+    "charlotte_tools",
+    {
+      description:
+        "Report Charlotte's exposed tool groups (read-only). This server's tool " +
+        "set is fixed at startup and cannot be changed at runtime — use 'list' " +
+        "to see which groups are exposed and which tools each contains. To expose " +
+        "more tools, change http.profile in the server config.",
+      inputSchema: {
+        action: z
+          .enum(["list", "enable", "disable"])
+          .optional()
+          .describe(
+            '"list" (default) — show all groups and which are exposed. ' +
+              '"enable"/"disable" are not available on this server (fixed tool set).',
+          ),
+        group: z
+          .enum(ALL_GROUP_NAMES as [ToolGroupName, ...ToolGroupName[]])
+          .optional()
+          .describe(
+            "Tool group (only meaningful for enable/disable, which this server rejects)",
+          ),
+      },
+    },
+    async ({ action, group }) => {
+      const effectiveAction = action ?? "list";
+
+      if (effectiveAction === "enable" || effectiveAction === "disable") {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify({
+                session_id: DEFAULT_SESSION_ID,
+                read_only: true,
+                error:
+                  "This server's tool set is fixed at startup and cannot be " +
+                  "changed at runtime. To expose more tools, set http.profile " +
+                  "(e.g. 'develop' or 'full') in the server config.",
+                requested_action: effectiveAction,
+                ...(group ? { group } : {}),
+              }),
+            },
+          ],
+          isError: true,
+        };
+      }
+
+      const status = getGroupStatus(registry);
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify({
+              session_id: DEFAULT_SESSION_ID,
+              read_only: true,
+              groups: status,
+            }),
+          },
+        ],
+      };
+    },
+  );
+}

@@ -54,6 +54,7 @@ import { toNodeHandler, hostHeaderValidation } from "@modelcontextprotocol/node"
 import { charlotteTools } from "../core/index.js";
 import type { SessionContext, ToolDefinition } from "../core/types.js";
 import { registerToolDefinitions } from "./stdio.js";
+import { registerMetaToolReporter } from "../tools/meta-tool.js";
 import { buildServerInstructions, SERVER_NAME, SERVER_VERSION } from "../server.js";
 import { resolveProfile, type ToolProfile } from "../tools/tool-groups.js";
 import { makeSecretMatcher, mountOauthFacade, normalizePublicOrigin } from "./oauth-facade.js";
@@ -319,12 +320,10 @@ export async function startHttpTransport(
 
   const enabledToolNames = resolveProfile(options.profile);
   const exposedTools = selectTools(enabledToolNames);
-  // No charlotte_tools here, so the instructions must not tell the agent to
-  // call it; the group inventory itself is still worth serving.
   const instructions = buildServerInstructions(
     enabledToolNames,
     `Active profile: ${options.profile}.`,
-    { metaToolAvailable: false },
+    { metaToolMutable: false },
   );
 
   const startedAtMs = Date.now();
@@ -347,7 +346,8 @@ export async function startHttpTransport(
           instructions,
         },
       );
-      registerToolDefinitions(server, ctx, exposedTools);
+      const toolRegistry = registerToolDefinitions(server, ctx, exposedTools);
+      registerMetaToolReporter(server, toolRegistry);
       return server;
     },
     {

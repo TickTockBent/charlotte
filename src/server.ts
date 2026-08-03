@@ -41,15 +41,17 @@ export interface CreateServerResult {
 
 export interface InstructionsOptions {
   /**
-   * Whether the `charlotte_tools` meta-tool is registered on this server.
+   * Whether the `charlotte_tools` meta-tool can mutate the tool registry on
+   * this server.
    *
-   * True over stdio, where the tool set is mutable per connection. False over
-   * HTTP, where the set is fixed at startup (a stateless transport has no
-   * per-connection registry to mutate) — the group listing stays, since it is
-   * still the honest inventory of what this deployment does and doesn't
-   * expose, but the call to action becomes "change the server config".
+   * True over stdio (mutable per-connection registry). False over HTTP
+   * (read-only reporter — the set is fixed at startup, change http.profile to
+   * alter it). Both values now imply the tool exists — over HTTP it is a
+   * read-only reporter, not absent — so the group listing stays either way,
+   * since it is still the honest inventory of what this deployment does and
+   * doesn't expose, but the call to action differs.
    */
-  metaToolAvailable?: boolean;
+  metaToolMutable?: boolean;
 }
 
 /**
@@ -67,7 +69,7 @@ export function buildServerInstructions(
   activeLabel: string,
   options: InstructionsOptions = {},
 ): string {
-  const metaToolAvailable = options.metaToolAvailable ?? true;
+  const metaToolMutable = options.metaToolMutable ?? true;
   const fullyDisabledGroups: ToolGroupName[] = [];
   const partiallyEnabledGroups: Array<{ group: ToolGroupName; enabled: number; total: number }> =
     [];
@@ -84,7 +86,7 @@ export function buildServerInstructions(
   const instructionLines = [`Charlotte browser automation server. ${activeLabel}`];
   if (fullyDisabledGroups.length > 0) {
     instructionLines.push(
-      metaToolAvailable
+      metaToolMutable
         ? "Additional tool groups available via charlotte_tools:"
         : "Tool groups not exposed by this server:",
     );
@@ -94,7 +96,7 @@ export function buildServerInstructions(
   }
   if (partiallyEnabledGroups.length > 0) {
     instructionLines.push(
-      metaToolAvailable
+      metaToolMutable
         ? "Partially-enabled groups (enable via charlotte_tools for more tools):"
         : "Partially-exposed groups:",
     );
@@ -103,7 +105,7 @@ export function buildServerInstructions(
         .filter((t) => !enabledTools.has(t))
         .map((t) => t.replace(/^charlotte_/, ""));
       instructionLines.push(
-        metaToolAvailable
+        metaToolMutable
           ? `  - ${group} (${enabled}/${total} enabled — enable for ${disabledTools.join(", ")})`
           : `  - ${group} (${enabled}/${total} exposed — not exposed: ${disabledTools.join(", ")})`,
       );
@@ -111,9 +113,9 @@ export function buildServerInstructions(
   }
   if (fullyDisabledGroups.length > 0 || partiallyEnabledGroups.length > 0) {
     instructionLines.push(
-      metaToolAvailable
+      metaToolMutable
         ? "Call charlotte_tools to list groups or enable/disable them."
-        : "The tool set is fixed for this server; change the server config (http.profile) to expose more.",
+        : "Call charlotte_tools to list the exposed groups (read-only). The tool set is fixed for this server; change http.profile to expose more.",
     );
   }
 

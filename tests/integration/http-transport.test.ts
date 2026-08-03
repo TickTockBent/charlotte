@@ -216,7 +216,7 @@ describe("HTTP transport (slice 1 step 2 smoke)", () => {
       expect(message.result).not.toHaveProperty("sessionId");
     });
 
-    it("serves instructions that do not advertise the absent meta-tool", async () => {
+    it("serves instructions that point at the read-only charlotte_tools reporter", async () => {
       const message = await callMcp("initialize", {
         protocolVersion: "2025-11-25",
         capabilities: {},
@@ -225,17 +225,17 @@ describe("HTTP transport (slice 1 step 2 smoke)", () => {
 
       const instructions = message.result?.instructions as string;
       expect(instructions).toContain("Active profile: browse.");
-      expect(instructions).not.toContain("charlotte_tools");
-      expect(instructions).toContain("change the server config (http.profile)");
+      expect(instructions).toContain("Call charlotte_tools to list the exposed groups (read-only)");
+      expect(instructions).toContain("change http.profile to expose more");
     });
 
-    it("lists exactly the browse profile, with charlotte_tools absent", async () => {
+    it("lists the browse profile plus the read-only charlotte_tools reporter", async () => {
       const message = await callMcp("tools/list", {});
 
       const tools = message.result?.tools as Array<{ name: string }>;
       const names = tools.map((tool) => tool.name);
-      expect(names).toEqual(PROFILE_TOOLS.browse);
-      expect(names).not.toContain("charlotte_tools");
+      expect(names).toEqual([...PROFILE_TOOLS.browse, "charlotte_tools"]);
+      expect(names).toContain("charlotte_tools");
     });
   });
 
@@ -368,7 +368,7 @@ describe("HTTP transport (slice 1 step 2 smoke)", () => {
           // /mcp itself is unaffected by observation mode.
           const message = await readJsonRpc(response);
           const tools = message.result?.tools as Array<{ name: string }>;
-          expect(tools.map((tool) => tool.name)).toEqual(PROFILE_TOOLS.browse);
+          expect(tools.map((tool) => tool.name)).toEqual([...PROFILE_TOOLS.browse, "charlotte_tools"]);
           await waitForLog(chunks, "http response");
         });
 

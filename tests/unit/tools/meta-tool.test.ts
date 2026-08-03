@@ -1,8 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { McpServer } from "@modelcontextprotocol/server";
 import type { RegisteredTool } from "@modelcontextprotocol/server";
-import { registerMetaTool, type ToolRegistry } from "../../../src/tools/meta-tool.js";
-import { TOOL_GROUPS, ALL_GROUP_NAMES } from "../../../src/tools/tool-groups.js";
+import {
+  registerMetaTool,
+  registerMetaToolReporter,
+  type ToolRegistry,
+} from "../../../src/tools/meta-tool.js";
+import { TOOL_GROUPS, ALL_GROUP_NAMES, resolveProfile } from "../../../src/tools/tool-groups.js";
 
 /**
  * Create a minimal mock registry where each tool has enable/disable/enabled.
@@ -239,5 +243,82 @@ describe("meta-tool", () => {
         expect(tool.disable).not.toHaveBeenCalled();
       }
     });
+  });
+});
+
+/**
+ * Build a registry whose `.enabled` flags mirror what a fixed HTTP-mode
+ * profile would expose — the same `resolveProfile()` set `http.ts` filters
+ * `charlotteTools` through via `selectTools()` — so `getGroupStatus` reports
+ * exactly what a "browse" profile server would.
+ */
+function createProfileRegistry(profile: Parameters<typeof resolveProfile>[0]): ToolRegistry {
+  const enabledToolNames = resolveProfile(profile);
+  const registry: ToolRegistry = {};
+  for (const group of ALL_GROUP_NAMES) {
+    for (const toolName of TOOL_GROUPS[group]) {
+      registry[toolName] = {
+        enabled: enabledToolNames.has(toolName),
+      } as unknown as RegisteredTool;
+    }
+  }
+  return registry;
+}
+
+describe("registerMetaToolReporter", () => {
+  let server: McpServer;
+  let registry: ToolRegistry;
+  let reporterTool: MetaToolWithArgsHandler;
+
+  beforeEach(() => {
+    server = new McpServer(
+      { name: "charlotte-test", version: "0.0.1" },
+      { capabilities: { tools: {} } },
+    );
+    registry = createProfileRegistry("browse");
+    reporterTool = registerMetaToolReporter(server, registry) as unknown as MetaToolWithArgsHandler;
+  });
+
+  it("list: reports read-only status and the browse profile's group inventory", async () => {
+    const result = await reporterTool.handler({}, {} as any);
+    const parsed = JSON.parse((result as any).content[0].text);
+
+    expect(parsed.read_only).toBe(true);
+    expect(parsed.groups.navigation.enabled).toBe(true);
+    expect(parsed.groups.dev_mode.enabled).toBe(false);
+    expect(parsed.groups.dev_mode.enabled_count).toBe(0);
+    expect(parsed.groups.dev_mode.total_count).toBe(3);
+  });
+
+  it("enable: refuses and steers to http.profile, echoing the requested action and group", async () => {
+    const result = await reporterTool.handler(
+      { action: "enable", group: "dev_mode" },
+      {} as any,
+    );
+
+    expect((result as any).isError).toBe(true);
+    const parsed = JSON.parse((result as any).content[0].text);
+    expect(parsed.read_only).toBe(true);
+    expect(parsed.error).toContain("http.profile");
+    expect(parsed.requested_action).toBe("enable");
+    expect(parsed.group).toBe("dev_mode");
+  });
+
+  it("disable (no group): refuses, mentions the fixed tool set, and omits the group key", async () => {
+    const result = await reporterTool.handler({ action: "disable" }, {} as any);
+
+    expect((result as any).isError).toBe(true);
+    const parsed = JSON.parse((result as any).content[0].text);
+    expect(parsed.error).toMatch(/fixed/i);
+    expect(parsed).not.toHaveProperty("group");
+  });
+
+  it("never mutates the registry: a list after a refused enable still shows dev_mode disabled", async () => {
+    await reporterTool.handler({ action: "enable", group: "dev_mode" }, {} as any);
+
+    const result = await reporterTool.handler({ action: "list" }, {} as any);
+    const parsed = JSON.parse((result as any).content[0].text);
+    expect(parsed.groups.dev_mode.enabled).toBe(false);
+    expect(parsed.groups.dev_mode.enabled_count).toBe(0);
   });
 });

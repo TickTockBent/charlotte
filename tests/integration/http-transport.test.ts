@@ -236,6 +236,11 @@ describe("HTTP transport (slice 1 step 2 smoke)", () => {
       const names = tools.map((tool) => tool.name);
       expect(names).toEqual([...PROFILE_TOOLS.browse, "charlotte_tools"]);
       expect(names).toContain("charlotte_tools");
+
+      // The SDK never adds cache fields to 2025-era responses — claude.ai's current
+      // connector is legacy-era, so it does not receive ttlMs/cacheScope (D20).
+      expect(message.result).not.toHaveProperty("ttlMs");
+      expect(message.result).not.toHaveProperty("cacheScope");
     });
   });
 

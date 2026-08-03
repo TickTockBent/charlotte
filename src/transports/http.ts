@@ -237,6 +237,13 @@ function selectTools(enabledToolNames: Set<string>): ToolDefinition[] {
   return charlotteTools.filter((definition) => enabledToolNames.has(definition.name));
 }
 
+// tools/list cache hint (D20). The HTTP tool set is fixed at startup (D3), so the
+// list is safely cacheable; 1h TTL + private scope priced and pinned by Wes
+// (Gate-D). Only modern (2026-07-28) clients receive these fields — the SDK never
+// adds cache fields to 2025-era responses (claude.ai's current connector), so
+// this is a correctness/forward-compat hint, invisible to the legacy connector today.
+const TOOLS_LIST_CACHE_TTL_MS = 3_600_000;
+
 /**
  * Start the streamable HTTP transport against an existing session.
  *
@@ -344,6 +351,9 @@ export async function startHttpTransport(
             tools: {},
           },
           instructions,
+          cacheHints: {
+            "tools/list": { ttlMs: TOOLS_LIST_CACHE_TTL_MS, cacheScope: "private" },
+          },
         },
       );
       const toolRegistry = registerToolDefinitions(server, ctx, exposedTools);

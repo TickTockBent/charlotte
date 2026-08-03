@@ -57,6 +57,7 @@ import { registerToolDefinitions } from "./stdio.js";
 import { buildServerInstructions, SERVER_NAME, SERVER_VERSION } from "../server.js";
 import { resolveProfile, type ToolProfile } from "../tools/tool-groups.js";
 import { makeSecretMatcher, mountOauthFacade, normalizePublicOrigin } from "./oauth-facade.js";
+import { createIdleReaper } from "./idle-reaper.js";
 import { logger } from "../utils/logger.js";
 
 /** Startup settings for {@link startHttpTransport}. */
@@ -106,6 +107,11 @@ export interface HttpTransportOptions {
    * hostname). Hostnames only, no ports; IPv6 in brackets.
    */
   allowedHosts?: string[];
+  /**
+   * Idle ms before the session's browser is torn down (D17). Undefined or
+   * `<= 0` disables the sweep (tests, or an operator opt-out).
+   */
+  sessionIdleTtlMs?: number;
   /**
    * The configured CDP endpoint, if any (`--cdpEndpoint` / config). Present here
    * only so HTTP-mode startup can REFUSE to run against an external browser: the
@@ -449,6 +455,29 @@ export async function startHttpTransport(
     next();
   });
 
+  // ─── Idle-TTL session sweep (D17, I7) ───
+  // After sessionIdleTtlMs with no AUTHORIZED /mcp activity, tear down the whole
+  // browser; the next tool call relaunches via the #201 recovery path. Mounted
+  // after auth so a bad-token flood cannot keep the session warm; touch fires on
+  // every authorized /mcp request (tool call, tools/list, initialize).
+  const idleReaper = createIdleReaper({
+    idleMs: options.sessionIdleTtlMs ?? 0,
+    onIdle: async () => {
+      logger.info(
+        `Idle-TTL elapsed (${options.sessionIdleTtlMs}ms) — tearing down the browser session; ` +
+          "the next tool call will relaunch a fresh session.",
+      );
+      // close() atomically resets pages via the #201 disconnect handler, within
+      // the serialized teardown window (D18); an explicit reset() out here would
+      // run after close() resolves and re-open the recovery clobber.
+      await ctx.browserManager.close();
+    },
+  });
+  app.use("/mcp", (_request: Request, _response: Response, next: NextFunction) => {
+    idleReaper.touch();
+    next();
+  });
+
   const nodeHandler = toNodeHandler(handler, {
     onerror: (error: Error) => {
       logger.error("HTTP transport adapter error", error);
@@ -487,6 +516,13 @@ export async function startHttpTransport(
       `(profile: ${options.profile}, auth: bearer required)`,
   );
   logger.info(`Inbound host-header guard: allowed Host hostnames = ${allowedHostnames.join(", ")}`);
+  logger.info(
+    `Idle-TTL session sweep: ${
+      options.sessionIdleTtlMs !== undefined && options.sessionIdleTtlMs > 0
+        ? `${options.sessionIdleTtlMs}ms`
+        : "disabled"
+    }`,
+  );
   if (publicOrigin !== undefined) {
     logger.info(
       `OAuth facade enabled at ${publicOrigin} — clients may authorize with the ` +
@@ -507,6 +543,7 @@ export async function startHttpTransport(
     async close(): Promise<void> {
       if (closed) return;
       closed = true;
+      idleReaper.stop();
       await handler.close();
       await new Promise<void>((resolve, reject) => {
         httpServer.close((error) => (error ? reject(error) : resolve()));

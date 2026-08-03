@@ -34,6 +34,7 @@ export class BrowserManager {
   private browser: Browser | null = null;
   private launchOptions: LaunchOptions = {};
   private launching: Promise<void> | null = null;
+  private closing: Promise<void> | null = null;
   private config: CharlotteConfig;
   private cdpEndpoint: string | undefined;
   private onFirstConnect: OnFirstConnect | undefined;
@@ -247,6 +248,13 @@ export class BrowserManager {
   }
 
   async ensureConnected(): Promise<void> {
+    // A teardown (idle sweep, shutdown) is in flight — wait for it to FULLY finish
+    // before (re)launching, so we never build a fresh session on a half-torn-down
+    // one (D18). Once it resolves this.browser is null → we fall through to relaunch.
+    if (this.closing) {
+      await this.closing;
+    }
+
     // Fully ready: connected AND (in CDP mode) page adoption has completed.
     // We deliberately do NOT short-circuit on a connected-but-unadopted CDP
     // session, so a prior adoption failure is retried here (#202).
@@ -311,18 +319,31 @@ export class BrowserManager {
   }
 
   async close(): Promise<void> {
-    if (this.browser) {
-      if (this.cdpEndpoint) {
-        logger.info("Disconnecting from remote browser");
-        await this.browser.disconnect();
-      } else {
-        logger.info("Closing Chromium");
-        await this.browser.close();
+    // Re-entrant: concurrent close() calls (idle sweep + shutdown) share one teardown.
+    if (this.closing) return this.closing;
+    const browserBeingClosed = this.browser;
+    this.closing = (async () => {
+      if (browserBeingClosed) {
+        if (this.cdpEndpoint) {
+          logger.info("Disconnecting from remote browser");
+          await browserBeingClosed.disconnect();
+        } else {
+          logger.info("Closing Chromium");
+          await browserBeingClosed.close();
+        }
+        // Generation-guard: never null a browser a concurrent relaunch installed.
+        if (this.browser === browserBeingClosed) {
+          this.browser = null;
+        }
       }
-      this.browser = null;
+      // Always stop the proxy, even if the browser was already gone (D15).
+      await this.stopGuardProxy();
+    })();
+    try {
+      await this.closing;
+    } finally {
+      this.closing = null;
     }
-    // Always stop the proxy, even if the browser was already gone (D15).
-    await this.stopGuardProxy();
   }
 
   async getBrowser(): Promise<Browser> {

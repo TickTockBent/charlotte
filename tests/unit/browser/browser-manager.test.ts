@@ -368,4 +368,87 @@ describe("BrowserManager", () => {
       expect(onFirstConnect).toHaveBeenCalledTimes(2);
     });
   });
+
+  // D18/I7: teardown (idle sweep, shutdown) must be serialized against relaunch,
+  // so a recovery request can never build a fresh session on a half-torn-down one.
+  describe("teardown/relaunch serialization (D18, I7)", () => {
+    /**
+     * A mock browser whose `close()` stays pending until `releaseClose()` is
+     * called, and whose captured `disconnected` listener can be fired by hand —
+     * so the interleaving of an early disconnect event vs. close() resolving is
+     * fully deterministic (the original bug was a probabilistic ~500ms window).
+     */
+    function gatedBrowser() {
+      let disconnectListener: (() => void) | undefined;
+      let releaseClose: () => void = () => {};
+      const closeGate = new Promise<void>((resolve) => {
+        releaseClose = resolve;
+      });
+      const browser = {
+        connected: true,
+        on: vi.fn((event: string, listener: () => void) => {
+          if (event === "disconnected") disconnectListener = listener;
+        }),
+        close: vi.fn(() => closeGate),
+        disconnect: vi.fn().mockResolvedValue(undefined),
+        process: () => ({ pid: 9001 }),
+        pages: vi.fn().mockResolvedValue([]),
+      };
+      return {
+        browser,
+        releaseClose,
+        fireDisconnect: () => {
+          browser.connected = false;
+          disconnectListener?.();
+        },
+      };
+    }
+
+    it("blocks a relaunch requested during an in-flight teardown until close() finishes", async () => {
+      const gen1 = gatedBrowser();
+      // gen2 is just the relaunch target; its gated close() is never invoked here.
+      const gen2 = gatedBrowser();
+      (puppeteer.launch as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce(gen1.browser)
+        .mockResolvedValueOnce(gen2.browser);
+
+      const manager = new BrowserManager();
+      // Mirror src/index.ts: the disconnect hook resets per-session state (#201).
+      manager.setOnDisconnected(vi.fn());
+
+      // 1. gen1 launched.
+      await manager.ensureConnected();
+      expect(puppeteer.launch).toHaveBeenCalledTimes(1);
+
+      // 2. Begin teardown (gen1.close() is gated/pending — do NOT await), then
+      //    fire gen1's early disconnect event that nulls the browser and makes
+      //    isConnected() go false while close() is still resolving.
+      const closeP = manager.close();
+      gen1.fireDisconnect();
+      expect(manager.isConnected()).toBe(false);
+
+      // 3. Request a recovery relaunch while teardown is still in flight.
+      const recoverP = manager.ensureConnected();
+      // Flush microtasks: without serialization the relaunch would already have
+      // started launching gen2 by now.
+      await Promise.resolve();
+      await Promise.resolve();
+
+      // 4. Deterministic assertion: the relaunch is BLOCKED on this.closing — it
+      //    has NOT started. Without D18 this would be 2 and the test fails.
+      expect(puppeteer.launch).toHaveBeenCalledTimes(1);
+
+      // 5. Let teardown finish; the blocked recovery now relaunches gen2.
+      gen1.releaseClose();
+      await closeP;
+      await recoverP;
+
+      // 6. Clean recovery on gen2 — close()'s generation-guarded tail did NOT
+      //    null the browser gen2 installed.
+      expect(puppeteer.launch).toHaveBeenCalledTimes(2);
+      expect(manager.isConnected()).toBe(true);
+      const active = await manager.getBrowser();
+      expect(active).toBe(gen2.browser);
+    });
+  });
 });

@@ -70,7 +70,7 @@ export interface HttpTransportConfig {
    * routes, no `WWW-Authenticate` on the /mcp 401.
    */
   publicOrigin?: string;
-  /** RESERVED (slice 2): idle ms before a session's pages are closed. */
+  /** Idle ms before the session's browser is torn down (D17, consumed by the HTTP transport's idle sweep). Whole-browser teardown; the next tool call relaunches via the #201 recovery path. ⟨tune⟩ 30 min, not yet calibrated. */
   sessionIdleTtlMs: number;
   /** RESERVED (post-MVP): concurrent sessions per server; MVP is a hard 1. */
   maxSessions: number;
@@ -108,7 +108,7 @@ export const DEFAULT_HTTP_CONFIG: Omit<HttpTransportConfig, "authToken" | "publi
   profile: "browse",
   // Off: request logging is a diagnostic tool, not a default posture.
   debugRequests: false,
-  // ⟨tune⟩ — 30 minutes. RESERVED, not consumed in slice 1.
+  // ⟨tune⟩ — 30 minutes. Consumed by the idle sweep (D17); the number itself is not yet calibrated/pinned.
   sessionIdleTtlMs: 1_800_000,
   maxSessions: 1,
   allowPrivateNetworks: [],

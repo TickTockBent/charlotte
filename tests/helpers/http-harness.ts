@@ -99,6 +99,11 @@ export interface HttpHarnessOptions {
    * pre-opened tab, matching production's guard-off-until-HTTP-startup posture).
    */
   navigationGuardAllowlist?: string[];
+  /**
+   * Inject a short idle-TTL so the idle-sweep test can observe teardown without
+   * a 30-min wait. Every other HTTP test leaves it undefined (sweep disabled).
+   */
+  sessionIdleTtlMs?: number;
 }
 
 /** A JSON-RPC response envelope as it comes back off the wire. */
@@ -288,6 +293,9 @@ async function buildHttpHarness(
       ...(options.publicOrigin !== undefined ? { publicOrigin: options.publicOrigin } : {}),
       ...(options.debugRequests !== undefined ? { debugRequests: options.debugRequests } : {}),
       ...(options.allowedHosts !== undefined ? { allowedHosts: options.allowedHosts } : {}),
+      ...(options.sessionIdleTtlMs !== undefined
+        ? { sessionIdleTtlMs: options.sessionIdleTtlMs }
+        : {}),
     });
   } catch (error) {
     // Tests that assert on startup rejections (bad token, bad publicOrigin)

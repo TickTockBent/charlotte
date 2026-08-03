@@ -453,12 +453,16 @@ const screenshotTool = defineTool({
       await waitForCompositorFrame(page);
 
       const screenshotFormat = format ?? "png";
+      // Remote (HTTP) mode defaults full_page to viewport so the common path is
+      // inline-safe and cheap (D6 §3); stdio keeps the true default. An explicit
+      // full_page wins in both modes. Selector captures ignore full_page.
+      const effectiveFullPage = full_page ?? (deps.config.remoteArtifacts.enabled ? false : true);
       logger.info("Taking screenshot", {
         selector,
         format: screenshotFormat,
         quality,
         save,
-        full_page: full_page ?? true,
+        full_page: effectiveFullPage,
       });
 
       let screenshotBase64: string;
@@ -485,15 +489,49 @@ const screenshotTool = defineTool({
           type: screenshotFormat,
           quality: screenshotFormat !== "png" ? quality : undefined,
           encoding: "base64",
-          fullPage: full_page ?? true,
+          fullPage: effectiveFullPage,
         })) as string;
       }
 
-      // Write to file and return brief confirmation instead of inline base64
+      // Empty-encode error (D6 §5, UNIVERSAL — both modes). webp cannot encode
+      // pages taller than 16,383px and returns a success-looking empty string;
+      // catch it BEFORE the output_file branch so an empty encode is never
+      // written to disk, inlined, or saved.
+      if (screenshotBase64.length === 0) {
+        return handleToolError(
+          new CharlotteError(
+            CharlotteErrorCode.SESSION_ERROR,
+            `Screenshot encoding produced no data (format '${screenshotFormat}').`,
+            "Some encoders (e.g. webp) cannot encode pages taller than 16,383px. Try format: 'png', or full_page: false / a selector.",
+          ),
+        );
+      }
+
+      // Write to file and return brief confirmation instead of inline base64.
+      // output_file writes to disk and is exempt from the remote inline cap.
       if (output_file) {
         const resolvedPath = await resolveOutputPath(output_file, deps.config);
         const buffer = Buffer.from(screenshotBase64, "base64");
         return await writeBinaryOutputFile(resolvedPath, buffer);
+      }
+
+      // Over-cap refuse+steer (D6 §1/§2, remote only, inline path). Applies to
+      // both the inline and `save` deliveries below: an over-cap screenshot is
+      // neither inlined nor saved — it is refused with actionable alternatives.
+      const rawBytes = Buffer.from(screenshotBase64, "base64").length;
+      if (
+        deps.config.remoteArtifacts.enabled &&
+        rawBytes > deps.config.remoteArtifacts.maxInlineBytes
+      ) {
+        return handleToolError(
+          new CharlotteError(
+            CharlotteErrorCode.INVALID_ARGUMENT,
+            `Screenshot is ${Math.round(rawBytes / 1024)} KB, over the ${Math.round(
+              deps.config.remoteArtifacts.maxInlineBytes / 1024,
+            )} KB inline limit for remote mode.`,
+            "Retry with full_page: false (viewport only), a 'selector' to capture one element, or a narrower region.",
+          ),
+        );
       }
 
       const content: Array<
@@ -526,7 +564,8 @@ const screenshotTool = defineTool({
             artifact: {
               id: artifact.id,
               filename: artifact.filename,
-              path: artifact.path,
+              // I8 (D6 §4): omit the server filesystem path in remote mode.
+              ...(deps.config.remoteArtifacts.enabled ? {} : { path: artifact.path }),
               size: artifact.size,
               format: artifact.format,
               timestamp: artifact.timestamp,
@@ -569,7 +608,10 @@ const screenshotsTool = defineTool({
                 timestamp: a.timestamp,
               })),
               count: artifacts.length,
-              directory: deps.artifactStore.screenshotDir,
+              // I8 (D6 §4): omit the server screenshot directory in remote mode.
+              ...(deps.config.remoteArtifacts.enabled
+                ? {}
+                : { directory: deps.artifactStore.screenshotDir }),
             }),
           },
         ],
@@ -612,6 +654,23 @@ const screenshotGetTool = defineTool({
         );
       }
 
+      // Over-cap refuse (D6 §1/§2, remote only): a stored image above the inline
+      // limit is refused rather than blown into the token-metered result.
+      if (
+        deps.config.remoteArtifacts.enabled &&
+        fileData.length > deps.config.remoteArtifacts.maxInlineBytes
+      ) {
+        return handleToolError(
+          new CharlotteError(
+            CharlotteErrorCode.INVALID_ARGUMENT,
+            `Stored screenshot '${id}' is ${Math.round(fileData.length / 1024)} KB, over the ${Math.round(
+              deps.config.remoteArtifacts.maxInlineBytes / 1024,
+            )} KB inline limit for remote mode.`,
+            "Re-capture with full_page: false or a selector for an inline-deliverable image.",
+          ),
+        );
+      }
+
       return {
         content: [
           {
@@ -626,7 +685,8 @@ const screenshotGetTool = defineTool({
               artifact: {
                 id: artifact.id,
                 filename: artifact.filename,
-                path: artifact.path,
+                // I8 (D6 §4): omit the server filesystem path in remote mode.
+                ...(deps.config.remoteArtifacts.enabled ? {} : { path: artifact.path }),
                 format: artifact.format,
                 size: artifact.size,
                 url: artifact.url,

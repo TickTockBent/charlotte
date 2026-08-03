@@ -154,6 +154,18 @@ export interface CharlotteConfig {
      */
     allowPrivateNetworks: string[];
   };
+  /**
+   * Remote (HTTP-mode) artifact handling (D6/D19, I8). OFF by default so stdio is
+   * unaffected; HTTP startup flips `enabled` on. When enabled, the screenshot
+   * tools cap inline images at `maxInlineBytes` (refuse+steer above it), omit
+   * server filesystem paths, and default full_page to viewport.
+   */
+  remoteArtifacts: {
+    /** When true, apply the remote artifact rules. HTTP mode sets this. */
+    enabled: boolean;
+    /** Inline image byte cap; above it the tool refuses and steers. */
+    maxInlineBytes: number;
+  };
 }
 
 /** Built-in defaults for {@link OutputLimits}. */
@@ -186,5 +198,9 @@ export function createDefaultConfig(): CharlotteConfig {
     // Guard off by default: stdio mode never denies navigation. The HTTP
     // transport flips `enabled` on at startup (deny-private-by-default, D14).
     navigationGuard: { enabled: false, allowPrivateNetworks: [] },
+    // Off by default: stdio never caps or path-strips screenshots. HTTP startup
+    // flips `enabled` on (D6). 256 KB is Gate-D-priced (D6 §1, 2026-08-03) against
+    // the screenshot size-distribution spike — pinned here in a reviewed build.
+    remoteArtifacts: { enabled: false, maxInlineBytes: 256_000 },
   };
 }

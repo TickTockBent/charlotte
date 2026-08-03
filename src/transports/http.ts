@@ -265,6 +265,10 @@ export async function startHttpTransport(
   ctx.config.navigationGuard.enabled = true;
   ctx.config.navigationGuard.allowPrivateNetworks = options.allowPrivateNetworks ?? [];
 
+  // Remote artifact handling (D6/D19, I8): cap inline images, omit server paths,
+  // default screenshots to viewport. Off in stdio; on here.
+  ctx.config.remoteArtifacts.enabled = true;
+
   // Fail closed (S2-F2): the guard is enforced by a launch-time filtering proxy
   // (D15), which can only front a browser Charlotte launches itself. Attaching
   // to an external browser via a CDP endpoint would serve a remote HTTP endpoint
@@ -522,6 +526,9 @@ export async function startHttpTransport(
         ? `${options.sessionIdleTtlMs}ms`
         : "disabled"
     }`,
+  );
+  logger.info(
+    `Remote artifact handling: on (inline cap ${ctx.config.remoteArtifacts.maxInlineBytes} bytes; full_page defaults to viewport; server paths omitted)`,
   );
   if (publicOrigin !== undefined) {
     logger.info(

@@ -449,7 +449,16 @@ describe("OAuth facade (slice 1 step 4a)", () => {
       it("rejects a tampered code signature", async () => {
         const code = await mintValidCode();
         const [payload, signature] = code.split(".");
-        const tampered = `${payload}.${signature.slice(0, -1)}${signature.endsWith("A") ? "B" : "A"}`;
+        // Tamper the DECODED signature bytes (flip one bit of the first byte),
+        // not a base64url character. The final base64url char of a 32-byte HMAC
+        // carries 2 padding bits, so flipping it (e.g. 'A'->'B') can decode to
+        // the IDENTICAL bytes — a no-op "tamper" that leaves the code valid and
+        // the server correctly returning 200. That made this a ~6% flake
+        // (whenever the signature ended in 'A'). Flipping a decoded byte always
+        // changes the signature, so verification always fails — deterministic.
+        const tamperedSignature = Buffer.from(signature, "base64url");
+        tamperedSignature[0] ^= 0x01;
+        const tampered = `${payload}.${tamperedSignature.toString("base64url")}`;
 
         const response = await postForm("/oauth/token", {
           grant_type: "authorization_code",

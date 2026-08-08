@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cross Navigation Page A</title>
+</head>
+<body>
+  <header role="banner">
+    <h1>Page A: The Origin Document</h1>
+  </header>
+
+  <nav role="navigation" aria-label="Page A navigation">
+    <ul>
+      <li><a href="#a1">Section One</a></li>
+      <li><a href="#a2">Section Two</a></li>
+      <li><a href="#a3">Section Three</a></li>
+    </ul>
+  </nav>
+
+  <main role="main" aria-label="Page A content">
+    <p>This is the origin document used to prove that a cross-document navigation collapses
+      the structural delta instead of listing every removed element from this page and every
+      added element from the destination page.</p>
+
+    <section id="a1">
+      <h2>Section One</h2>
+      <p>Paragraph one under section one.</p>
+      <p>Paragraph two under section one.</p>
+      <ul>
+        <li>Alpha item one</li>
+        <li>Alpha item two</li>
+        <li>Alpha item three</li>
+      </ul>
+    </section>
+
+    <section id="a2">
+      <h2>Section Two</h2>
+      <p>Paragraph one under section two.</p>
+      <p>Paragraph two under section two.</p>
+      <ul>
+        <li>Bravo item one</li>
+        <li>Bravo item two</li>
+        <li>Bravo item three</li>
+      </ul>
+    </section>
+
+    <section id="a3">
+      <h2>Section Three</h2>
+      <p>Paragraph one under section three.</p>
+      <p>Paragraph two under section three.</p>
+      <ul>
+        <li>Charlie item one</li>
+        <li>Charlie item two</li>
+        <li>Charlie item three</li>
+      </ul>
+      <p>
+        <a href="cross-nav-b.html" id="nav-link">Go to page B</a>
+      </p>
+    </section>
+
+    <button id="noop-btn" type="button">Does Nothing</button>
+    <input type="text" id="scratch-input" placeholder="Scratch input">
+  </main>
+
+  <footer role="contentinfo">
+    <p>Footer of Page A.</p>
+  </footer>
+</body>
+</html>

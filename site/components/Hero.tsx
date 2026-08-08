@@ -49,7 +49,7 @@ function ArchitectureDiagram() {
 
 export default function Hero() {
   return (
-    <section className="relative pt-24 pb-20 px-6 sm:px-8 lg:px-12" data-asm-role="primary-content" data-asm-summary="Charlotte overview: an MCP server that renders web pages into structured, agent-readable representations. 136x smaller responses than Playwright MCP, 7 tools to start / 42 total, 3 detail levels." data-asm-priority="critical">
+    <section className="relative pt-24 pb-20 px-6 sm:px-8 lg:px-12" data-asm-role="primary-content" data-asm-summary="Charlotte overview: an MCP server that renders web pages into structured, agent-readable representations. 136x smaller responses than Playwright MCP, 7 tools to start / 43 total, 3 detail levels." data-asm-priority="critical">
       <div className="max-w-5xl mx-auto">
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-12">
           {/* Left: Text content */}
@@ -136,7 +136,7 @@ export default function Hero() {
           </div>
           <div>
             <span className="font-mono text-2xl font-bold text-accent">7</span>
-            <span className="ml-2 text-muted">tools to start, 42 when you need them</span>
+            <span className="ml-2 text-muted">tools to start, 43 when you need them</span>
           </div>
           <div>
             <span className="font-mono text-2xl font-bold text-accent">3</span>

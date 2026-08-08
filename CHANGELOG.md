@@ -8,6 +8,8 @@ This release introduces **Charlotte Remote** — an optional streamable-HTTP tra
 
 Re-verified benchmarks: Charlotte's `navigate` orientation is still ~10–140x smaller than a full Playwright MCP `browser_snapshot` on content-heavy pages (measured against Playwright MCP v0.0.79, 2026-08-08).
 
+> **Note:** v0.7.0 was merged but never published as a standalone release; its changes (sandbox-on default, security hardening, config file, element-ID format) ship as part of v0.8.0. The `v0.7.0` git tag exists for reference only.
+
 ### Added
 
 - **Streamable HTTP transport (`charlotte --http`)** — a stateless `/mcp` endpoint with a single implicit session per server process, plus an unauthenticated `/healthz` endpoint reporting version, uptime, and browser-connection state. A bearer token is mandatory for `/mcp`.

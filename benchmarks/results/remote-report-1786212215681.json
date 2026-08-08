@@ -1,0 +1,601 @@
+{
+  "generatedAt": "2026-08-08T18:02:00.763Z",
+  "smoke": false,
+  "assumptions": {
+    "host": "motherbrain",
+    "platform": "linux/x64",
+    "cpus": 4,
+    "totalMemMb": 31947,
+    "nodeVersion": "v24.18.0",
+    "noSandbox": true,
+    "transport": "loopback TCP (127.0.0.1, ephemeral port)",
+    "toolProfile": "browse",
+    "workload": "remote-parity golden sequence (captureGoldenScenarios): 4 fixture pages x navigate/observe/find + 1 click",
+    "fixturePages": [
+      "simple.html",
+      "form.html",
+      "plain-form.html",
+      "interaction.html"
+    ],
+    "smoke": false,
+    "excludesNodeProcessStartup": "Cold-start measurement starts t0 at harness setup (Chromium launch), not at Node process start / module import — real container cold-start is a slice-3 concern.",
+    "idleMemoryMethod": "Idle session memory is the summed PSS (Proportional Set Size, from /proc/<pid>/smaps_rollup or /proc/<pid>/smaps) of the Chromium process tree only — root process + every descendant (renderer/GPU/utility processes etc). PSS apportions shared pages across processes so the sum does not double-count, unlike summed RSS (kept as a secondary upper-bound figure). The Node.js server process running this harness/report is explicitly EXCLUDED from the figure."
+  },
+  "measurements": {
+    "httpOverheadPerToolCallVsStdio": {
+      "designIntentMs": 50,
+      "aggregateDeltaMs": {
+        "median": 5,
+        "p10": 3.2,
+        "p90": 10.800000000000002,
+        "n": 13
+      },
+      "warmupPasses": 3,
+      "passes": 30,
+      "httpFasterThanCoreLabels": [
+        "01:charlotte_navigate"
+      ],
+      "perCall": [
+        {
+          "label": "01:charlotte_navigate",
+          "core": {
+            "median": 49.5,
+            "p10": 24,
+            "p90": 56,
+            "n": 30
+          },
+          "http": {
+            "median": 44,
+            "p10": 28,
+            "p90": 69.1,
+            "n": 30
+          },
+          "deltaMedianMs": -5.5
+        },
+        {
+          "label": "02:charlotte_observe",
+          "core": {
+            "median": 5,
+            "p10": 5,
+            "p90": 6.500000000000007,
+            "n": 30
+          },
+          "http": {
+            "median": 13,
+            "p10": 9,
+            "p90": 34.400000000000006,
+            "n": 30
+          },
+          "deltaMedianMs": 8
+        },
+        {
+          "label": "03:charlotte_find",
+          "core": {
+            "median": 5,
+            "p10": 4,
+            "p90": 9.400000000000006,
+            "n": 30
+          },
+          "http": {
+            "median": 10,
+            "p10": 9,
+            "p90": 23,
+            "n": 30
+          },
+          "deltaMedianMs": 5
+        },
+        {
+          "label": "04:charlotte_navigate",
+          "core": {
+            "median": 26.5,
+            "p10": 23,
+            "p90": 42.60000000000002,
+            "n": 30
+          },
+          "http": {
+            "median": 38,
+            "p10": 30.800000000000004,
+            "p90": 70.4,
+            "n": 30
+          },
+          "deltaMedianMs": 11.5
+        },
+        {
+          "label": "05:charlotte_observe",
+          "core": {
+            "median": 6,
+            "p10": 5,
+            "p90": 20.1,
+            "n": 30
+          },
+          "http": {
+            "median": 9,
+            "p10": 8,
+            "p90": 17.200000000000003,
+            "n": 30
+          },
+          "deltaMedianMs": 3
+        },
+        {
+          "label": "06:charlotte_find",
+          "core": {
+            "median": 5,
+            "p10": 4,
+            "p90": 13.300000000000004,
+            "n": 30
+          },
+          "http": {
+            "median": 9,
+            "p10": 8,
+            "p90": 18,
+            "n": 30
+          },
+          "deltaMedianMs": 4
+        },
+        {
+          "label": "07:charlotte_navigate",
+          "core": {
+            "median": 20,
+            "p10": 18,
+            "p90": 43.70000000000001,
+            "n": 30
+          },
+          "http": {
+            "median": 24,
+            "p10": 22,
+            "p90": 38.300000000000004,
+            "n": 30
+          },
+          "deltaMedianMs": 4
+        },
+        {
+          "label": "08:charlotte_observe",
+          "core": {
+            "median": 2,
+            "p10": 1,
+            "p90": 5.500000000000007,
+            "n": 30
+          },
+          "http": {
+            "median": 7,
+            "p10": 6,
+            "p90": 19.1,
+            "n": 30
+          },
+          "deltaMedianMs": 5
+        },
+        {
+          "label": "09:charlotte_find",
+          "core": {
+            "median": 2,
+            "p10": 1,
+            "p90": 11.100000000000001,
+            "n": 30
+          },
+          "http": {
+            "median": 7.5,
+            "p10": 6,
+            "p90": 17,
+            "n": 30
+          },
+          "deltaMedianMs": 5.5
+        },
+        {
+          "label": "10:charlotte_navigate",
+          "core": {
+            "median": 30,
+            "p10": 26,
+            "p90": 79.19999999999999,
+            "n": 30
+          },
+          "http": {
+            "median": 43.5,
+            "p10": 31.9,
+            "p90": 83.80000000000001,
+            "n": 30
+          },
+          "deltaMedianMs": 13.5
+        },
+        {
+          "label": "11:charlotte_observe",
+          "core": {
+            "median": 8.5,
+            "p10": 6,
+            "p90": 30.1,
+            "n": 30
+          },
+          "http": {
+            "median": 14,
+            "p10": 11,
+            "p90": 34,
+            "n": 30
+          },
+          "deltaMedianMs": 5.5
+        },
+        {
+          "label": "12:charlotte_find",
+          "core": {
+            "median": 7.5,
+            "p10": 6,
+            "p90": 17.1,
+            "n": 30
+          },
+          "http": {
+            "median": 11.5,
+            "p10": 10,
+            "p90": 33.2,
+            "n": 30
+          },
+          "deltaMedianMs": 4
+        },
+        {
+          "label": "13:charlotte_click",
+          "core": {
+            "median": 576.5,
+            "p10": 561.9,
+            "p90": 583.6,
+            "n": 30
+          },
+          "http": {
+            "median": 583,
+            "p10": 573.6,
+            "p90": 589,
+            "n": 30
+          },
+          "deltaMedianMs": 6.5
+        }
+      ]
+    },
+    "coldStartToFirstObservation": {
+      "designIntentMs": 5000,
+      "spread": {
+        "median": 348.5,
+        "p10": 327.6,
+        "p90": 372.9,
+        "n": 10
+      },
+      "warmupSamples": 1,
+      "allSamplesMs": [
+        424,
+        306,
+        332,
+        381,
+        330,
+        349,
+        348,
+        372,
+        359,
+        351,
+        335
+      ]
+    },
+    "crashRecoveryRelaunch": {
+      "designIntentMs": 8000,
+      "spread": {
+        "median": 533,
+        "p10": 469.8,
+        "p90": 701.7,
+        "n": 10
+      },
+      "warmupSamples": 1,
+      "allSamplesMs": [
+        593,
+        624,
+        567,
+        692,
+        549,
+        508,
+        500,
+        517,
+        789,
+        468,
+        470
+      ],
+      "failedObserveCalls": 11,
+      "samplesAttempted": 11,
+      "samplesNeverRecovered": 0
+    },
+    "idleSessionMemory": {
+      "designIntentMb": 400,
+      "spreadPssMb": {
+        "median": 329.90625,
+        "p10": 329.395703125,
+        "p90": 330.2728515625,
+        "n": 5
+      },
+      "spreadRssUpperBoundMb": {
+        "median": 923.515625,
+        "p10": 922.8734375,
+        "p90": 923.6867187500001,
+        "n": 5
+      },
+      "snapshots": [
+        {
+          "totalPssMb": 329.33203125,
+          "totalRssMb": 922.6953125,
+          "pssUnavailablePids": [],
+          "processes": [
+            {
+              "pid": 2306619,
+              "rssKb": 198968,
+              "pssKb": 108838
+            },
+            {
+              "pid": 2306626,
+              "rssKb": 66068,
+              "pssKb": 17428
+            },
+            {
+              "pid": 2306627,
+              "rssKb": 66168,
+              "pssKb": 12725
+            },
+            {
+              "pid": 2306654,
+              "rssKb": 116076,
+              "pssKb": 42096
+            },
+            {
+              "pid": 2306647,
+              "rssKb": 74956,
+              "pssKb": 24773
+            },
+            {
+              "pid": 2306656,
+              "rssKb": 50580,
+              "pssKb": 9832
+            },
+            {
+              "pid": 2306687,
+              "rssKb": 146612,
+              "pssKb": 66791
+            },
+            {
+              "pid": 2306694,
+              "rssKb": 92472,
+              "pssKb": 25329
+            },
+            {
+              "pid": 2306706,
+              "rssKb": 66528,
+              "pssKb": 14725
+            },
+            {
+              "pid": 2306733,
+              "rssKb": 66412,
+              "pssKb": 14699
+            }
+          ]
+        },
+        {
+          "totalPssMb": 329.4912109375,
+          "totalRssMb": 923.140625,
+          "pssUnavailablePids": [],
+          "processes": [
+            {
+              "pid": 2306619,
+              "rssKb": 199068,
+              "pssKb": 108886
+            },
+            {
+              "pid": 2306626,
+              "rssKb": 66068,
+              "pssKb": 17428
+            },
+            {
+              "pid": 2306627,
+              "rssKb": 66168,
+              "pssKb": 12725
+            },
+            {
+              "pid": 2306654,
+              "rssKb": 116076,
+              "pssKb": 42093
+            },
+            {
+              "pid": 2306647,
+              "rssKb": 75120,
+              "pssKb": 24831
+            },
+            {
+              "pid": 2306656,
+              "rssKb": 50580,
+              "pssKb": 9832
+            },
+            {
+              "pid": 2306687,
+              "rssKb": 146612,
+              "pssKb": 66771
+            },
+            {
+              "pid": 2306694,
+              "rssKb": 92664,
+              "pssKb": 25410
+            },
+            {
+              "pid": 2306706,
+              "rssKb": 66528,
+              "pssKb": 14724
+            },
+            {
+              "pid": 2306733,
+              "rssKb": 66412,
+              "pssKb": 14699
+            }
+          ]
+        },
+        {
+          "totalPssMb": 329.90625,
+          "totalRssMb": 923.64453125,
+          "pssUnavailablePids": [],
+          "processes": [
+            {
+              "pid": 2306619,
+              "rssKb": 199572,
+              "pssKb": 109334
+            },
+            {
+              "pid": 2306626,
+              "rssKb": 66068,
+              "pssKb": 17428
+            },
+            {
+              "pid": 2306627,
+              "rssKb": 66168,
+              "pssKb": 12725
+            },
+            {
+              "pid": 2306654,
+              "rssKb": 116088,
+              "pssKb": 42089
+            },
+            {
+              "pid": 2306647,
+              "rssKb": 75120,
+              "pssKb": 24828
+            },
+            {
+              "pid": 2306656,
+              "rssKb": 50580,
+              "pssKb": 9832
+            },
+            {
+              "pid": 2306687,
+              "rssKb": 146612,
+              "pssKb": 66756
+            },
+            {
+              "pid": 2306694,
+              "rssKb": 92664,
+              "pssKb": 25409
+            },
+            {
+              "pid": 2306706,
+              "rssKb": 66528,
+              "pssKb": 14724
+            },
+            {
+              "pid": 2306733,
+              "rssKb": 66412,
+              "pssKb": 14699
+            }
+          ]
+        },
+        {
+          "totalPssMb": 330.1533203125,
+          "totalRssMb": 923.515625,
+          "pssUnavailablePids": [],
+          "processes": [
+            {
+              "pid": 2306619,
+              "rssKb": 199024,
+              "pssKb": 109004
+            },
+            {
+              "pid": 2306626,
+              "rssKb": 66068,
+              "pssKb": 17428
+            },
+            {
+              "pid": 2306627,
+              "rssKb": 66168,
+              "pssKb": 12725
+            },
+            {
+              "pid": 2306654,
+              "rssKb": 116504,
+              "pssKb": 42416
+            },
+            {
+              "pid": 2306647,
+              "rssKb": 75120,
+              "pssKb": 25099
+            },
+            {
+              "pid": 2306656,
+              "rssKb": 50580,
+              "pssKb": 9832
+            },
+            {
+              "pid": 2306687,
+              "rssKb": 146612,
+              "pssKb": 66750
+            },
+            {
+              "pid": 2306694,
+              "rssKb": 92664,
+              "pssKb": 25403
+            },
+            {
+              "pid": 2306706,
+              "rssKb": 66528,
+              "pssKb": 14723
+            },
+            {
+              "pid": 2306733,
+              "rssKb": 66412,
+              "pssKb": 14697
+            }
+          ]
+        },
+        {
+          "totalPssMb": 330.3525390625,
+          "totalRssMb": 923.71484375,
+          "pssUnavailablePids": [],
+          "processes": [
+            {
+              "pid": 2306619,
+              "rssKb": 199228,
+              "pssKb": 109208
+            },
+            {
+              "pid": 2306626,
+              "rssKb": 66068,
+              "pssKb": 17428
+            },
+            {
+              "pid": 2306627,
+              "rssKb": 66168,
+              "pssKb": 12725
+            },
+            {
+              "pid": 2306654,
+              "rssKb": 116504,
+              "pssKb": 42416
+            },
+            {
+              "pid": 2306647,
+              "rssKb": 75120,
+              "pssKb": 25099
+            },
+            {
+              "pid": 2306656,
+              "rssKb": 50580,
+              "pssKb": 9832
+            },
+            {
+              "pid": 2306687,
+              "rssKb": 146612,
+              "pssKb": 66750
+            },
+            {
+              "pid": 2306694,
+              "rssKb": 92664,
+              "pssKb": 25403
+            },
+            {
+              "pid": 2306706,
+              "rssKb": 66528,
+              "pssKb": 14723
+            },
+            {
+              "pid": 2306733,
+              "rssKb": 66412,
+              "pssKb": 14697
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

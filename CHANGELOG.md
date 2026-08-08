@@ -2,7 +2,26 @@
 
 All notable changes to Charlotte will be documented in this file.
 
-## [Unreleased]
+## [0.8.0] - UNRELEASED
+
+This release introduces **Charlotte Remote** — an optional streamable-HTTP transport that lets Charlotte run as a self-hosted, network-reachable MCP server alongside its existing stdio transport. Read the **Security** section before exposing an instance to a network; several guards below are new and are mandatory whenever HTTP mode is enabled.
+
+### Added
+
+- **Streamable HTTP transport (`charlotte --http`)** — a stateless `/mcp` endpoint with a single implicit session per server process, plus an unauthenticated `/healthz` endpoint reporting version, uptime, and browser-connection state. A bearer token is mandatory for `/mcp`.
+- **OAuth facade for claude.ai's connector** — satisfies claude.ai's remote-connector OAuth flow with HMAC-derived tokens computed on demand from the configured secret; nothing is persisted server-side. Direct MCP clients continue to authenticate with a plain bearer token.
+- **Session idle-TTL sweep** and **crash/restart recovery** for the HTTP transport, so abandoned sessions and a browser crash mid-session don't leave the server wedged.
+- **Artifact delivery over HTTP** — artifacts up to 256 KB are delivered inline; over-cap artifacts are refused with a steering message rather than falling back to a server-local filesystem path, since an HTTP client has no way to dereference one.
+- **Read-only `charlotte_tools` reporter in HTTP mode** — reports the tool profile fixed at server startup; enable/disable requests are refused with a steering message pointing at the `http.profile` config option instead.
+- **`tools/list` cache hint** (`ttlMs` 1 hour, `private`) so HTTP clients can avoid re-fetching the tool listing on every call.
+- **Docker HTTP image** with the Chromium sandbox **enabled** by default, using a surgical seccomp profile scoped to what the sandbox needs, plus a `docker-compose.yml` for running Charlotte in HTTP mode.
+- **`charlotte doctor --http`** — a preflight smoke check for HTTP transport configuration.
+- **Full HTTP configuration surface** via `charlotte.config.json` and environment variables (including `CHARLOTTE_AUTH_TOKEN`), covering transport, auth, host/origin allowlisting, and session limits.
+
+### Security
+
+- **Outbound SSRF navigation guard.** An in-process filtering proxy resolves navigation targets at request time and default-denies loopback, RFC1918/link-local, and cloud-metadata addresses, with an operator-configurable CIDR allowlist for intentional exceptions.
+- **Inbound Host-header DNS-rebind guard.** Incoming HTTP requests are checked against an allowlist built from loopback, the configured bind host, `publicOrigin`, and any operator-configured `allowedHosts`.
 
 ### Changed
 

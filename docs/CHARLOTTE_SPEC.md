@@ -1,6 +1,6 @@
 # Charlotte Technical Specification
 
-**Version:** 0.7.0
+**Version:** 0.8.0
 
 Charlotte is an MCP server that renders web pages into structured, agent-readable `PageRepresentation` objects using headless Chromium and Puppeteer. It communicates over stdio using the Model Context Protocol.
 

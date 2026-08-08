@@ -60,7 +60,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <head>
-        <link rel="asm-manifest" type="application/json" href="/agents.json" />
+        <link rel="agents-manifest" type="application/json" href="/agents.json" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}

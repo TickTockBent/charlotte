@@ -1,7 +1,7 @@
 # v0.8.0 benchmark provenance
 
 **Run date:** 2026-08-08 (metrics pass, task #35)
-**Host:** motherbrain (Ubuntu 24.04), sandbox off (`--no-sandbox`) for the harness.
+**Host:** the project dev machine (Ubuntu 24.04), sandbox off (`--no-sandbox`) for the harness.
 
 ## Resolved versions under test
 - **Charlotte:** 0.8.0 (fresh `dist/` from `npm run build`)
@@ -22,7 +22,7 @@
   returns the full tree inline (the comparison point), so the methodology is
   preserved.
 - Live pages drift; durable claims are expressed as conservative ranges, not the
-  brittle per-run peak. See `../../../private-docs/remote/decisions.md` D24.
+  brittle per-run peak (project decision record D24).
 - First re-run's Playwright numbers were void (missing browser binary → every call
   errored); discarded and re-run after installing the browser. The *original*
   v0.7.0 comparison was valid and is untouched in `../v0.7.0/`.

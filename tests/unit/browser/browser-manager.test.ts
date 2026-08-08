@@ -1,6 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import puppeteer from "puppeteer";
 import { BrowserManager } from "../../../src/browser/browser-manager.js";
+import { createDefaultConfig } from "../../../src/types/config.js";
+import { startFilteringProxy } from "../../../src/browser/filtering-proxy.js";
+
+// Mock the SSRF filtering proxy (D15) so the guard seam is observable without
+// binding a real loopback port. Inert unless a test enables navigationGuard.
+vi.mock("../../../src/browser/filtering-proxy.js", () => ({
+  startFilteringProxy: vi.fn(),
+}));
 
 // Mock puppeteer at module level
 vi.mock("puppeteer", () => {
@@ -449,6 +457,91 @@ describe("BrowserManager", () => {
       expect(manager.isConnected()).toBe(true);
       const active = await manager.getBrowser();
       expect(active).toBe(gen2.browser);
+    });
+  });
+
+  // D25: the mirror image of D18. close() must await an in-flight launch the way
+  // ensureConnected() awaits an in-flight close. Without it, close() lands in the
+  // window between "guard proxy listening" and "browser installed": it snapshots
+  // a null browser, skips the teardown branch, but still stops the proxy — and
+  // the launch then installs a Chromium wired to a dead --proxy-server port.
+  describe("close() vs in-flight launch (D25)", () => {
+    /** Resolve after a macrotask so every pending microtask has drained. */
+    const flushMacrotask = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+    it("waits for a pending launch, then tears down the browser it installed", async () => {
+      // One ordered log for the three events whose interleaving IS the bug.
+      const eventLog: string[] = [];
+
+      const proxyHandle = {
+        port: 45678,
+        host: "127.0.0.1",
+        close: vi.fn(async () => {
+          eventLog.push("proxy-stopped");
+        }),
+      };
+      (startFilteringProxy as ReturnType<typeof vi.fn>).mockResolvedValue(proxyHandle);
+
+      // The launch stays pending until the test releases it — the window is
+      // forced open, not raced for.
+      let releaseLaunch: () => void = () => {};
+      const launchGate = new Promise<void>((resolve) => {
+        releaseLaunch = resolve;
+      });
+      const launchedBrowser = {
+        connected: true,
+        on: vi.fn(),
+        close: vi.fn(async () => {
+          eventLog.push("browser-closed");
+        }),
+        disconnect: vi.fn().mockResolvedValue(undefined),
+        process: () => ({ pid: 2501 }),
+        pages: vi.fn().mockResolvedValue([]),
+      };
+      (puppeteer.launch as ReturnType<typeof vi.fn>).mockImplementationOnce(async () => {
+        await launchGate;
+        eventLog.push("launch-settled");
+        return launchedBrowser;
+      });
+
+      const guardedConfig = createDefaultConfig();
+      guardedConfig.navigationGuard = { enabled: true, allowPrivateNetworks: [] };
+      const manager = new BrowserManager(guardedConfig);
+      manager.setNavigationGuardOnDeny(vi.fn());
+
+      // 1. Launch in flight: proxy is listening, Chromium is not up yet.
+      const connectPromise = manager.ensureConnected();
+      await flushMacrotask();
+      expect(startFilteringProxy).toHaveBeenCalledTimes(1);
+      expect(puppeteer.launch).toHaveBeenCalledTimes(1);
+      const launchArgs = ((puppeteer.launch as ReturnType<typeof vi.fn>).mock.calls[0]?.[0]?.args ??
+        []) as string[];
+      expect(launchArgs).toContain(`--proxy-server=http://127.0.0.1:${proxyHandle.port}`);
+
+      // 2. Teardown requested squarely inside that window.
+      let closeSettled = false;
+      const closePromise = manager.close().then(() => {
+        closeSettled = true;
+      });
+
+      // 3. Deterministic assertion: teardown is BLOCKED on this.launching.
+      //    Without D25 close() would have run to completion by now, stopping the
+      //    proxy out from under a launch that is still pending.
+      await flushMacrotask();
+      expect(closeSettled).toBe(false);
+      expect(proxyHandle.close).not.toHaveBeenCalled();
+      expect(eventLog).toEqual([]);
+
+      // 4. Release the launch; both operations settle.
+      releaseLaunch();
+      await connectPromise;
+      await closePromise;
+
+      // 5. The browser the launch installed was closed (not left running), and
+      //    the proxy was stopped last — after the launch settled, not during it.
+      expect(eventLog).toEqual(["launch-settled", "browser-closed", "proxy-stopped"]);
+      expect(launchedBrowser.close).toHaveBeenCalledTimes(1);
+      expect(manager.isConnected()).toBe(false);
     });
   });
 });

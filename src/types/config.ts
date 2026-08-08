@@ -74,7 +74,7 @@ export interface HttpTransportConfig {
   sessionIdleTtlMs: number;
   /** RESERVED (post-MVP): concurrent sessions per server; MVP is a hard 1. */
   maxSessions: number;
-  /** RESERVED (slice 2): CIDR allowlist for the SSRF guard. Empty = deny all. */
+  /** CIDR allowlist for the SSRF guard (D15, live — wired into the navigation guard by the HTTP transport). Empty = deny all private ranges. */
   allowPrivateNetworks: string[];
   /**
    * Extra `Host` header hostnames to accept, on top of the always-allowed set

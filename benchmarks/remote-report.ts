@@ -2,11 +2,11 @@
 /**
  * Charlotte Remote — §8 budget-pinning measurement instrument.
  *
- * Emits the four spec-§8 measurements (docs: private-docs/remote/calibration.md)
- * with NO ASSERTIONS and no pass/fail thresholds — this is a measurement
- * instrument, not a test. Its numbers are printed for the human (Wes) to
- * review and price against the design-intent targets recorded in
- * calibration.md. Pinning bands is his separate step.
+ * Emits the four spec-§8 measurements with NO ASSERTIONS and no pass/fail
+ * thresholds — this is a measurement instrument, not a test. Its numbers are
+ * printed for the maintainer to review and price against the design-intent
+ * targets in the project calibration record. Pinning bands is a separate,
+ * human step.
  *
  * Usage:
  *   npx tsx benchmarks/remote-report.ts            # full run (real N)
@@ -225,9 +225,9 @@ const SMOKE_SIZES: RunSizes = {
 };
 
 // Profile every HTTP harness in this report is stood up with. "browse" matches
-// the precedent set by the slice-1 step 3 observational note in
-// private-docs/remote/calibration.md, and keeps the HTTP-overhead number
-// comparable to that note (overhead scales with registered tool-set size).
+// the precedent set by the slice-1 observational note in the project
+// calibration record, and keeps the HTTP-overhead number comparable to that
+// note (overhead scales with registered tool-set size).
 const REPORT_PROFILE = "browse" as const;
 
 const FIXTURES_DIR = path.resolve(import.meta.dirname, "../tests/fixtures/pages");

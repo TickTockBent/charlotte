@@ -27,6 +27,8 @@
     "authToken": null,
     "profile": "browse",
     "debugRequests": false,
+    "publicOrigin": null,
+    "allowedHosts": [],
     "sessionIdleTtlMs": 1800000,
     "maxSessions": 1,
     "allowPrivateNetworks": [],

@@ -321,8 +321,20 @@ export class BrowserManager {
   async close(): Promise<void> {
     // Re-entrant: concurrent close() calls (idle sweep + shutdown) share one teardown.
     if (this.closing) return this.closing;
-    const browserBeingClosed = this.browser;
     this.closing = (async () => {
+      // A launch is in flight — wait for it to FULLY finish before deciding what
+      // to tear down (D25). Otherwise we'd snapshot a null browser, skip the
+      // browser branch, stop the guard proxy anyway, and the launch would then
+      // install a Chromium permanently wired to a dead --proxy-server port.
+      // Symmetric with ensureConnected()'s await of this.closing (D18). A
+      // rejected launch installed nothing to close, so swallow its failure —
+      // it is already reported to the caller that started the launch.
+      if (this.launching) {
+        await this.launching.catch(() => {});
+      }
+      // Snapshotted after the launching-await so it sees the browser the launch
+      // installed, not the null that preceded it.
+      const browserBeingClosed = this.browser;
       if (browserBeingClosed) {
         if (this.cdpEndpoint) {
           logger.info("Disconnecting from remote browser");

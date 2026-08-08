@@ -94,7 +94,7 @@ Charlotte's BrowserManager passes `--disable-dev-shm-usage` to Chromium, which m
 
 ### Sandbox / Security Posture
 
-Decision D22 (see `private-docs/remote/decisions.md`) settled this after a
+Project decision D22 settled this after a
 spike (R4) confirmed Chromium's own sandbox (user-namespaces + seccomp-BPF)
 runs **enabled** in-container, **without `--privileged`**, on this host's
 Docker (27.4.1) — the Ubuntu unprivileged-userns AppArmor restriction that

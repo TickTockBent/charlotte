@@ -65,6 +65,8 @@ Every section is optional. An empty `{}` is valid.
     "authToken": null,
     "profile": "browse",
     "debugRequests": false,
+    "publicOrigin": null,
+    "allowedHosts": [],
     "sessionIdleTtlMs": 1800000,
     "maxSessions": 1,
     "allowPrivateNetworks": [],
@@ -96,11 +98,13 @@ Every section is optional. An empty `{}` is valid.
 | `http.authToken` | string \| null | Static bearer token. **Required** in HTTP mode — no default. `CHARLOTTE_AUTH_TOKEN` wins over this. |
 | `http.profile` | enum | Tool profile served over HTTP, fixed at startup. Default `browse`. `--profile` overrides it. |
 | `http.debugRequests` | boolean | **Diagnostics only, not for production.** Logs every request's method, path, and headers (credentials redacted) plus its response status to stderr. Default `false`. Env: `CHARLOTTE_DEBUG_HTTP=1`. |
-| `http.sessionIdleTtlMs` | int > 0 | *Reserved.* Idle ms before a session's pages close. Validated, not yet consumed. |
+| `http.publicOrigin` | string \| null | The origin claude.ai (or any OAuth client) reaches the server at, e.g. `https://charlotte.example.com`. Enables the OAuth facade and is added to the Host-header allowlist. `null` (default) disables the facade — bearer-token clients only. |
+| `http.allowedHosts` | string[] | Extra `Host` header hostnames to accept beyond the always-allowed set (loopback, bind host, `publicOrigin`'s hostname). Requests with any other `Host` are rejected (DNS-rebind guard). Default `[]`. |
+| `http.sessionIdleTtlMs` | int > 0 | Idle ms with no authorized `/mcp` activity before the browser is torn down (the next tool call relaunches it). Default `1800000` (30 min). **No enforced minimum** — a very low value will tear the browser down between (or even during) requests; don't set it below your slowest expected request. |
 | `http.maxSessions` | int > 0 | *Reserved.* Concurrent sessions; today there is exactly one. Validated, not yet consumed. |
-| `http.allowPrivateNetworks` | string[] | *Reserved.* CIDR allowlist for the private-network guard. Validated, not yet consumed. |
+| `http.allowPrivateNetworks` | string[] | CIDR allowlist punching holes in the SSRF guard's default-deny of loopback / RFC1918 / link-local / cloud-metadata navigation. Empty (default) = all private ranges denied. |
 | `http.enableDevTools` | boolean | *Reserved.* Expose filesystem-serving dev tools over HTTP. Validated, not yet consumed. |
-| `http.artifactDelivery` | enum | *Reserved.* `inline` or `resource`. Validated, not yet consumed. |
+| `http.artifactDelivery` | enum | *Reserved.* `inline` or `resource`. Validated, not yet consumed (inline delivery with a size cap is the live behavior). |
 
 ### HTTP mode (`http`)
 
@@ -115,9 +119,10 @@ stdio. The two modes are mutually exclusive — one process serves one transport
 
 The tool set is fixed at startup from `http.profile` (`--profile` overrides;
 `--tools` is ignored with a warning), because a stateless HTTP transport has no
-per-connection registry to mutate — `charlotte_tools` is therefore not exposed
-over HTTP. Default `browse` excludes the dev-mode, evaluate, and monitoring
-groups.
+per-connection registry to mutate — over HTTP, `charlotte_tools` is a
+**read-only reporter**: it reports the active profile and group status, and
+`enable`/`disable` requests are refused with a pointer at `http.profile`.
+Default `browse` excludes the dev-mode, evaluate, and monitoring groups.
 
 Any path that is neither `/mcp` nor `/healthz` answers `404
 {"error":"not_found"}`.

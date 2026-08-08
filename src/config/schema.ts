@@ -176,9 +176,10 @@ const HttpConfigSchema = z
      */
     publicOrigin: z.string().nullable().optional(),
     /**
-     * RESERVED (slice 2 — session lifecycle): idle milliseconds before a
-     * session's browser pages are closed. Default 1800000 ⟨tune⟩. Validated
-     * and ignored in slice 1.
+     * Idle milliseconds before the session's browser is torn down (D17,
+     * consumed by the HTTP transport's idle sweep; the next tool call
+     * relaunches). Default 1800000 ⟨tune⟩. No schema floor (D25): a very low
+     * value tears the browser down between — or even during — requests.
      */
     sessionIdleTtlMs: z.number().int().positive().optional(),
     /**
@@ -187,10 +188,10 @@ const HttpConfigSchema = z
      */
     maxSessions: z.number().int().positive().optional(),
     /**
-     * RESERVED (slice 2 — SSRF guard): CIDR allowlist punching holes in the
-     * default-deny of loopback/RFC1918/link-local/cloud-metadata navigation.
-     * Empty = deny all private ranges. Validated and ignored in slice 1,
-     * where the interim posture is loopback binding + tunnel + token.
+     * CIDR allowlist punching holes in the SSRF guard's default-deny of
+     * loopback/RFC1918/link-local/cloud-metadata navigation (D15, consumed by
+     * the HTTP transport — wired into the navigation guard at startup).
+     * Empty = deny all private ranges.
      */
     allowPrivateNetworks: z.array(z.string()).optional(),
     /**

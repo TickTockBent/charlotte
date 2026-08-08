@@ -1,0 +1,40 @@
+{
+  "testName": "Deep Navigation (GitHub Repo)",
+  "serverName": "Chrome DevTools MCP",
+  "calls": [
+    {
+      "toolName": "navigate_page",
+      "arguments": {
+        "url": "https://github.com/anthropics/anthropic-cookbook"
+      },
+      "responseChars": 239,
+      "estimatedTokens": 60,
+      "wallTimeMs": 2252.714197000001,
+      "isError": false
+    },
+    {
+      "toolName": "take_snapshot",
+      "arguments": {},
+      "responseChars": 76258,
+      "estimatedTokens": 19065,
+      "wallTimeMs": 120.96083099999669,
+      "isError": false
+    }
+  ],
+  "cumulative": {
+    "totalChars": 76497,
+    "totalEstimatedTokens": 19125,
+    "totalWallTimeMs": 2373.675027999998,
+    "totalCalls": 2
+  },
+  "toolDefinitions": {
+    "toolCount": 29,
+    "definitionChars": 22608,
+    "estimatedDefinitionTokens": 6460,
+    "cumulativeDefinitionTokens": 12920
+  },
+  "success": true,
+  "successCriteria": "Server can observe the repo page structure.",
+  "notes": "Snapshot: 76258 chars",
+  "timestamp": 1786225885065
+}

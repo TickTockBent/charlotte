@@ -6,6 +6,8 @@ All notable changes to Charlotte will be documented in this file.
 
 This release introduces **Charlotte Remote** — an optional streamable-HTTP transport that lets Charlotte run as a self-hosted, network-reachable MCP server alongside its existing stdio transport. Read the **Security** section before exposing an instance to a network; several guards below are new and are mandatory whenever HTTP mode is enabled.
 
+Re-verified benchmarks: Charlotte's `navigate` orientation is still ~10–140x smaller than a full Playwright MCP `browser_snapshot` on content-heavy pages (measured against Playwright MCP v0.0.79, 2026-08-08).
+
 ### Added
 
 - **Streamable HTTP transport (`charlotte --http`)** — a stateless `/mcp` endpoint with a single implicit session per server process, plus an unauthenticated `/healthz` endpoint reporting version, uptime, and browser-connection state. A bearer token is mandatory for `/mcp`.

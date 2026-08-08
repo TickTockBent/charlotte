@@ -1,0 +1,40 @@
+{
+  "testName": "Simple Page (example.com)",
+  "serverName": "Chrome DevTools MCP",
+  "calls": [
+    {
+      "toolName": "navigate_page",
+      "arguments": {
+        "url": "https://example.com"
+      },
+      "responseChars": 148,
+      "estimatedTokens": 37,
+      "wallTimeMs": 496.208673000001,
+      "isError": false
+    },
+    {
+      "toolName": "take_snapshot",
+      "arguments": {},
+      "responseChars": 422,
+      "estimatedTokens": 106,
+      "wallTimeMs": 7.905106999998679,
+      "isError": false
+    }
+  ],
+  "cumulative": {
+    "totalChars": 570,
+    "totalEstimatedTokens": 143,
+    "totalWallTimeMs": 504.1137799999997,
+    "totalCalls": 2
+  },
+  "toolDefinitions": {
+    "toolCount": 29,
+    "definitionChars": 22608,
+    "estimatedDefinitionTokens": 6460,
+    "cumulativeDefinitionTokens": 12920
+  },
+  "success": true,
+  "successCriteria": "Server identifies the page title, the heading, and the single link.",
+  "notes": "Title found: true",
+  "timestamp": 1786226219935
+}

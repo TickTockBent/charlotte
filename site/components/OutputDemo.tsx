@@ -108,7 +108,7 @@ export default function OutputDemo() {
                 }`}
               >
                 minimal
-                <span className="ml-1.5 text-muted">336 chars</span>
+                <span className="ml-1.5 text-muted">364 chars</span>
               </button>
               <button
                 role="tab"

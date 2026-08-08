@@ -43,3 +43,6 @@ charlotte.config.local.json
 
 # Throwaway spike/experiment scripts written to the repo root during design work
 /scratchpad/
+
+# Playwright MCP snapshot spill (benchmark byproduct)
+.playwright-mcp/

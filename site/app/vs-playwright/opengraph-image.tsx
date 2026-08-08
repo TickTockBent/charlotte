@@ -9,10 +9,10 @@ export const alt =
 
 export default function OgImage() {
   const benchmarks = [
-    { site: "Wikipedia", factor: "136x", chars: "7.7K vs 1.04M" },
-    { site: "Hacker News", factor: "182x", chars: "336 vs 61K" },
-    { site: "GitHub", factor: "25x", chars: "3.2K vs 80K" },
-    { site: "LinkedIn", factor: "7.3x", chars: "3.4K vs 25K" },
+    { site: "Wikipedia", factor: "51x", chars: "22.1K vs 1.14M" },
+    { site: "Hacker News", factor: "139x", chars: "364 vs 50.7K" },
+    { site: "GitHub", factor: "10x", chars: "3.8K vs 39K" },
+    { site: "LinkedIn*", factor: "7.3x", chars: "3.4K vs 25K" },
   ];
 
   return new ImageResponse(
@@ -106,6 +106,17 @@ export default function OgImage() {
               </span>
             </div>
           ))}
+        </div>
+
+        {/* Footnote */}
+        <div
+          style={{
+            fontSize: "14px",
+            color: "#525252",
+            marginTop: "16px",
+          }}
+        >
+          *LinkedIn measured on an earlier version
         </div>
 
         {/* Bottom branding */}

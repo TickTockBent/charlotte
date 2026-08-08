@@ -49,7 +49,7 @@ function ArchitectureDiagram() {
 
 export default function Hero() {
   return (
-    <section className="relative pt-24 pb-20 px-6 sm:px-8 lg:px-12" data-asm-role="primary-content" data-asm-summary="Charlotte overview: an MCP server that renders web pages into structured, agent-readable representations. 136x smaller responses than Playwright MCP, 7 tools to start / 43 total, 3 detail levels." data-asm-priority="critical">
+    <section className="relative pt-24 pb-20 px-6 sm:px-8 lg:px-12" data-asm-role="primary-content" data-asm-summary="Charlotte overview: an MCP server that renders web pages into structured, agent-readable representations. Up to ~140x smaller responses than Playwright MCP, 7 tools to start / 43 total, 3 detail levels." data-asm-priority="critical">
       <div className="max-w-5xl mx-auto">
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-12">
           {/* Left: Text content */}
@@ -61,7 +61,7 @@ export default function Hero() {
             <p className="text-lg text-muted leading-relaxed mb-8">
               Charlotte is an MCP server that renders web pages into structured,
               agent-readable representations using headless Chromium. Agents
-              control how much context they receive — from a 336-character
+              control how much context they receive — from a 364-character
               orientation to the full page — so they never pay for what they
               don&apos;t need.
             </p>
@@ -131,8 +131,8 @@ export default function Hero() {
         {/* Stats bar */}
         <div className="mt-16 flex flex-wrap gap-8 sm:gap-12 text-sm">
           <div>
-            <span className="font-mono text-2xl font-bold text-accent">136x</span>
-            <span className="ml-2 text-muted">smaller than Playwright</span>
+            <span className="font-mono text-2xl font-bold text-accent">140x</span>
+            <span className="ml-2 text-muted">smaller than Playwright (up to)</span>
           </div>
           <div>
             <span className="font-mono text-2xl font-bold text-accent">7</span>

@@ -2,23 +2,23 @@
 
 **The Web, Readable.**
 
-Your AI agent burns ~60,000 characters of accessibility tree just to look at the Hacker News front page. Charlotte does it in 337.
+Your AI agent burns ~50,000 characters of accessibility tree just to look at the Hacker News front page. Charlotte does it in 364.
 
 Charlotte is an MCP server that gives AI agents structured, token-efficient access to the web.
 Instead of dumping the full accessibility tree on every call, Charlotte returns only what
 the agent needs: a compact page summary on arrival, targeted queries for specific elements,
 and full detail only when explicitly requested. On content-heavy pages that orientation is
-up to ~180x smaller than a full accessibility-tree snapshot from [Playwright MCP](https://github.com/microsoft/playwright-mcp); on trivially small pages the two are roughly the same size.
+up to ~140x smaller than a full accessibility-tree snapshot from [Playwright MCP](https://github.com/microsoft/playwright-mcp); on trivially small pages the two are roughly the same size.
 
 ## Why Charlotte?
 
 Most browser MCP servers dump the entire accessibility tree on every call — a flat text blob that can exceed a million characters on content-heavy pages. Agents pay for all of it whether they need it or not.
 
-Charlotte decomposes each page into a typed, structured representation — landmarks, headings, interactive elements, forms, content summaries — and lets agents control how much they receive with three detail levels. When an agent navigates to a new page, it gets a compact orientation (337 characters for Hacker News) instead of the full element dump (~60,000 characters). When it needs specifics, it asks for them.
+Charlotte decomposes each page into a typed, structured representation — landmarks, headings, interactive elements, forms, content summaries — and lets agents control how much they receive with three detail levels. When an agent navigates to a new page, it gets a compact orientation (364 characters for Hacker News) instead of the full element dump (~50,000 characters). When it needs specifics, it asks for them.
 
 ### Benchmarks
 
-Measured on Charlotte v0.7.0 against [Playwright MCP](https://github.com/microsoft/playwright-mcp) v0.0.75, by characters returned per tool call on real websites (`npx tsx benchmarks/run-benchmarks.ts --suite comparison`). Raw results: [`benchmarks/results/raw/v0.7.0/`](benchmarks/results/raw/v0.7.0/).
+Measured on Charlotte v0.8.0 against [Playwright MCP](https://github.com/microsoft/playwright-mcp) v0.0.79, by characters returned per tool call on real websites (`npx tsx benchmarks/run-benchmarks.ts --suite comparison`), 2026-08-08. Raw results: [`benchmarks/results/raw/v0.8.0/`](benchmarks/results/raw/v0.8.0/).
 
 **Orientation cost** (what an agent pays to "see" a page on arrival):
 
@@ -26,25 +26,25 @@ A Charlotte `navigate` returns a usable orientation by default — landmarks, he
 
 | Site | Charlotte `navigate` | Playwright `browser_snapshot` | Smaller by |
 |:---|---:|---:|---:|
-| example.com | 388 | 465 | 1.2x |
-| httpbin form | 592 | 1,925 | 3.3x |
-| GitHub repo | 3,559 | 81,835 | 23x |
-| Wikipedia (AI article) | 8,571 | 1,049,228 | 122x |
-| Hacker News | 337 | 59,996 | 178x |
+| example.com | 415 | 465 | 1.1x |
+| httpbin form | 619 | 1,847 | 3.0x |
+| GitHub repo | 3,778 | 38,983 | 10x |
+| Wikipedia (AI article) | 22,134 | 1,137,928 | 51x |
+| Hacker News | 364 | 50,706 | 139x |
 
-The advantage scales with page complexity: on content-heavy pages the structured orientation is **23–178x smaller** than the full snapshot, while on a trivially small page like example.com the two are within ~20% of each other (and on a page that small, the structured representation can be the larger of the two — there is simply nothing to summarize away). Charlotte's value shows up precisely where Playwright's flat dump hurts most. When an agent needs more than the orientation, it calls `observe` or `find` for exactly the part it wants instead of paying for the whole tree up front.
+The advantage scales with page complexity: on content-heavy pages the structured orientation is **~10–140x smaller** than the full snapshot, while on a trivially small page like example.com the two are within ~20% of each other (and on a page that small, the structured representation can be the larger of the two — there is simply nothing to summarize away). Charlotte's value shows up precisely where Playwright's flat dump hurts most. When an agent needs more than the orientation, it calls `observe` or `find` for exactly the part it wants instead of paying for the whole tree up front.
 
 **Tool definition overhead** (invisible cost per API call):
 
 | Profile | Tools | Def. tokens/call | Savings vs full |
 |:---|---:|---:|---:|
-| full | 43 | 9,297 | — |
-| browse (default) | 23 | 4,785 | **~49%** |
-| core | 7 | 2,323 | **~75%** |
+| full | 43 | 8,500 | — |
+| browse (default) | 23 | 4,372 | **~49%** |
+| core | 7 | 2,186 | **~75%** |
 
 Tool definitions are sent on every API round-trip. With the default `browse` profile, Charlotte carries ~49% less definition overhead than loading all 43 tools; the minimal `core` profile cuts it by ~75%. See the [profile benchmark report](docs/charlotte-profile-benchmark-report.md) for full results.
 
-**The workflow difference:** A Playwright agent that reads the full snapshot receives ~60,000 characters every time it looks at Hacker News, whether it's reading headlines or hunting for a login button. A Charlotte agent gets 337 characters on arrival, calls `find({ type: "link", text: "login" })` to get exactly what it needs, and never pays for the rest.
+**The workflow difference:** A Playwright agent that reads the full snapshot receives ~50,000 characters every time it looks at Hacker News, whether it's reading headlines or hunting for a login button. A Charlotte agent gets 364 characters on arrival, calls `find({ type: "link", text: "login" })` to get exactly what it needs, and never pays for the rest.
 
 ## How It Works
 
@@ -86,7 +86,7 @@ Agents receive landmarks, headings, interactive elements with typed metadata, bo
 
 ## Tool Profiles
 
-Charlotte ships 43 tools (42 registered + the `charlotte_tools` meta-tool), but most workflows only need a subset. Startup profiles control which tools load into the agent's context, reducing definition overhead by up to 78%.
+Charlotte ships 43 tools (42 registered + the `charlotte_tools` meta-tool), but most workflows only need a subset. Startup profiles control which tools load into the agent's context, reducing definition overhead by up to ~75%.
 
 ```bash
 charlotte --profile browse    # 23 tools (default) — navigate, observe, interact, tabs

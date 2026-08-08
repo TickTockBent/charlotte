@@ -1,39 +1,72 @@
 services:
+  # Primary service: Debian image, HTTP transport, Chromium sandbox ENABLED
+  # (decision D22 — spike R4 verified this in-container without --privileged).
+  # Full walkthrough (token generation, publicOrigin/OAuth facade, tunnel
+  # setup): SELF_HOSTING.md. Sandbox posture details: DOCKER.md.
   charlotte:
     build:
       context: .
-      dockerfile: Dockerfile.alpine
-    image: charlotte:latest
+      dockerfile: Dockerfile
+    image: charlotte:http
     container_name: charlotte-mcp
-    # MCP servers communicate via stdio
-    stdin_open: true
-    # Shared memory size for Chromium
+    # Chromium's own sandbox (namespaces + seccomp-BPF) is kept ON in this
+    # image (CHARLOTTE_NO_SANDBOX is unset — see Dockerfile). Docker's
+    # DEFAULT seccomp profile blocks the unprivileged-userns syscalls that
+    # sandbox setup needs, so we swap in the surgical profile below, which
+    # un-gates exactly the 23 syscalls Chromium needs and nothing else.
+    # Docker's default AppArmor profile is kept as-is (do NOT add
+    # `apparmor:unconfined` — on hosts with the Ubuntu unprivileged-userns
+    # AppArmor restriction, default AppArmor is what grants the userns
+    # exemption in the first place; removing it breaks the sandbox again).
+    security_opt:
+      - "seccomp:./docker/chrome-seccomp.json"
+    # Fallback for hosts where mounting a custom seccomp profile is awkward
+    # (e.g. some managed container platforms): grant SYS_ADMIN with Docker's
+    # DEFAULT seccomp instead of swapping the profile. This also verified as
+    # sandbox-enabled in spike R4, but SYS_ADMIN is a broad capability (far
+    # more than the syscalls the sandbox actually needs), so the seccomp
+    # profile above is the narrower, preferred posture. Swap them by
+    # commenting out `security_opt` above and uncommenting below:
+    # cap_add:
+    #   - SYS_ADMIN
+    #
+    # On hosts that don't carry the unprivileged-userns AppArmor restriction
+    # (i.e. not Ubuntu 23.10+/24.04-like), Chromium's sandbox may already
+    # work with neither relaxation — try default first if you're unsure.
     shm_size: '2gb'
-    # Security hardening (issue #184):
-    #   The Dockerfiles set CHARLOTTE_NO_SANDBOX=1, so Chromium runs without
-    #   its own kernel sandbox inside the container. We therefore KEEP Docker's
-    #   default seccomp syscall filter (no `seccomp=unconfined`) so the
-    #   container is not left with neither layer of protection. If you instead
-    #   want Chromium's own sandbox, supply its documented seccomp profile via
-    #   `security_opt: [seccomp=./chrome.json]` and set CHARLOTTE_NO_SANDBOX=0.
+    ports:
+      - "3737:3737"
     environment:
+      # REQUIRED: set a real bearer token before starting. HTTP mode refuses
+      # to start without one. Generate one with e.g. `openssl rand -hex 32`.
+      - CHARLOTTE_AUTH_TOKEN=REPLACE_ME_WITH_A_REAL_TOKEN
       - NODE_ENV=production
-      # Sandbox disabled in-container by default (also set in the Dockerfile).
-      - CHARLOTTE_NO_SANDBOX=1
-      # Uncomment to use a specific Chromium path
-      # - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+      # CHARLOTTE_NO_SANDBOX intentionally NOT set here — leaving it unset
+      # keeps the sandbox ON (see Dockerfile comment / D22).
+    volumes:
+      # Supplies the `http` block (host, port, publicOrigin, allowedHosts,
+      # profile, ...) — see charlotte.config.example.json and SELF_HOSTING.md.
+      # `host` must be "0.0.0.0" here so the server is reachable from outside
+      # the container; the code default (127.0.0.1) is loopback-only and
+      # would only be reachable from inside this container's own network
+      # namespace.
+      - ./charlotte.config.json:/app/charlotte.config.json:ro
 
-  # Alternative: Debian-based build (larger but more reliable)
-  charlotte-debian:
+  # Local/dev alternative: Alpine image, stdio transport, sandbox DISABLED.
+  # Sandbox-enabled operation is UNVERIFIED for Alpine's system Chromium
+  # (only the Debian image above was verified under D22/spike R4) — this
+  # variant keeps CHARLOTTE_NO_SANDBOX=1 (set in Dockerfile.alpine) rather
+  # than guessing. Not exposed by default: `docker compose --profile local up`.
+  charlotte-stdio:
     build:
       context: .
-      dockerfile: Dockerfile
-    image: charlotte:debian
-    container_name: charlotte-mcp-debian
+      dockerfile: Dockerfile.alpine
+    image: charlotte:alpine
+    container_name: charlotte-mcp-alpine
     stdin_open: true
     shm_size: '2gb'
     environment:
       - NODE_ENV=production
       - CHARLOTTE_NO_SANDBOX=1
     profiles:
-      - debian  # Only starts with: docker compose --profile debian up
+      - local  # Only starts with: docker compose --profile local up

@@ -1,5 +1,10 @@
 # Charlotte MCP Server Docker Image (Alpine)
 # Uses system Chromium (currently ~1.2GB due to transitive dependencies)
+# stdio/local-use image only. Sandbox-enabled operation was verified for the
+# Debian Dockerfile (spike R4 / D22); the surgical seccomp profile has NOT
+# been tested against Alpine's system Chromium, so this image keeps the
+# sandbox disabled (CHARLOTTE_NO_SANDBOX=1) below. Use the Debian Dockerfile
+# for the HTTP self-host, sandbox-enabled image.
 
 FROM node:22-alpine
 

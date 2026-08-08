@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
 import type { Page, Browser } from "puppeteer";
 import { BrowserManager } from "../../src/browser/browser-manager.js";
+import { resolveTestNoSandbox } from "../helpers/sandbox-env.js";
 import { PageManager } from "../../src/browser/page-manager.js";
 import { createDefaultConfig } from "../../src/types/config.js";
 
@@ -11,7 +12,7 @@ describe("PageManager", () => {
     // This test launches a real Chromium. The sandbox is ON by default
     // (issue #184), so opt out here to keep it portable across CI/dev hosts
     // where the kernel sandbox is unavailable.
-    browserManager = new BrowserManager(undefined, { noSandbox: true });
+    browserManager = new BrowserManager(undefined, { noSandbox: resolveTestNoSandbox() });
     await browserManager.launch();
   });
 

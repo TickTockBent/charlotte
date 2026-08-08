@@ -50,6 +50,7 @@ import { createDefaultConfig } from "../../src/types/config.js";
 import type { CharlotteConfig } from "../../src/types/config.js";
 import { startHttpTransport, type HttpTransportHandle } from "../../src/transports/http.js";
 import type { ToolProfile } from "../../src/tools/tool-groups.js";
+import { resolveTestNoSandbox } from "./sandbox-env.js";
 
 /** Default bearer token for harness-built transports. */
 export const HTTP_HARNESS_TOKEN = "test-token-6b1d90ae";
@@ -227,10 +228,11 @@ async function buildHttpHarness(
   }
   options.configOverrides?.(config);
 
-  // Tests opt out of the Chromium sandbox: CI hosts and AppArmor-restricted
-  // dev machines cannot launch the sandboxed browser (see #184). Pass the shared
-  // config so BrowserManager sees `navigationGuard.enabled` at launch (D15).
-  const browserManager = new BrowserManager(config, { noSandbox: true });
+  // Tests opt out of the Chromium sandbox by default: CI hosts and
+  // AppArmor-restricted dev machines cannot launch the sandboxed browser (see
+  // #184). Env-gated via CHARLOTTE_NO_SANDBOX=0 (I9). Pass the shared config so
+  // BrowserManager sees `navigationGuard.enabled` at launch (D15).
+  const browserManager = new BrowserManager(config, { noSandbox: resolveTestNoSandbox() });
 
   const cdpSessionManager = new CDPSessionManager();
   const pageManager = new PageManager(config, cdpSessionManager);

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import * as path from "node:path";
 import * as http from "node:http";
 import { BrowserManager } from "../../src/browser/browser-manager.js";
+import { resolveTestNoSandbox } from "../helpers/sandbox-env.js";
 import { PageManager } from "../../src/browser/page-manager.js";
 import { createDefaultConfig } from "../../src/types/config.js";
 import type { CharlotteConfig } from "../../src/types/config.js";
@@ -15,7 +16,7 @@ describe("Monitoring integration", () => {
   let pageManager: PageManager;
 
   beforeAll(async () => {
-    browserManager = new BrowserManager(undefined, { noSandbox: true });
+    browserManager = new BrowserManager(undefined, { noSandbox: resolveTestNoSandbox() });
     await browserManager.launch();
     config = createDefaultConfig();
     pageManager = new PageManager(config);

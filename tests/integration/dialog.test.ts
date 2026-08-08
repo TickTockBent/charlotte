@@ -3,6 +3,7 @@ import * as path from "node:path";
 import * as os from "node:os";
 import * as fs from "node:fs/promises";
 import { BrowserManager } from "../../src/browser/browser-manager.js";
+import { resolveTestNoSandbox } from "../helpers/sandbox-env.js";
 import { PageManager } from "../../src/browser/page-manager.js";
 import { CDPSessionManager } from "../../src/browser/cdp-session.js";
 import { RendererPipeline } from "../../src/renderer/renderer-pipeline.js";
@@ -36,7 +37,7 @@ describe("Dialog integration", () => {
   let artifactDirectory: string;
 
   beforeAll(async () => {
-    browserManager = new BrowserManager(undefined, { noSandbox: true });
+    browserManager = new BrowserManager(undefined, { noSandbox: resolveTestNoSandbox() });
     await browserManager.launch();
     config = createDefaultConfig();
     pageManager = new PageManager(config);

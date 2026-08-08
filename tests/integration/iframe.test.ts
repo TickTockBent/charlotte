@@ -3,6 +3,7 @@ import * as path from "node:path";
 import * as os from "node:os";
 import * as fs from "node:fs/promises";
 import { BrowserManager } from "../../src/browser/browser-manager.js";
+import { resolveTestNoSandbox } from "../helpers/sandbox-env.js";
 import { PageManager } from "../../src/browser/page-manager.js";
 import { CDPSessionManager, frameClient } from "../../src/browser/cdp-session.js";
 import { RendererPipeline } from "../../src/renderer/renderer-pipeline.js";
@@ -43,7 +44,7 @@ describe("Iframe content extraction", () => {
     const serverInfo = await staticServer.start({ directoryPath: FIXTURES_DIR });
     baseUrl = serverInfo.url;
 
-    browserManager = new BrowserManager(undefined, { noSandbox: true });
+    browserManager = new BrowserManager(undefined, { noSandbox: resolveTestNoSandbox() });
     await browserManager.launch();
     cdpSessionManager = new CDPSessionManager();
     pageManager = new PageManager(undefined, cdpSessionManager);

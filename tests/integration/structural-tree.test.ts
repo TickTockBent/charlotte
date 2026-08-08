@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import * as path from "node:path";
 import { BrowserManager } from "../../src/browser/browser-manager.js";
+import { resolveTestNoSandbox } from "../helpers/sandbox-env.js";
 import { CDPSessionManager } from "../../src/browser/cdp-session.js";
 import { RendererPipeline } from "../../src/renderer/renderer-pipeline.js";
 import { ElementIdGenerator } from "../../src/renderer/element-id-generator.js";
@@ -16,7 +17,7 @@ describe("Structural tree view integration", () => {
   let page: Page;
 
   beforeAll(async () => {
-    browserManager = new BrowserManager(undefined, { noSandbox: true });
+    browserManager = new BrowserManager(undefined, { noSandbox: resolveTestNoSandbox() });
     await browserManager.launch();
     page = await browserManager.newPage();
     cdpSessionManager = new CDPSessionManager();

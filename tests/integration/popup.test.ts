@@ -5,6 +5,7 @@ import * as os from "node:os";
 import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import { BrowserManager } from "../../src/browser/browser-manager.js";
+import { resolveTestNoSandbox } from "../helpers/sandbox-env.js";
 import { PageManager } from "../../src/browser/page-manager.js";
 import { CDPSessionManager } from "../../src/browser/cdp-session.js";
 import { RendererPipeline } from "../../src/renderer/renderer-pipeline.js";
@@ -50,7 +51,7 @@ describe("Popup tab capture", () => {
     const addr = server.address() as { port: number };
     baseUrl = `http://127.0.0.1:${addr.port}`;
 
-    browserManager = new BrowserManager(undefined, { noSandbox: true });
+    browserManager = new BrowserManager(undefined, { noSandbox: resolveTestNoSandbox() });
     await browserManager.launch();
     pageManager = new PageManager();
     await pageManager.openTab(browserManager);

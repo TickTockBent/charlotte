@@ -3,6 +3,7 @@ import * as path from "node:path";
 import * as os from "node:os";
 import * as fs from "node:fs/promises";
 import { BrowserManager } from "../../src/browser/browser-manager.js";
+import { resolveTestNoSandbox } from "../helpers/sandbox-env.js";
 import { PageManager } from "../../src/browser/page-manager.js";
 import { CDPSessionManager } from "../../src/browser/cdp-session.js";
 import { RendererPipeline } from "../../src/renderer/renderer-pipeline.js";
@@ -89,7 +90,7 @@ describe("HTTP transport (slice 1 step 2 smoke)", () => {
     const config = createDefaultConfig();
     const cdpSessionManager = new CDPSessionManager();
     const pageManager = new PageManager(config, cdpSessionManager);
-    browserManager = new BrowserManager(config, { noSandbox: true });
+    browserManager = new BrowserManager(config, { noSandbox: resolveTestNoSandbox() });
     const elementIdGenerator = new ElementIdGenerator();
     artifactDirectory = await fs.mkdtemp(path.join(os.tmpdir(), "charlotte-http-test-"));
     const artifactStore = new ArtifactStore(artifactDirectory);

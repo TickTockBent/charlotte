@@ -17,6 +17,8 @@ import { DevModeState } from "./dev/dev-mode-state.js";
 import { logger } from "./utils/logger.js";
 import { loadStartupConfig } from "./config/index.js";
 import type { ResolvedOptions } from "./config/resolve.js";
+import { isDoctorInvocation } from "./cli.js";
+import { runDoctorCli } from "./doctor.js";
 
 /**
  * Build the process's single {@link SessionContext} — the browser, page, and
@@ -125,6 +127,17 @@ function installShutdownHandlers(ctx: SessionContext, closeTransport: () => Prom
 }
 
 async function main(): Promise<void> {
+  const argv = process.argv.slice(2);
+
+  // `charlotte doctor [...]` is a preflight smoke-check subcommand: it never
+  // starts the MCP server (stdio or HTTP), so it is dispatched before any of
+  // the normal startup below runs. `runDoctorCli` prints its own report to
+  // stdout and returns the exit code; nothing else in main() executes.
+  if (isDoctorInvocation(argv)) {
+    const exitCode = await runDoctorCli(argv.slice(1));
+    process.exit(exitCode);
+  }
+
   let resolved;
   try {
     resolved = loadStartupConfig();

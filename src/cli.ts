@@ -33,6 +33,15 @@ const VALID_GROUPS: ToolGroupName[] = [
 const HELP_TEXT = `Charlotte — token-efficient MCP browser automation server
 
 Usage: charlotte [options]
+       charlotte doctor [--http] [--config <path>] [--port <n>]
+
+Commands:
+  doctor                 Preflight smoke-check: validates config, and in
+                         --http mode checks the auth token and port; always
+                         checks that Chromium launches and renders. Prints a
+                         PASS/WARN/FAIL report to stdout and exits without
+                         starting the MCP server. Accepts --http, --config,
+                         and --port same as normal startup.
 
 Options:
   --config <path>        Load settings from a JSON config file
@@ -206,6 +215,19 @@ export function parseCliInputs(argv: string[] = process.argv.slice(2)): {
   if (port !== undefined) cli.port = port;
 
   return { cli, configPath: values.config };
+}
+
+/**
+ * Whether this invocation is `charlotte doctor [...]` — a preflight
+ * smoke-check subcommand (see `src/doctor.ts`) that never starts the MCP
+ * server. `doctor` is a positional subcommand, not a flag, so this is
+ * checked before the regular CLI/config parsing runs; `node:util.parseArgs`
+ * (called by `parseCliInputs`) tolerates the extra leading positional and
+ * ignores it for flag values either way, so callers may pass the full argv
+ * (including `doctor`) on to `loadStartupConfig`/`runDoctor` unchanged.
+ */
+export function isDoctorInvocation(argv: string[] = process.argv.slice(2)): boolean {
+  return argv[0] === "doctor";
 }
 
 /**

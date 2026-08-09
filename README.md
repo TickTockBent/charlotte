@@ -105,6 +105,25 @@ charlotte_tools disable dev_mode   → deactivates them
 charlotte_tools list               → see what's loaded
 ```
 
+## Self-Hosting (Charlotte Remote)
+
+Run Charlotte as a remote MCP server and connect it to claude.ai — one command:
+
+```bash
+docker run --cap-add SYS_ADMIN --shm-size 2g -p 3737:3737 ghcr.io/ticktockbent/charlotte
+```
+
+It prints a public connector URL and an operator token. In claude.ai:
+**Settings → Connectors → Add custom connector** — paste the URL, leave the
+OAuth Client ID/Secret fields blank, and enter the token on Charlotte's consent
+page when it appears. That's it; you're browsing.
+
+The demo URL and token are ephemeral (both rotate on restart). Running it for
+real — stable domain, your own tunnel or reverse proxy, docker compose:
+[SELF_HOSTING.md](SELF_HOSTING.md). Trust model and network guards:
+[SECURITY.md](SECURITY.md). Container and sandbox internals:
+[DOCKER.md](DOCKER.md).
+
 ## Quick Start
 
 ### Prerequisites
@@ -309,6 +328,8 @@ CHARLOTTE_NO_SANDBOX=1 charlotte        # environment variable
 ```
 
 **Migration note (Docker / bare-metal):** Containers usually cannot set up the kernel sandbox, so the provided Dockerfiles set `CHARLOTTE_NO_SANDBOX=1` for you, and `docker-compose.yml` now keeps Docker's default seccomp filter (it no longer runs `seccomp=unconfined`). If you run Charlotte **bare-metal as root**, Chromium refuses to launch with the sandbox enabled — run as a non-root user (recommended) or pass `--no-sandbox`. Existing setups that previously relied on the implicit `--no-sandbox` and run in an environment where the sandbox can't initialize must now set `CHARLOTTE_NO_SANDBOX=1` (or the flag/config equivalent) to keep working.
+
+Running Charlotte Remote (HTTP mode) over the network raises additional trust-boundary and network-guard questions beyond the sandbox — see [SECURITY.md](SECURITY.md).
 
 ### Output-size limits
 

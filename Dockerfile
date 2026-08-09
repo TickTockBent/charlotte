@@ -36,6 +36,24 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
+# cloudflared — powers the zero-config demo tunnel in docker/entrypoint.sh (D27).
+# Pinned to a specific release and fetched at build time so the image is
+# reproducible and needs no network fetch at container start. Downloaded with
+# Node's fetch (already in the base image) rather than adding curl/wget.
+# TARGETARCH is supplied by BuildKit: amd64 / arm64 match the asset names.
+ARG TARGETARCH
+ARG CLOUDFLARED_VERSION=2026.7.3
+RUN node -e "\
+const [, version, arch, outputPath] = process.argv; \
+const url = \`https://github.com/cloudflare/cloudflared/releases/download/\${version}/cloudflared-linux-\${arch}\`; \
+fetch(url).then(async (response) => { \
+  if (!response.ok) throw new Error(\`\${response.status} \${response.statusText} for \${url}\`); \
+  require('fs').writeFileSync(outputPath, Buffer.from(await response.arrayBuffer())); \
+}).catch((error) => { console.error(error.message); process.exit(1); }); \
+" "$CLOUDFLARED_VERSION" "${TARGETARCH:-amd64}" /usr/local/bin/cloudflared \
+    && chmod 0755 /usr/local/bin/cloudflared \
+    && cloudflared --version
+
 # Create non-root user for security
 RUN groupadd -r charlotte && useradd -r -g charlotte -G audio,video charlotte \
     && mkdir -p /home/charlotte/Downloads \
@@ -61,6 +79,13 @@ RUN npm run build
 # Fix ownership so non-root user can access node_modules and dist
 RUN chown -R charlotte:charlotte /app
 
+# Container entrypoint: the mode ladder (mounted config / tunnel off / your own
+# public origin / cloudflared demo tunnel). See the header comment in the script.
+# Copied AFTER the recursive chown above, which takes minutes on this tree —
+# this way editing the script doesn't invalidate it. The file stays root-owned;
+# 0755 is all the charlotte user needs to read and execute it.
+COPY --chmod=0755 docker/entrypoint.sh ./docker/entrypoint.sh
+
 # Switch to non-root user
 USER charlotte
 
@@ -82,4 +107,10 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:3737/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 # Charlotte Remote: streamable HTTP transport, sandbox-enabled Chromium.
-CMD ["dumb-init", "node", "dist/index.js", "--http"]
+#
+# dumb-init stays PID 1 (signal forwarding + zombie reaping) and hands off to
+# the entrypoint, which supervises Charlotte and — in demo mode — cloudflared.
+# There is deliberately no CMD: an empty argv means "run the mode ladder", and
+# any argv the operator passes is exec'd verbatim instead, which is what keeps
+# `docker compose run --rm charlotte node dist/index.js doctor --http` working.
+ENTRYPOINT ["dumb-init", "--", "/app/docker/entrypoint.sh"]

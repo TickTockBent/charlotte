@@ -11,6 +11,9 @@ env:
 
 jobs:
   publish:
+    # v0.7.0 is a reference-only tag (never published standalone; see CHANGELOG) —
+    # publishing it would also repoint :latest at a pre-remote image.
+    if: github.ref_name != 'v0.7.0'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:

@@ -37,9 +37,9 @@ services:
     ports:
       - "3737:3737"
     environment:
-      # REQUIRED: set a real bearer token before starting. HTTP mode refuses
-      # to start without one. Generate one with e.g. `openssl rand -hex 32`.
-      - CHARLOTTE_AUTH_TOKEN=REPLACE_ME_WITH_A_REAL_TOKEN
+      # REQUIRED: export CHARLOTTE_AUTH_TOKEN before `docker compose up` — HTTP
+      # mode refuses to start without it. Generate one: `openssl rand -hex 32`.
+      - CHARLOTTE_AUTH_TOKEN=${CHARLOTTE_AUTH_TOKEN:?export CHARLOTTE_AUTH_TOKEN first (openssl rand -hex 32)}
       - NODE_ENV=production
       # CHARLOTTE_NO_SANDBOX intentionally NOT set here — leaving it unset
       # keeps the sandbox ON (see Dockerfile comment / D22).

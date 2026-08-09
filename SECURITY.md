@@ -42,3 +42,14 @@ A screenshot or similar artifact up to 256 KB is returned inline in the tool res
 ## Container sandbox posture
 
 Chromium's own sandbox is a load-bearing part of this model — the Docker image ships with it enabled, not disabled, so a hostile page a session navigates to is exploiting the renderer inside the sandbox, not your server. See [DOCKER.md § Sandbox / Security Posture](DOCKER.md#sandbox--security-posture) for the full mechanics and troubleshooting.
+
+## Known accepted risks
+
+- **GHSA-frvp-7c67-39w9** (`@hono/node-server` < 2.0.5, moderate): path
+  traversal in that package's `serve-static` handler on **Windows** hosts via
+  an encoded backslash. Present transitively through
+  `@modelcontextprotocol/node`; Charlotte never invokes the affected
+  `serveStatic` code path, and the documented deployment target is Docker on
+  Linux. Accepted for v0.8.0 (2026-08-09); will clear when the MCP SDK moves
+  to `@hono/node-server` ≥ 2.0.5. If you run Charlotte's HTTP mode directly on
+  Windows, weigh this yourself.

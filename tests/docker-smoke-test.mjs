@@ -36,6 +36,11 @@ function startContainer() {
       if (line.trim() && pendingResolve) {
         try {
           const parsed = JSON.parse(line.trim());
+          if (parsed.id === undefined) {
+            // Server-initiated notification (e.g. tools/list_changed after a
+            // charlotte_tools enable) — not the response we are waiting for.
+            continue;
+          }
           const resolve = pendingResolve;
           pendingResolve = null;
           resolve(parsed);
@@ -236,7 +241,12 @@ async function runTests(container) {
   const screenshotOk = !response.error && response.result?.content?.[0];
   log("screenshot", screenshotOk, screenshotOk ? "image captured" : "failed");
 
-  // 15. Evaluate JS
+  // 15. Evaluate JS — disabled in the default browse profile since v0.7.0's
+  // safe-defaults hardening, so enable its group first via the meta-tool.
+  // This also exercises the runtime-toggle path in the shipped image.
+  response = await callTool(container, "charlotte_tools", { action: "enable", group: "evaluate" });
+  content = assertOk(response, "tools enable evaluate");
+  log("tools (enable evaluate)", true, "evaluate group enabled");
   response = await callTool(container, "charlotte_evaluate", { expression: "document.title" });
   content = assertOk(response, "evaluate");
   log("evaluate", content.length > 0, `result: ${content.slice(0, 60)}`);
@@ -261,7 +271,11 @@ async function runTests(container) {
   const diffOk = !response.error;
   log("diff", diffOk, diffOk ? "diff computed" : "diff failed");
 
-  // 20. Configure
+  // 20. Configure — the browse profile only enables the tabs subset of the
+  // session group, so enable the full group first (second runtime-toggle check).
+  response = await callTool(container, "charlotte_tools", { action: "enable", group: "session" });
+  content = assertOk(response, "tools enable session");
+  log("tools (enable session)", true, "session group enabled");
   response = await callTool(container, "charlotte_configure", { auto_snapshot: "every_action" });
   content = assertOk(response, "configure");
   log("configure", true, "config updated");

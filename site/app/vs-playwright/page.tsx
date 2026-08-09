@@ -3,6 +3,7 @@ import Link from "next/link";
 import Footer from "../../components/Footer";
 import ReleaseDrift from "../../components/ReleaseDrift";
 import CostPerTask from "../../components/CostPerTask";
+import QuickStart from "../../components/QuickStart";
 
 export const metadata: Metadata = {
   title: "Charlotte vs Playwright MCP — Head-to-Head Comparison",
@@ -833,10 +834,10 @@ export default function VsPlaywrightPage() {
                     Charlotte full
                   </td>
                   <td className="py-3 px-4 text-right font-mono text-muted">
-                    40
+                    43
                   </td>
                   <td className="py-3 px-4 text-right font-mono text-muted">
-                    7,187
+                    8,500
                   </td>
                   <td className="py-3 px-4 text-right font-mono text-muted">
                     &mdash;
@@ -848,13 +849,13 @@ export default function VsPlaywrightPage() {
                     <span className="text-xs text-accent">(default)</span>
                   </td>
                   <td className="py-3 px-4 text-right font-mono text-accent">
-                    22
+                    23
                   </td>
                   <td className="py-3 px-4 text-right font-mono text-accent">
-                    3,727
+                    4,372
                   </td>
                   <td className="py-3 px-4 text-right font-mono text-foreground font-medium">
-                    48% less
+                    49% less
                   </td>
                 </tr>
                 <tr>
@@ -863,10 +864,10 @@ export default function VsPlaywrightPage() {
                     7
                   </td>
                   <td className="py-3 px-4 text-right font-mono text-accent">
-                    1,677
+                    2,186
                   </td>
                   <td className="py-3 px-4 text-right font-mono text-foreground font-medium">
-                    77% less
+                    75% less
                   </td>
                 </tr>
               </tbody>
@@ -891,16 +892,12 @@ export default function VsPlaywrightPage() {
             Try Charlotte
           </h2>
           <p className="text-sm text-muted mb-6 max-w-2xl">
-            Charlotte is open-source, MIT-licensed, and available on npm. Add it
-            to any MCP-compatible client in one step.
+            Charlotte is open-source, MIT-licensed, and available on npm.
+            Use it as a local stdio MCP server, or self-host Charlotte Remote
+            to connect from claude.ai.
           </p>
 
-          <div className="rounded-lg border border-surface-border bg-surface p-5 font-mono text-sm max-w-xl">
-            <div className="text-muted mb-1"># Install</div>
-            <div className="text-foreground">
-              npx @ticktockbent/charlotte@latest
-            </div>
-          </div>
+          <QuickStart variant="compact" />
 
           <div className="mt-6 flex flex-wrap gap-4 text-sm">
             <Link

@@ -12,10 +12,10 @@ const navigateData = [
 ];
 
 const observeData = [
-  { site: "Wikipedia (AI)", charlotte: "521,127", playwright: "1,040,878", factor: "2x smaller" },
-  { site: "Hacker News", charlotte: "30,781", playwright: "61,143", factor: "2x smaller" },
-  { site: "GitHub repo", charlotte: "37,628", playwright: "80,190", factor: "2.1x smaller" },
-  { site: "example.com", charlotte: "612", playwright: "498", factor: "comparable" },
+  { site: "Wikipedia (AI)", charlotte: "294,142", playwright: "1,137,928", factor: "3.9x smaller" },
+  { site: "Hacker News", charlotte: "31,489", playwright: "50,706", factor: "1.6x smaller" },
+  { site: "GitHub repo", charlotte: "23,447", playwright: "38,983", factor: "1.7x smaller" },
+  { site: "example.com", charlotte: "543", playwright: "465", factor: "comparable" },
 ];
 
 const costData = [

@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     template: "%s | Charlotte",
   },
   description:
-    "AI agents spend 60,000+ tokens per page with Playwright MCP. Charlotte returns the same information in 336 characters. Token-efficient browser MCP server for AI agents.",
+    "AI agents spend 50,000+ characters per page with Playwright MCP. Charlotte returns the same information in 364 characters. Token-efficient browser MCP server for AI agents.",
   keywords: [
     "MCP",
     "Model Context Protocol",
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Charlotte — The Web, Readable",
     description:
-      "Browse the web in 336 tokens instead of 61,000. Structured, token-efficient browser MCP for AI agents.",
+      "Browse the web in 364 tokens instead of 50,000. Structured, token-efficient browser MCP for AI agents.",
     type: "website",
     url: "https://charlotte-rose.vercel.app",
     siteName: "Charlotte",
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Charlotte — The Web, Readable",
     description:
-      "Browse the web in 336 tokens instead of 61,000. Structured, token-efficient browser MCP for AI agents.",
+      "Browse the web in 364 tokens instead of 50,000. Structured, token-efficient browser MCP for AI agents.",
   },
   alternates: {
     canonical: "https://charlotte-rose.vercel.app",
@@ -60,7 +60,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <head>
-        <link rel="asm-manifest" type="application/json" href="/agents.json" />
+        <link rel="agents-manifest" type="application/json" href="/agents.json" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}

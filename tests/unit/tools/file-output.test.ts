@@ -6,7 +6,7 @@ import {
   resolveOutputPath,
   writeOutputFile,
   writeBinaryOutputFile,
-} from "../../../src/tools/tool-helpers.js";
+} from "../../../src/core/tool-helpers.js";
 import type { CharlotteConfig } from "../../../src/types/config.js";
 import { createDefaultConfig } from "../../../src/types/config.js";
 import { parseCliArgs } from "../../../src/cli.js";

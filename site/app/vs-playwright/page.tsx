@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Footer from "../../components/Footer";
+import ReleaseDrift from "../../components/ReleaseDrift";
+import CostPerTask from "../../components/CostPerTask";
+import QuickStart from "../../components/QuickStart";
 
 export const metadata: Metadata = {
   title: "Charlotte vs Playwright MCP — Head-to-Head Comparison",
@@ -19,17 +22,19 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Charlotte vs Playwright MCP — Benchmark Comparison",
     description:
-      "Head-to-head benchmarks: Charlotte returns 25-182x less data than Playwright MCP on real websites. Actual numbers from Wikipedia, GitHub, Hacker News, and LinkedIn.",
+      "Head-to-head benchmarks: Charlotte returns ~10-140x less data than Playwright MCP on real websites. Actual numbers from Wikipedia, GitHub, Hacker News, and LinkedIn.",
     type: "article",
+    // TODO(reconcile): confirm canonical production domain
     url: "https://charlotte-rose.vercel.app/vs-playwright/",
   },
   twitter: {
     card: "summary_large_image",
     title: "Charlotte vs Playwright MCP — Benchmark Comparison",
     description:
-      "Charlotte returns 25-182x less data than Playwright MCP. Real benchmarks, real numbers.",
+      "Charlotte returns ~10-140x less data than Playwright MCP. Real benchmarks, real numbers.",
   },
   alternates: {
+    // TODO(reconcile): confirm canonical production domain
     canonical: "https://charlotte-rose.vercel.app/vs-playwright/",
   },
 };
@@ -37,30 +42,30 @@ export const metadata: Metadata = {
 const navigationBenchmarks = [
   {
     site: "Wikipedia (AI article)",
-    charlotte: "7,667",
-    playwright: "1,040,636",
-    charlotteNum: 7667,
-    playwrightNum: 1040636,
-    factor: "136x smaller",
-    reduction: "99.3%",
+    charlotte: "22,134",
+    playwright: "1,137,928",
+    charlotteNum: 22134,
+    playwrightNum: 1137928,
+    factor: "51x smaller",
+    reduction: "98.1%",
   },
   {
     site: "Hacker News",
-    charlotte: "336",
-    playwright: "61,230",
-    charlotteNum: 336,
-    playwrightNum: 61230,
-    factor: "182x smaller",
-    reduction: "99.5%",
+    charlotte: "364",
+    playwright: "50,706",
+    charlotteNum: 364,
+    playwrightNum: 50706,
+    factor: "139x smaller",
+    reduction: "99.3%",
   },
   {
     site: "GitHub repository",
-    charlotte: "3,185",
-    playwright: "80,297",
-    charlotteNum: 3185,
-    playwrightNum: 80297,
-    factor: "25x smaller",
-    reduction: "96.0%",
+    charlotte: "3,778",
+    playwright: "38,983",
+    charlotteNum: 3778,
+    playwrightNum: 38983,
+    factor: "10x smaller",
+    reduction: "90.3%",
   },
   {
     site: "LinkedIn (logged out)",
@@ -70,28 +75,29 @@ const navigationBenchmarks = [
     playwrightNum: 24712,
     factor: "7.3x smaller",
     reduction: "86.2%",
+    note: "measured on an earlier version (v0.4.0-era)",
   },
 ];
 
 const costBenchmarks = [
   {
-    model: "Claude Sonnet 4",
+    model: "Claude Sonnet 5",
+    charlotte: "$0.03",
+    playwright: "$3.82",
+    savings: "$3.80",
+  },
+  {
+    model: "Claude Opus 5",
     charlotte: "$0.05",
-    playwright: "$9.18",
-    savings: "$9.13",
+    playwright: "$6.37",
+    savings: "$6.33",
   },
+  { model: "GPT-5.6 Terra", charlotte: "$0.02", playwright: "$2.55", savings: "$2.53" },
   {
-    model: "Claude Opus 4",
-    charlotte: "$0.09",
-    playwright: "$15.30",
-    savings: "$15.21",
-  },
-  { model: "GPT-4o", charlotte: "$0.04", playwright: "$7.65", savings: "$7.61" },
-  {
-    model: "Claude Haiku 4",
+    model: "Claude Haiku 4.5",
     charlotte: "$0.01",
-    playwright: "$2.45",
-    savings: "$2.43",
+    playwright: "$1.27",
+    savings: "$1.27",
   },
 ];
 
@@ -260,6 +266,7 @@ function ComparisonBar({
   charlotteNum,
   playwrightNum,
   factor,
+  note,
 }: {
   label: string;
   charlotteValue: string;
@@ -267,6 +274,7 @@ function ComparisonBar({
   charlotteNum: number;
   playwrightNum: number;
   factor: string;
+  note?: string;
 }) {
   const maxValue = Math.max(charlotteNum, playwrightNum);
   const charlottePercent = Math.max((charlotteNum / maxValue) * 100, 1);
@@ -275,7 +283,14 @@ function ComparisonBar({
   return (
     <div className="space-y-2">
       <div className="flex items-baseline justify-between">
-        <span className="text-sm text-foreground font-medium">{label}</span>
+        <span className="text-sm text-foreground font-medium">
+          {label}
+          {note && (
+            <span className="ml-2 text-xs font-normal text-muted italic">
+              ({note})
+            </span>
+          )}
+        </span>
         <span className="text-xs text-accent font-mono">{factor}</span>
       </div>
       <div className="space-y-1.5">
@@ -424,7 +439,7 @@ export default function VsPlaywrightPage() {
           <p className="text-lg text-muted max-w-3xl leading-relaxed">
             Both Charlotte and Playwright MCP give AI agents the ability to
             browse the web. The difference is cost. Charlotte is a
-            token-efficient browser MCP that returns 25&ndash;182x less data on
+            token-efficient browser MCP that returns ~10&ndash;140x less data on
             real websites &mdash; saving thousands of dollars across production
             workloads.
           </p>
@@ -475,7 +490,8 @@ export default function VsPlaywrightPage() {
           <p className="text-sm text-muted mb-8 max-w-2xl">
             Characters returned when an agent first lands on a page. Charlotte
             defaults to minimal detail; Playwright returns the full accessibility
-            tree. Measured on Charlotte v0.2.0 and Playwright MCP v1.0.
+            tree. Measured on Charlotte v0.8.0 and Playwright MCP v0.0.79,
+            2026-08-08.
           </p>
 
           <div className="space-y-6">
@@ -488,6 +504,7 @@ export default function VsPlaywrightPage() {
                 charlotteNum={row.charlotteNum}
                 playwrightNum={row.playwrightNum}
                 factor={row.factor}
+                note={row.note}
               />
             ))}
           </div>
@@ -497,8 +514,8 @@ export default function VsPlaywrightPage() {
               <span className="font-semibold text-accent">
                 What this means in practice:
               </span>{" "}
-              A Playwright agent reading Hacker News headlines receives 61,230
-              characters of accessibility tree data. A Charlotte agent gets 336
+              A Playwright agent reading Hacker News headlines receives 50,706
+              characters of accessibility tree data. A Charlotte agent gets 364
               characters &mdash; enough to see the page structure and landmarks
               &mdash; then calls{" "}
               <code className="font-mono text-accent text-xs">
@@ -520,8 +537,8 @@ export default function VsPlaywrightPage() {
           </h2>
           <p className="text-sm text-muted mb-8 max-w-2xl">
             Input token cost for a 100-page browsing session at Hacker News
-            complexity. Charlotte uses the default browse profile (22 tools);
-            Playwright loads all tools on every call.
+            complexity. Charlotte uses the default browse profile (23 tools);
+            Playwright loads all tools on every call (24 tools).
           </p>
 
           <div className="rounded-lg border border-surface-border overflow-hidden">
@@ -570,9 +587,9 @@ export default function VsPlaywrightPage() {
 
           <p className="mt-6 text-sm text-muted max-w-2xl">
             With tiered tool profiles, Charlotte further reduces overhead.
-            The default <strong>browse</strong> profile loads 22 tools instead of 40,
-            cutting tool definition tokens by 48%. The <strong>core</strong>{" "}
-            profile (7 tools) cuts definition overhead by 77%.
+            The default <strong>browse</strong> profile loads 23 tools instead of 43,
+            cutting tool definition tokens by ~49%. The <strong>core</strong>{" "}
+            profile (7 tools) cuts definition overhead by ~75%.
           </p>
         </section>
 
@@ -585,7 +602,7 @@ export default function VsPlaywrightPage() {
             Feature comparison
           </h2>
           <p className="text-sm text-muted mb-8 max-w-2xl">
-            Charlotte v0.4.0 (40 tools) vs Playwright MCP (36 tools).
+            Charlotte v0.8.0 (43 tools) vs Playwright MCP (24 tools).
             Both are open-source MCP servers for browser automation. The
             capability overlap is substantial &mdash; the difference is in
             design philosophy.
@@ -817,10 +834,10 @@ export default function VsPlaywrightPage() {
                     Charlotte full
                   </td>
                   <td className="py-3 px-4 text-right font-mono text-muted">
-                    40
+                    43
                   </td>
                   <td className="py-3 px-4 text-right font-mono text-muted">
-                    7,187
+                    8,500
                   </td>
                   <td className="py-3 px-4 text-right font-mono text-muted">
                     &mdash;
@@ -832,13 +849,13 @@ export default function VsPlaywrightPage() {
                     <span className="text-xs text-accent">(default)</span>
                   </td>
                   <td className="py-3 px-4 text-right font-mono text-accent">
-                    22
+                    23
                   </td>
                   <td className="py-3 px-4 text-right font-mono text-accent">
-                    3,727
+                    4,372
                   </td>
                   <td className="py-3 px-4 text-right font-mono text-foreground font-medium">
-                    48% less
+                    49% less
                   </td>
                 </tr>
                 <tr>
@@ -847,10 +864,10 @@ export default function VsPlaywrightPage() {
                     7
                   </td>
                   <td className="py-3 px-4 text-right font-mono text-accent">
-                    1,677
+                    2,186
                   </td>
                   <td className="py-3 px-4 text-right font-mono text-foreground font-medium">
-                    77% less
+                    75% less
                   </td>
                 </tr>
               </tbody>
@@ -862,6 +879,10 @@ export default function VsPlaywrightPage() {
           </div>
         </section>
 
+        <ReleaseDrift />
+
+        <CostPerTask />
+
         {/* Getting started */}
         <section className="mb-16" aria-labelledby="start-heading">
           <h2
@@ -871,16 +892,12 @@ export default function VsPlaywrightPage() {
             Try Charlotte
           </h2>
           <p className="text-sm text-muted mb-6 max-w-2xl">
-            Charlotte is open-source, MIT-licensed, and available on npm. Add it
-            to any MCP-compatible client in one step.
+            Charlotte is open-source, MIT-licensed, and available on npm.
+            Use it as a local stdio MCP server, or self-host Charlotte Remote
+            to connect from claude.ai.
           </p>
 
-          <div className="rounded-lg border border-surface-border bg-surface p-5 font-mono text-sm max-w-xl">
-            <div className="text-muted mb-1"># Install</div>
-            <div className="text-foreground">
-              npx @ticktockbent/charlotte@latest
-            </div>
-          </div>
+          <QuickStart variant="compact" />
 
           <div className="mt-6 flex flex-wrap gap-4 text-sm">
             <Link
@@ -938,13 +955,13 @@ export default function VsPlaywrightPage() {
                 How much does Charlotte actually save on tokens?
               </h3>
               <p className="text-sm text-foreground/90 leading-relaxed">
-                On navigation, Charlotte returns 25&ndash;182x fewer characters
+                On navigation, Charlotte returns ~10&ndash;140x fewer characters
                 than Playwright MCP depending on page complexity. For a
-                100-page browsing session on Claude Sonnet 4, that&apos;s $0.05
-                vs $9.18 in input token costs. Content-heavy pages like
-                Wikipedia see the largest gains (136x smaller). Simple pages
-                like example.com show modest improvement (1.3x). Real-world
-                pages consistently fall in the 7&ndash;182x range.
+                100-page browsing session on Claude Sonnet 5, that&apos;s $0.03
+                vs $3.82 in input token costs. Content-heavy pages like
+                Hacker News see the largest gains (up to 139x smaller). Simple pages
+                like example.com show modest improvement (1.1x). Real-world
+                pages consistently fall in the ~10&ndash;140x range.
               </p>
             </div>
 

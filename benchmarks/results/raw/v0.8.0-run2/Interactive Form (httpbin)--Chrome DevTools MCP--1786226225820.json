@@ -1,0 +1,59 @@
+{
+  "testName": "Interactive Form (httpbin)",
+  "serverName": "Chrome DevTools MCP",
+  "calls": [
+    {
+      "toolName": "navigate_page",
+      "arguments": {
+        "url": "https://httpbin.org/forms/post"
+      },
+      "responseChars": 152,
+      "estimatedTokens": 38,
+      "wallTimeMs": 606.487804000004,
+      "isError": false
+    },
+    {
+      "toolName": "take_snapshot",
+      "arguments": {},
+      "responseChars": 1405,
+      "estimatedTokens": 352,
+      "wallTimeMs": 12.793612000001303,
+      "isError": false
+    },
+    {
+      "toolName": "fill",
+      "arguments": {
+        "selector": "input[type=text]",
+        "value": "benchmark-test"
+      },
+      "responseChars": 312,
+      "estimatedTokens": 78,
+      "wallTimeMs": 1.1851329999990412,
+      "isError": true
+    },
+    {
+      "toolName": "take_snapshot",
+      "arguments": {},
+      "responseChars": 1405,
+      "estimatedTokens": 352,
+      "wallTimeMs": 6.038066000000981,
+      "isError": false
+    }
+  ],
+  "cumulative": {
+    "totalChars": 3274,
+    "totalEstimatedTokens": 820,
+    "totalWallTimeMs": 626.5046150000053,
+    "totalCalls": 4
+  },
+  "toolDefinitions": {
+    "toolCount": 29,
+    "definitionChars": 22608,
+    "estimatedDefinitionTokens": 6460,
+    "cumulativeDefinitionTokens": 25840
+  },
+  "success": false,
+  "successCriteria": "Form fields filled and form submitted without errors.",
+  "notes": "Fill succeeded: false",
+  "timestamp": 1786226225819
+}

@@ -9,7 +9,15 @@ const toolCategories = [
   {
     name: "Observation",
     icon: "eye",
-    tools: ["observe", "find", "screenshot", "diff"],
+    tools: [
+      "observe",
+      "find",
+      "screenshot",
+      "screenshots",
+      "screenshot_get",
+      "screenshot_delete",
+      "diff",
+    ],
     description:
       "Understand pages. Three detail levels, spatial search, visual capture, structural diffing.",
   },
@@ -18,6 +26,7 @@ const toolCategories = [
     icon: "pointer",
     tools: [
       "click",
+      "click_at",
       "type",
       "select",
       "toggle",
@@ -27,6 +36,8 @@ const toolCategories = [
       "drag",
       "key",
       "wait_for",
+      "upload",
+      "fill_form",
     ],
     description:
       "Act on pages. Click, type, submit forms, drag elements, scroll, and poll for async conditions.",
@@ -41,6 +52,8 @@ const toolCategories = [
       "tab_close",
       "viewport",
       "network",
+      "get_cookies",
+      "clear_cookies",
       "set_cookies",
       "set_headers",
       "configure",
@@ -149,12 +162,12 @@ export default function ToolGrid() {
       id="tools"
       className="py-20 px-6 sm:px-8 lg:px-12 border-t border-surface-border"
       data-asm-role="primary-content"
-      data-asm-summary="All 40 Charlotte tools organized into 8 categories: Navigation, Observation, Interaction, Session, Dev Mode, Utility, Monitoring, and Meta."
+      data-asm-summary="All 43 Charlotte tools organized into 8 categories: Navigation, Observation, Interaction, Session, Dev Mode, Utility, Monitoring, and Meta."
       data-asm-priority="high"
     >
       <div className="max-w-5xl mx-auto">
         <h2 className="text-3xl font-bold tracking-tight mb-4">
-          40 Tools, 8 Categories
+          43 Tools, 8 Categories
         </h2>
         <p className="text-muted text-lg mb-10 max-w-2xl">
           Everything an agent needs to navigate, understand, and interact with

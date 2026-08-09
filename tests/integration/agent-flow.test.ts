@@ -65,11 +65,11 @@ describe("agent flow: end-to-end journey through the sandbox via real handlers",
   }
 
   async function findOne(criteria: Record<string, unknown>): Promise<InteractiveEl> {
-    const matches = parseToolJson<InteractiveEl[]>(
+    const { elements } = parseToolJson<{ elements: InteractiveEl[] }>(
       await harness.callTool("charlotte_find", criteria),
     );
-    expect(matches.length).toBeGreaterThan(0);
-    return matches[0];
+    expect(elements.length).toBeGreaterThan(0);
+    return elements[0];
   }
 
   async function evalValue<T>(expression: string): Promise<T> {

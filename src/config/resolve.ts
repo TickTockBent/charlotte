@@ -16,7 +16,8 @@
  */
 
 import type { ToolProfile, ToolGroupName } from "../tools/tool-groups.js";
-import type { AutoSnapshotMode, DialogAutoDismiss } from "../types/config.js";
+import type { AutoSnapshotMode, DialogAutoDismiss, HttpTransportConfig } from "../types/config.js";
+import { DEFAULT_HTTP_CONFIG } from "../types/config.js";
 import type { CharlotteFileConfig } from "./schema.js";
 
 /**
@@ -42,6 +43,17 @@ export interface ResolvedOptions {
   maxFullContentChars?: number;
   maxResponseBytes?: number;
   maxEvaluateBytes?: number;
+  /**
+   * Whether `--http` was passed. When false, Charlotte serves stdio (the
+   * default, unchanged). The two modes are mutually exclusive in v1.
+   */
+  http: boolean;
+  /**
+   * Settings for the HTTP transport, always resolved (defaults included) so
+   * `--http` has a complete config to hand to `startHttpTransport`. Ignored
+   * entirely in stdio mode.
+   */
+  httpConfig: HttpTransportConfig;
 }
 
 /**
@@ -57,6 +69,10 @@ export interface CliInputs {
   headless?: boolean;
   noSandbox?: boolean;
   cdpEndpoint?: string;
+  /** `--http`: serve streamable HTTP instead of stdio. */
+  http?: boolean;
+  /** `--port <n>`: only meaningful together with `--http`. */
+  port?: number;
 }
 
 /**
@@ -66,6 +82,8 @@ export interface EnvInputs {
   noSandbox?: boolean;
   outputDir?: string;
   cdpEndpoint?: string;
+  /** `CHARLOTTE_AUTH_TOKEN` — the HTTP mode bearer token. */
+  authToken?: string;
 }
 
 const VALID_CDP_PREFIXES = ["http://", "https://", "ws://", "wss://", "channel:"];
@@ -117,6 +135,43 @@ export function resolveOptions(
   // ── outputDir: cli > env > file ──
   const outputDir = cli.outputDir ?? env.outputDir ?? file.output?.dir ?? undefined;
 
+  // ── http block ──
+  // Same precedence rule as everything else: cli > env > file > default. The
+  // token is the one field with no default: absent here means "not configured",
+  // and `startHttpTransport` refuses to start.
+  const httpFile = file.http ?? {};
+  const authToken = env.authToken ?? httpFile.authToken ?? undefined;
+  const httpConfig: HttpTransportConfig = {
+    port: cli.port ?? httpFile.port ?? DEFAULT_HTTP_CONFIG.port,
+    host: httpFile.host ?? DEFAULT_HTTP_CONFIG.host,
+    // `--profile` still wins in HTTP mode; the value is fixed at startup
+    // either way, since a stateless transport has no per-connection registry.
+    profile: cli.profile ?? httpFile.profile ?? DEFAULT_HTTP_CONFIG.profile,
+    // The env switch (CHARLOTTE_DEBUG_HTTP) is read by the transport itself,
+    // so an operator can observe a running deployment without a config edit;
+    // this field is the config-file half of the same OR.
+    debugRequests: httpFile.debugRequests ?? DEFAULT_HTTP_CONFIG.debugRequests,
+    sessionIdleTtlMs: httpFile.sessionIdleTtlMs ?? DEFAULT_HTTP_CONFIG.sessionIdleTtlMs,
+    maxSessions: httpFile.maxSessions ?? DEFAULT_HTTP_CONFIG.maxSessions,
+    allowPrivateNetworks: httpFile.allowPrivateNetworks ?? [
+      ...DEFAULT_HTTP_CONFIG.allowPrivateNetworks,
+    ],
+    allowedHosts: httpFile.allowedHosts ?? [...DEFAULT_HTTP_CONFIG.allowedHosts],
+    enableDevTools: httpFile.enableDevTools ?? DEFAULT_HTTP_CONFIG.enableDevTools,
+    artifactDelivery: httpFile.artifactDelivery ?? DEFAULT_HTTP_CONFIG.artifactDelivery,
+  };
+  if (authToken !== undefined) {
+    httpConfig.authToken = authToken;
+  }
+  // Same "absent means unconfigured" treatment as the token: assigning
+  // `undefined` would put the key in the object and make "unset" and "set to
+  // nothing" indistinguishable downstream, where the difference is whether the
+  // OAuth facade exists at all.
+  const publicOrigin = httpFile.publicOrigin ?? undefined;
+  if (publicOrigin !== undefined) {
+    httpConfig.publicOrigin = publicOrigin;
+  }
+
   return {
     profile,
     toolGroups,
@@ -133,5 +188,7 @@ export function resolveOptions(
     maxFullContentChars: file.limits?.maxFullContentChars,
     maxResponseBytes: file.limits?.maxResponseBytes,
     maxEvaluateBytes: file.limits?.maxEvaluateBytes,
+    http: cli.http ?? false,
+    httpConfig,
   };
 }

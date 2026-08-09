@@ -52,4 +52,31 @@ describe("parseCliInputs (issues #19, #184)", () => {
     expect(cli.outputDir).toBe("/tmp/o");
     expect(cli.cdpEndpoint).toBe("http://localhost:9222");
   });
+
+  describe("--http / --port (slice 1 step 2)", () => {
+    it("leaves http unset by default (stdio is the default mode)", () => {
+      expect(parseCliInputs([]).cli.http).toBeUndefined();
+      expect(parseCliInputs([]).cli.port).toBeUndefined();
+    });
+
+    it("captures --http", () => {
+      expect(parseCliInputs(["--http"]).cli.http).toBe(true);
+    });
+
+    it("captures --port alongside --http", () => {
+      const { cli } = parseCliInputs(["--http", "--port", "9999"]);
+      expect(cli.http).toBe(true);
+      expect(cli.port).toBe(9999);
+    });
+
+    it("rejects --port without --http", () => {
+      expect(() => parseCliInputs(["--port=9999"])).toThrow("--port requires --http");
+    });
+
+    it("rejects a non-numeric or out-of-range --port", () => {
+      expect(() => parseCliInputs(["--http", "--port=abc"])).toThrow("Invalid --port");
+      expect(() => parseCliInputs(["--http", "--port=0"])).toThrow("Invalid --port");
+      expect(() => parseCliInputs(["--http", "--port=70000"])).toThrow("Invalid --port");
+    });
+  });
 });

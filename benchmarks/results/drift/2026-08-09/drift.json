@@ -1,0 +1,432 @@
+{
+  "meta": {
+    "runDate": "2026-08-09",
+    "generatedAt": "2026-08-09",
+    "tokenHeuristic": "ceil(chars/4)",
+    "pages": [
+      {
+        "label": "Hacker News",
+        "url": "https://news.ycombinator.com/"
+      },
+      {
+        "label": "Wikipedia",
+        "url": "https://en.wikipedia.org/wiki/Main_Page"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/anthropics"
+      }
+    ],
+    "hostNote": "Run on an Ubuntu 24.04 host (AppArmor userns restriction on Chrome sandboxing); all versions launched with --no-sandbox unless noted otherwise in argsUsed.",
+    "versionOrder": [
+      "v0.2.0",
+      "v0.3.0",
+      "v0.4.2",
+      "v0.5.1",
+      "v0.6.3",
+      "v0.7.0",
+      "v0.8.0"
+    ]
+  },
+  "versions": [
+    {
+      "version": "v0.2.0",
+      "argsUsed": [
+        "--no-sandbox"
+      ],
+      "startupError": null,
+      "puppeteerVersion": "24.43.1",
+      "chromeBuildId": "148.0.7778.97",
+      "toolCount": 32,
+      "defChars": 19229,
+      "defTokens": 4808,
+      "defTokensChars3_5": 5494,
+      "navigateToolName": "charlotte:navigate",
+      "pages": {
+        "Hacker News": {
+          "run1": {
+            "chars": 336,
+            "tokens": 84
+          },
+          "run2": {
+            "chars": 336,
+            "tokens": 84
+          }
+        },
+        "Wikipedia": {
+          "run1": {
+            "chars": 2385,
+            "tokens": 597
+          },
+          "run2": {
+            "chars": 2385,
+            "tokens": 597
+          }
+        },
+        "GitHub": {
+          "run1": {
+            "chars": 2242,
+            "tokens": 561
+          },
+          "run2": {
+            "chars": 1717,
+            "tokens": 430
+          }
+        }
+      }
+    },
+    {
+      "version": "v0.3.0",
+      "argsUsed": [
+        "--no-sandbox"
+      ],
+      "startupError": null,
+      "puppeteerVersion": "24.43.1",
+      "chromeBuildId": "148.0.7778.97",
+      "toolCount": 36,
+      "defChars": 21647,
+      "defTokens": 5412,
+      "defTokensChars3_5": 6185,
+      "navigateToolName": "charlotte:navigate",
+      "pages": {
+        "Hacker News": {
+          "run1": {
+            "chars": 336,
+            "tokens": 84
+          },
+          "run2": {
+            "chars": 336,
+            "tokens": 84
+          }
+        },
+        "Wikipedia": {
+          "run1": {
+            "chars": 2385,
+            "tokens": 597
+          },
+          "run2": {
+            "chars": 2385,
+            "tokens": 597
+          }
+        },
+        "GitHub": {
+          "run1": {
+            "chars": 1717,
+            "tokens": 430
+          },
+          "run2": {
+            "chars": 1717,
+            "tokens": 430
+          }
+        }
+      }
+    },
+    {
+      "version": "v0.4.2",
+      "argsUsed": [
+        "--no-sandbox"
+      ],
+      "startupError": null,
+      "puppeteerVersion": "24.43.1",
+      "chromeBuildId": "148.0.7778.97",
+      "toolCount": 23,
+      "defChars": 14463,
+      "defTokens": 3616,
+      "defTokensChars3_5": 4133,
+      "navigateToolName": "charlotte:navigate",
+      "pages": {
+        "Hacker News": {
+          "run1": {
+            "chars": 336,
+            "tokens": 84
+          },
+          "run2": {
+            "chars": 336,
+            "tokens": 84
+          }
+        },
+        "Wikipedia": {
+          "run1": {
+            "chars": 2565,
+            "tokens": 642
+          },
+          "run2": {
+            "chars": 2729,
+            "tokens": 683
+          }
+        },
+        "GitHub": {
+          "run1": {
+            "chars": 1837,
+            "tokens": 460
+          },
+          "run2": {
+            "chars": 1837,
+            "tokens": 460
+          }
+        }
+      }
+    },
+    {
+      "version": "v0.5.1",
+      "argsUsed": [
+        "--no-sandbox"
+      ],
+      "startupError": null,
+      "puppeteerVersion": "24.43.1",
+      "chromeBuildId": "148.0.7778.97",
+      "toolCount": 23,
+      "defChars": 15546,
+      "defTokens": 3887,
+      "defTokensChars3_5": 4442,
+      "navigateToolName": "charlotte:navigate",
+      "pages": {
+        "Hacker News": {
+          "run1": {
+            "chars": 336,
+            "tokens": 84
+          },
+          "run2": {
+            "chars": 336,
+            "tokens": 84
+          }
+        },
+        "Wikipedia": {
+          "run1": {
+            "chars": 2565,
+            "tokens": 642
+          },
+          "run2": {
+            "chars": 2729,
+            "tokens": 683
+          }
+        },
+        "GitHub": {
+          "run1": {
+            "chars": 1837,
+            "tokens": 460
+          },
+          "run2": {
+            "chars": 1837,
+            "tokens": 460
+          }
+        }
+      }
+    },
+    {
+      "version": "v0.6.3",
+      "argsUsed": [
+        "--no-sandbox"
+      ],
+      "startupError": null,
+      "puppeteerVersion": "24.43.1",
+      "chromeBuildId": "148.0.7778.97",
+      "toolCount": 23,
+      "defChars": 15915,
+      "defTokens": 3979,
+      "defTokensChars3_5": 4548,
+      "navigateToolName": "charlotte_navigate",
+      "pages": {
+        "Hacker News": {
+          "run1": {
+            "chars": 337,
+            "tokens": 85
+          },
+          "run2": {
+            "chars": 337,
+            "tokens": 85
+          }
+        },
+        "Wikipedia": {
+          "run1": {
+            "chars": 2757,
+            "tokens": 690
+          },
+          "run2": {
+            "chars": 2758,
+            "tokens": 690
+          }
+        },
+        "GitHub": {
+          "run1": {
+            "chars": 2010,
+            "tokens": 503
+          },
+          "run2": {
+            "chars": 2010,
+            "tokens": 503
+          }
+        }
+      }
+    },
+    {
+      "version": "v0.7.0",
+      "argsUsed": [
+        "--no-sandbox"
+      ],
+      "startupError": null,
+      "puppeteerVersion": "24.37.3",
+      "chromeBuildId": "145.0.7632.67",
+      "toolCount": 23,
+      "defChars": 16747,
+      "defTokens": 4187,
+      "defTokensChars3_5": 4785,
+      "navigateToolName": "charlotte_navigate",
+      "pages": {
+        "Hacker News": {
+          "run1": {
+            "chars": 337,
+            "tokens": 85
+          },
+          "run2": {
+            "chars": 337,
+            "tokens": 85
+          }
+        },
+        "Wikipedia": {
+          "run1": {
+            "chars": 2801,
+            "tokens": 701
+          },
+          "run2": {
+            "chars": 2802,
+            "tokens": 701
+          }
+        },
+        "GitHub": {
+          "run1": {
+            "chars": 2042,
+            "tokens": 511
+          },
+          "run2": {
+            "chars": 2042,
+            "tokens": 511
+          }
+        }
+      }
+    },
+    {
+      "version": "v0.8.0",
+      "argsUsed": [
+        "--no-sandbox"
+      ],
+      "startupError": null,
+      "puppeteerVersion": "24.37.3",
+      "chromeBuildId": "145.0.7632.67",
+      "toolCount": 23,
+      "defChars": 15299,
+      "defTokens": 3825,
+      "defTokensChars3_5": 4372,
+      "navigateToolName": "charlotte_navigate",
+      "pages": {
+        "Hacker News": {
+          "run1": {
+            "chars": 364,
+            "tokens": 91
+          },
+          "run2": {
+            "chars": 364,
+            "tokens": 91
+          }
+        },
+        "Wikipedia": {
+          "run1": {
+            "chars": 2828,
+            "tokens": 707
+          },
+          "run2": {
+            "chars": 2829,
+            "tokens": 708
+          }
+        },
+        "GitHub": {
+          "run1": {
+            "chars": 2069,
+            "tokens": 518
+          },
+          "run2": {
+            "chars": 2069,
+            "tokens": 518
+          }
+        }
+      }
+    }
+  ],
+  "baseline": {
+    "label": "playwright",
+    "version": "0.0.79",
+    "startupError": null,
+    "toolCount": 24,
+    "defChars": 18502,
+    "defTokens": 4626,
+    "defTokensChars3_5": 5287,
+    "pages": {
+      "Hacker News": {
+        "run1": {
+          "navigate": {
+            "chars": 284,
+            "tokens": 71
+          },
+          "snapshot": {
+            "chars": 50159,
+            "tokens": 12540
+          }
+        },
+        "run2": {
+          "navigate": {
+            "chars": 284,
+            "tokens": 71
+          },
+          "snapshot": {
+            "chars": 51399,
+            "tokens": 12850
+          }
+        }
+      },
+      "Wikipedia": {
+        "run1": {
+          "navigate": {
+            "chars": 325,
+            "tokens": 82
+          },
+          "snapshot": {
+            "chars": 63394,
+            "tokens": 15849
+          }
+        },
+        "run2": {
+          "navigate": {
+            "chars": 325,
+            "tokens": 82
+          },
+          "snapshot": {
+            "chars": 63394,
+            "tokens": 15849
+          }
+        }
+      },
+      "GitHub": {
+        "run1": {
+          "navigate": {
+            "chars": 419,
+            "tokens": 105
+          },
+          "snapshot": {
+            "chars": 33078,
+            "tokens": 8270
+          }
+        },
+        "run2": {
+          "navigate": {
+            "chars": 419,
+            "tokens": 105
+          },
+          "snapshot": {
+            "chars": 33078,
+            "tokens": 8270
+          }
+        }
+      }
+    }
+  }
+}

@@ -97,6 +97,7 @@ const EnvSchema = z.object({
   CHARLOTTE_NO_SANDBOX: z.string().optional(),
   CHARLOTTE_OUTPUT_DIR: z.string().optional(),
   CHARLOTTE_CDP_ENDPOINT: z.string().optional(),
+  CHARLOTTE_AUTH_TOKEN: z.string().optional(),
 });
 
 /**
@@ -123,6 +124,9 @@ export function readEnvInputs(env: NodeJS.ProcessEnv = process.env): EnvInputs {
 
   const outputDir = parsed.CHARLOTTE_OUTPUT_DIR?.trim() || undefined;
   const cdpEndpoint = parsed.CHARLOTTE_CDP_ENDPOINT?.trim() || undefined;
+  // Not trimmed beyond surrounding whitespace, and an empty value counts as
+  // unset so `CHARLOTTE_AUTH_TOKEN=` can't silently become a valid token.
+  const authToken = parsed.CHARLOTTE_AUTH_TOKEN?.trim() || undefined;
 
-  return { noSandbox, outputDir, cdpEndpoint };
+  return { noSandbox, outputDir, cdpEndpoint, authToken };
 }

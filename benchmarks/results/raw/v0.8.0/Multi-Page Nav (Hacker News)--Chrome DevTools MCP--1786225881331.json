@@ -1,0 +1,40 @@
+{
+  "testName": "Multi-Page Nav (Hacker News)",
+  "serverName": "Chrome DevTools MCP",
+  "calls": [
+    {
+      "toolName": "navigate_page",
+      "arguments": {
+        "url": "https://news.ycombinator.com"
+      },
+      "responseChars": 163,
+      "estimatedTokens": 41,
+      "wallTimeMs": 793.9174799999964,
+      "isError": false
+    },
+    {
+      "toolName": "take_snapshot",
+      "arguments": {},
+      "responseChars": 42361,
+      "estimatedTokens": 10591,
+      "wallTimeMs": 187.10405000000173,
+      "isError": false
+    }
+  ],
+  "cumulative": {
+    "totalChars": 42524,
+    "totalEstimatedTokens": 10632,
+    "totalWallTimeMs": 981.0215299999982,
+    "totalCalls": 2
+  },
+  "toolDefinitions": {
+    "toolCount": 29,
+    "definitionChars": 22608,
+    "estimatedDefinitionTokens": 6460,
+    "cumulativeDefinitionTokens": 12920
+  },
+  "success": true,
+  "successCriteria": "Successfully observe the front page content.",
+  "notes": "Snapshot: 42361 chars",
+  "timestamp": 1786225881331
+}

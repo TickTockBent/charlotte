@@ -1,0 +1,72 @@
+{
+  "testName": "Runtime Toggle (meta-tool)",
+  "serverName": "Charlotte (browse)",
+  "calls": [
+    {
+      "toolName": "charlotte_tools",
+      "arguments": {
+        "action": "list"
+      },
+      "responseChars": 2327,
+      "estimatedTokens": 582,
+      "wallTimeMs": 7.01939599999605,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte_tools",
+      "arguments": {
+        "action": "enable",
+        "group": "monitoring"
+      },
+      "responseChars": 191,
+      "estimatedTokens": 48,
+      "wallTimeMs": 2.760708000001614,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte_navigate",
+      "arguments": {
+        "url": "about:blank"
+      },
+      "responseChars": 286,
+      "estimatedTokens": 72,
+      "wallTimeMs": 295.2339370000045,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte_console",
+      "arguments": {},
+      "responseChars": 131,
+      "estimatedTokens": 33,
+      "wallTimeMs": 1.1806529999958002,
+      "isError": false
+    },
+    {
+      "toolName": "charlotte_tools",
+      "arguments": {
+        "action": "disable",
+        "group": "monitoring"
+      },
+      "responseChars": 193,
+      "estimatedTokens": 49,
+      "wallTimeMs": 0.9554750000024796,
+      "isError": false
+    }
+  ],
+  "cumulative": {
+    "totalChars": 3128,
+    "totalEstimatedTokens": 784,
+    "totalWallTimeMs": 307.15016900000046,
+    "totalCalls": 5
+  },
+  "toolDefinitions": {
+    "toolCount": 23,
+    "definitionChars": 15299,
+    "estimatedDefinitionTokens": 4372,
+    "cumulativeDefinitionTokens": 21860
+  },
+  "success": true,
+  "successCriteria": "Tool count increases after enable, monitoring tool works, tool count decreases after disable.",
+  "notes": "Initial: 23 tools. After enable: 25 tools (grew: true). Console tool worked: true. After disable: 23 tools (restored: true). Initial def chars: 15,299. Expanded def chars: 17,288. Contracted def chars: 15,299",
+  "timestamp": 1786225988927
+}

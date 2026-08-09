@@ -1,5 +1,4 @@
 {
-  "buildCommand": "next build",
-  "outputDirectory": "out",
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- ."
 }

@@ -1,0 +1,20 @@
+{
+  "session_id": "default",
+  "elements": [
+    {
+      "id": "inp-8c0d28",
+      "type": "text_input",
+      "label": "First Name",
+      "bounds": {
+        "x": 48,
+        "y": 123,
+        "w": 280,
+        "h": 15
+      },
+      "state": {
+        "required": true
+      },
+      "value": ""
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "session_id": "default",
+  "elements": [
+    {
+      "id": "btn-0cfa12",
+      "type": "button",
+      "label": "Create New Project",
+      "bounds": {
+        "x": 278,
+        "y": 213,
+        "w": 116,
+        "h": 15
+      },
+      "state": {}
+    }
+  ]
+}

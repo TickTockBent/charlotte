@@ -80,6 +80,78 @@ describe("parseConfigContent (issue #19)", () => {
       parseConfigContent(JSON.stringify({ limits: { maxBytes: 1000 } }), "test.json"),
     ).toThrow(/Invalid config file/);
   });
+
+  // ─── http section (remote design spec §5; slice 1 step 2) ───
+  // The whole block is validated even though only port/host/authToken/profile
+  // are consumed today — a config written against the documented surface must
+  // not start failing when the reserved consumers land.
+
+  it("parses the full http section, reserved fields included", () => {
+    const result = parseConfigContent(
+      JSON.stringify({
+        http: {
+          port: 4000,
+          host: "0.0.0.0",
+          authToken: "secret",
+          profile: "interact",
+          debugRequests: true,
+          sessionIdleTtlMs: 60_000,
+          maxSessions: 1,
+          allowPrivateNetworks: ["10.0.5.0/24"],
+          enableDevTools: false,
+          artifactDelivery: "resource",
+        },
+      }),
+      "test.json",
+    );
+    expect(result.http).toEqual({
+      port: 4000,
+      host: "0.0.0.0",
+      authToken: "secret",
+      profile: "interact",
+      debugRequests: true,
+      sessionIdleTtlMs: 60_000,
+      maxSessions: 1,
+      allowPrivateNetworks: ["10.0.5.0/24"],
+      enableDevTools: false,
+      artifactDelivery: "resource",
+    });
+  });
+
+  it("accepts an empty http section and a null authToken", () => {
+    expect(parseConfigContent(JSON.stringify({ http: {} }), "test.json").http).toEqual({});
+    expect(
+      parseConfigContent(JSON.stringify({ http: { authToken: null } }), "test.json").http
+        ?.authToken,
+    ).toBeNull();
+  });
+
+  it("rejects an out-of-range http.port", () => {
+    expect(() => parseConfigContent(JSON.stringify({ http: { port: 0 } }), "test.json")).toThrow(
+      /Invalid config file/,
+    );
+    expect(() =>
+      parseConfigContent(JSON.stringify({ http: { port: 70000 } }), "test.json"),
+    ).toThrow(/Invalid config file/);
+  });
+
+  it("rejects an invalid http.profile", () => {
+    expect(() =>
+      parseConfigContent(JSON.stringify({ http: { profile: "remote" } }), "test.json"),
+    ).toThrow(/Invalid config file/);
+  });
+
+  it("rejects an invalid http.artifactDelivery", () => {
+    expect(() =>
+      parseConfigContent(JSON.stringify({ http: { artifactDelivery: "s3" } }), "test.json"),
+    ).toThrow(/Invalid config file/);
+  });
+
+  it("rejects unknown keys in the http section (strict)", () => {
+    expect(() =>
+      parseConfigContent(JSON.stringify({ http: { authTokens: ["a"] } }), "test.json"),
+    ).toThrow(/Invalid config file/);
+  });
 });
 
 describe("loadConfigFile (issue #19)", () => {
@@ -157,5 +229,14 @@ describe("readEnvInputs (issues #19, #184)", () => {
     });
     expect(result.outputDir).toBe("/tmp/out");
     expect(result.cdpEndpoint).toBe("http://localhost:9222");
+  });
+
+  it("reads CHARLOTTE_AUTH_TOKEN", () => {
+    expect(readEnvInputs({ CHARLOTTE_AUTH_TOKEN: "  secret  " }).authToken).toBe("secret");
+  });
+
+  it("treats an empty CHARLOTTE_AUTH_TOKEN as unset", () => {
+    expect(readEnvInputs({ CHARLOTTE_AUTH_TOKEN: "" }).authToken).toBeUndefined();
+    expect(readEnvInputs({ CHARLOTTE_AUTH_TOKEN: "   " }).authToken).toBeUndefined();
   });
 });

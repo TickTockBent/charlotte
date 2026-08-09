@@ -3,6 +3,7 @@ import * as path from "node:path";
 import * as os from "node:os";
 import * as fs from "node:fs/promises";
 import { BrowserManager } from "../../src/browser/browser-manager.js";
+import { resolveTestNoSandbox } from "../helpers/sandbox-env.js";
 import { PageManager } from "../../src/browser/page-manager.js";
 import { CDPSessionManager } from "../../src/browser/cdp-session.js";
 import { RendererPipeline } from "../../src/renderer/renderer-pipeline.js";
@@ -10,8 +11,8 @@ import { ElementIdGenerator } from "../../src/renderer/element-id-generator.js";
 import { SnapshotStore } from "../../src/state/snapshot-store.js";
 import { ArtifactStore } from "../../src/state/artifact-store.js";
 import { createDefaultConfig } from "../../src/types/config.js";
-import type { ToolDependencies } from "../../src/tools/tool-helpers.js";
-import { renderActivePage, formatPageResponse } from "../../src/tools/tool-helpers.js";
+import type { ToolDependencies } from "../../src/core/tool-helpers.js";
+import { renderActivePage, formatPageResponse } from "../../src/core/tool-helpers.js";
 
 const SIMPLE_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/simple.html")}`;
 const SPA_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/spa.html")}`;
@@ -27,7 +28,7 @@ describe("Navigation integration", () => {
   let artifactDirectory: string;
 
   beforeAll(async () => {
-    browserManager = new BrowserManager(undefined, { noSandbox: true });
+    browserManager = new BrowserManager(undefined, { noSandbox: resolveTestNoSandbox() });
     await browserManager.launch();
     pageManager = new PageManager();
     await pageManager.openTab(browserManager);

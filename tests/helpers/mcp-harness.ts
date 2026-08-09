@@ -18,9 +18,7 @@
 import * as path from "node:path";
 import * as os from "node:os";
 import * as fs from "node:fs/promises";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { Client, InMemoryTransport, type CallToolResult } from "@modelcontextprotocol/client";
 import { createServer } from "../../src/server.js";
 import type { ServerDeps, ServerOptions } from "../../src/server.js";
 import { BrowserManager } from "../../src/browser/browser-manager.js";
@@ -34,6 +32,7 @@ import { StaticServer } from "../../src/dev/static-server.js";
 import { DevModeState } from "../../src/dev/dev-mode-state.js";
 import { createDefaultConfig } from "../../src/types/config.js";
 import type { CharlotteConfig } from "../../src/types/config.js";
+import { resolveTestNoSandbox } from "./sandbox-env.js";
 
 export interface FixtureServerInfo {
   /** Base URL of the static fixture server (e.g. http://localhost:53124). */
@@ -90,9 +89,11 @@ export interface McpHarness {
  * `resolveElement` and rendering see consistent state.
  */
 export async function setupMcpHarness(options: HarnessOptions = {}): Promise<McpHarness> {
-  // Tests opt out of the Chromium sandbox: CI hosts and AppArmor-restricted
-  // dev machines cannot launch the sandboxed browser (see #184).
-  const browserManager = new BrowserManager(undefined, { noSandbox: true });
+  // Tests opt out of the Chromium sandbox by default: CI hosts and
+  // AppArmor-restricted dev machines cannot launch the sandboxed browser
+  // (see #184). Env-gated via CHARLOTTE_NO_SANDBOX=0 (I9) so a sandbox-capable
+  // container can prove scenarios run with the sandbox enabled.
+  const browserManager = new BrowserManager(undefined, { noSandbox: resolveTestNoSandbox() });
   await browserManager.launch();
 
   const config = createDefaultConfig();

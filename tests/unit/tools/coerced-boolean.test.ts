@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { coercedBoolean } from "../../../src/tools/tool-helpers.js";
+import { coercedBoolean } from "../../../src/core/tool-helpers.js";
 
 describe("coercedBoolean", () => {
   it("accepts native true", () => {

@@ -1,9 +1,9 @@
 {
-  "asm_version": "1.0",
+  "version": "1.0",
 
   "site": {
     "name": "Charlotte",
-    "description": "Open-source MCP server that renders web pages into structured, agent-readable representations using headless Chromium. 40 tools for AI agents to navigate, observe, and interact with the web.",
+    "description": "Open-source MCP server that renders web pages into structured, agent-readable representations using headless Chromium. 43 tools for AI agents to navigate, observe, and interact with the web.",
     "primary_language": "en",
     "contact": "https://github.com/TickTockBent/charlotte/issues",
     "sameAs": [
@@ -70,7 +70,7 @@
         "children": [
           { "name": "Benchmarks", "path": "/#benchmarks", "description": "Response size and cost comparisons vs Playwright MCP." },
           { "name": "Output Format", "path": "/#output", "description": "Example responses at each detail level." },
-          { "name": "Tools", "path": "/#tools", "description": "All 40 tools organized by category." },
+          { "name": "Tools", "path": "/#tools", "description": "All 43 tools organized by category." },
           { "name": "Usage Examples", "path": "/#examples", "description": "Code examples for browsing, forms, and dev mode." },
           { "name": "Quick Start", "path": "/#quickstart", "description": "Installation and configuration instructions." }
         ]

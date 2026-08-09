@@ -1,0 +1,48 @@
+{
+  "testName": "Interactive Form (httpbin)",
+  "serverName": "Playwright MCP",
+  "calls": [
+    {
+      "toolName": "browser_navigate",
+      "arguments": {
+        "url": "https://httpbin.org/forms/post"
+      },
+      "responseChars": 384,
+      "estimatedTokens": 96,
+      "wallTimeMs": 433.66942800000106,
+      "isError": false
+    },
+    {
+      "toolName": "browser_snapshot",
+      "arguments": {},
+      "responseChars": 1847,
+      "estimatedTokens": 462,
+      "wallTimeMs": 7.431243999999424,
+      "isError": false
+    },
+    {
+      "toolName": "browser_snapshot",
+      "arguments": {},
+      "responseChars": 1847,
+      "estimatedTokens": 462,
+      "wallTimeMs": 10.10930300000473,
+      "isError": false
+    }
+  ],
+  "cumulative": {
+    "totalChars": 4078,
+    "totalEstimatedTokens": 1020,
+    "totalWallTimeMs": 451.2099750000052,
+    "totalCalls": 3
+  },
+  "toolDefinitions": {
+    "toolCount": 24,
+    "definitionChars": 18502,
+    "estimatedDefinitionTokens": 5287,
+    "cumulativeDefinitionTokens": 15861
+  },
+  "success": false,
+  "successCriteria": "Form fields filled and form submitted without errors.",
+  "notes": "Found 0 refs. Filled: false",
+  "timestamp": 1786225867830
+}

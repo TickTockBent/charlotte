@@ -6,12 +6,12 @@
     "url": "https://github.com/ticktockbent/charlotte",
     "source": "github"
   },
-  "version": "0.7.0",
+  "version": "0.8.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@ticktockbent/charlotte",
-      "version": "0.7.0",
+      "version": "0.8.0",
       "transport": {
         "type": "stdio"
       }

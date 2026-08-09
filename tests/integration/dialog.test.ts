@@ -3,6 +3,7 @@ import * as path from "node:path";
 import * as os from "node:os";
 import * as fs from "node:fs/promises";
 import { BrowserManager } from "../../src/browser/browser-manager.js";
+import { resolveTestNoSandbox } from "../helpers/sandbox-env.js";
 import { PageManager } from "../../src/browser/page-manager.js";
 import { CDPSessionManager } from "../../src/browser/cdp-session.js";
 import { RendererPipeline } from "../../src/renderer/renderer-pipeline.js";
@@ -11,15 +12,14 @@ import { SnapshotStore } from "../../src/state/snapshot-store.js";
 import { ArtifactStore } from "../../src/state/artifact-store.js";
 import { createDefaultConfig } from "../../src/types/config.js";
 import type { CharlotteConfig } from "../../src/types/config.js";
-import type { ToolDependencies } from "../../src/tools/tool-helpers.js";
+import type { ToolDependencies } from "../../src/core/tool-helpers.js";
 import {
   renderActivePage,
   renderAfterAction,
   resolveElement,
-} from "../../src/tools/tool-helpers.js";
-import { waitForPossibleNavigation } from "../../src/tools/interaction.js";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+} from "../../src/core/tool-helpers.js";
+import { waitForPossibleNavigation } from "../../src/core/interaction.js";
+import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 import { createServer } from "../../src/server.js";
 import { pollUntil } from "../helpers/poll.js";
 import type { PendingDialog } from "../../src/types/page-representation.js";
@@ -37,7 +37,7 @@ describe("Dialog integration", () => {
   let artifactDirectory: string;
 
   beforeAll(async () => {
-    browserManager = new BrowserManager(undefined, { noSandbox: true });
+    browserManager = new BrowserManager(undefined, { noSandbox: resolveTestNoSandbox() });
     await browserManager.launch();
     config = createDefaultConfig();
     pageManager = new PageManager(config);

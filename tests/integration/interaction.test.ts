@@ -4,6 +4,7 @@ import * as os from "node:os";
 import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import { BrowserManager } from "../../src/browser/browser-manager.js";
+import { resolveTestNoSandbox } from "../helpers/sandbox-env.js";
 import { PageManager } from "../../src/browser/page-manager.js";
 import { CDPSessionManager } from "../../src/browser/cdp-session.js";
 import { RendererPipeline } from "../../src/renderer/renderer-pipeline.js";
@@ -11,9 +12,9 @@ import { ElementIdGenerator } from "../../src/renderer/element-id-generator.js";
 import { SnapshotStore } from "../../src/state/snapshot-store.js";
 import { ArtifactStore } from "../../src/state/artifact-store.js";
 import { createDefaultConfig } from "../../src/types/config.js";
-import type { ToolDependencies } from "../../src/tools/tool-helpers.js";
-import { renderActivePage, resolveElement } from "../../src/tools/tool-helpers.js";
-import { typeIntoElement } from "../../src/tools/interaction-helpers.js";
+import type { ToolDependencies } from "../../src/core/tool-helpers.js";
+import { renderActivePage, resolveElement } from "../../src/core/tool-helpers.js";
+import { typeIntoElement } from "../../src/core/interaction-helpers.js";
 import {
   setupMcpHarness,
   parseToolJson,
@@ -24,6 +25,7 @@ import type { InteractiveElement } from "../../src/types/page-representation.js"
 
 const INTERACTION_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/interaction.html")}`;
 const FORM_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/form.html")}`;
+const CUSTOM_DROPDOWN_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/custom-dropdown.html")}`;
 
 describe("Interaction integration", () => {
   let browserManager: BrowserManager;
@@ -42,7 +44,7 @@ describe("Interaction integration", () => {
   let harness: McpHarness;
 
   beforeAll(async () => {
-    browserManager = new BrowserManager(undefined, { noSandbox: true });
+    browserManager = new BrowserManager(undefined, { noSandbox: resolveTestNoSandbox() });
     await browserManager.launch();
     pageManager = new PageManager();
     await pageManager.openTab(browserManager);
@@ -97,11 +99,11 @@ describe("Interaction integration", () => {
 
   /** Find one interactive element on the harness page via charlotte_find. */
   async function harnessFind(criteria: Record<string, unknown>): Promise<InteractiveElement> {
-    const matches = parseToolJson<InteractiveElement[]>(
+    const { elements } = parseToolJson<{ elements: InteractiveElement[] }>(
       await harness.callTool("charlotte_find", criteria),
     );
-    expect(matches.length).toBeGreaterThan(0);
-    return matches[0];
+    expect(elements.length).toBeGreaterThan(0);
+    return elements[0];
   }
 
   /**
@@ -387,6 +389,39 @@ describe("Interaction integration", () => {
         "blue",
       );
     });
+
+    it("G6(b): rejects charlotte_select on a non-native (custom) dropdown with a clean INVALID_ARGUMENT error", async () => {
+      // Regression test for the raw in-page TypeError ("undefined is not
+      // iterable") that used to surface as ELEMENT_NOT_FOUND when
+      // selectOptionByBackendNodeId ran `Array.from(this.options)` against a
+      // non-<select> element (e.g. a custom ARIA listbox widget). Fixed by
+      // guarding `this instanceof HTMLSelectElement` first in the in-page
+      // function and throwing a clean CharlotteError otherwise.
+      await harnessGoto(CUSTOM_DROPDOWN_FIXTURE);
+
+      const { elements } = parseToolJson<{ elements: Array<{ id: string }> }>(
+        await harness.callTool("charlotte_find", { selector: "#custom-dd" }),
+      );
+      expect(elements.length).toBeGreaterThan(0);
+      const customDropdownId = elements[0].id;
+
+      const result = await harness.callTool("charlotte_select", {
+        element_id: customDropdownId,
+        value: "Option 1",
+      });
+
+      expect(result.isError).toBe(true);
+      const parsed = parseToolJson<{
+        error: { code: string; message: string; suggestion?: string };
+      }>(result);
+      expect(parsed.error.code).toBe("INVALID_ARGUMENT");
+      expect(parsed.error.message).toContain("not a native <select>");
+      expect(parsed.error.suggestion).toContain("charlotte_click the element to expand it");
+
+      const rawText = parseToolText(result);
+      expect(rawText).not.toContain("TypeError");
+      expect(rawText).not.toContain("not iterable");
+    });
   });
 
   describe("toggle", () => {
@@ -451,11 +486,11 @@ describe("Interaction integration", () => {
 
     /** The key-input is found by CSS selector since it has no accessible label. */
     async function keyInputId(): Promise<string> {
-      const matches = parseToolJson<Array<{ id: string }>>(
+      const { elements } = parseToolJson<{ elements: Array<{ id: string }> }>(
         await harness.callTool("charlotte_find", { selector: "#key-input" }),
       );
-      expect(matches.length).toBe(1);
-      return matches[0].id;
+      expect(elements.length).toBe(1);
+      return elements[0].id;
     }
 
     it("presses a simple key targeted at an element", async () => {
@@ -873,11 +908,11 @@ describe("Interaction integration", () => {
       // appears in representation.interactive (that array comes from the AX
       // tree). Before the fix fill_form rejected dom- IDs with ELEMENT_NOT_FOUND
       // before resolveElement ran; the CHANGELOG claims they work — verify it.
-      const matches = parseToolJson<Array<{ id: string }>>(
+      const { elements } = parseToolJson<{ elements: Array<{ id: string }> }>(
         await harness.callTool("charlotte_find", { selector: "#first-name" }),
       );
-      expect(matches.length).toBeGreaterThan(0);
-      const domId = matches[0].id;
+      expect(elements.length).toBeGreaterThan(0);
+      const domId = elements[0].id;
       expect(domId.startsWith("dom-")).toBe(true);
 
       const result = await harness.callTool("charlotte_fill_form", {
@@ -894,11 +929,11 @@ describe("Interaction integration", () => {
     });
 
     it("#191: rejects a dom- ID pointing at a non-fillable element", async () => {
-      const matches = parseToolJson<Array<{ id: string }>>(
+      const { elements } = parseToolJson<{ elements: Array<{ id: string }> }>(
         await harness.callTool("charlotte_find", { selector: "#submit-btn" }),
       );
-      expect(matches.length).toBeGreaterThan(0);
-      const domId = matches[0].id;
+      expect(elements.length).toBeGreaterThan(0);
+      const domId = elements[0].id;
       expect(domId.startsWith("dom-")).toBe(true);
 
       const result = await harness.callTool("charlotte_fill_form", {

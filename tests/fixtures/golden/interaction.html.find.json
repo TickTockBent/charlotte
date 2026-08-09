@@ -1,0 +1,41 @@
+{
+  "session_id": "default",
+  "elements": [
+    {
+      "id": "btn-9d10a1",
+      "type": "button",
+      "label": "Click Me",
+      "bounds": {
+        "x": 38,
+        "y": 155,
+        "w": 51,
+        "h": 15
+      },
+      "state": {}
+    },
+    {
+      "id": "btn-f05bf4",
+      "type": "button",
+      "label": "Double Click Me",
+      "bounds": {
+        "x": 138,
+        "y": 155,
+        "w": 97,
+        "h": 15
+      },
+      "state": {}
+    },
+    {
+      "id": "btn-8d89df",
+      "type": "button",
+      "label": "Right Click Me",
+      "bounds": {
+        "x": 283,
+        "y": 155,
+        "w": 86,
+        "h": 15
+      },
+      "state": {}
+    }
+  ]
+}

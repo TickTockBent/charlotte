@@ -2,7 +2,33 @@
 
 All notable changes to Charlotte will be documented in this file.
 
-## [Unreleased]
+## [0.8.0] - 2026-08-09
+
+This release introduces **Charlotte Remote** — an optional streamable-HTTP transport that lets Charlotte run as a self-hosted, network-reachable MCP server alongside its existing stdio transport. Read the **Security** section before exposing an instance to a network; several guards below are new and are mandatory whenever HTTP mode is enabled.
+
+Re-verified benchmarks: Charlotte's `navigate` orientation is still ~10–140x smaller than a full Playwright MCP `browser_snapshot` on content-heavy pages (measured against Playwright MCP v0.0.79, 2026-08-08).
+
+> **Note:** v0.7.0 was merged but never published as a standalone release; its changes (sandbox-on default, security hardening, config file, element-ID format) ship as part of v0.8.0. The `v0.7.0` git tag exists for reference only.
+
+### Added
+
+- **Streamable HTTP transport (`charlotte --http`)** — a stateless `/mcp` endpoint with a single implicit session per server process, plus an unauthenticated `/healthz` endpoint reporting version, uptime, and browser-connection state. A bearer token is mandatory for `/mcp`.
+- **OAuth facade for claude.ai's connector** — satisfies claude.ai's remote-connector OAuth flow with HMAC-derived tokens computed on demand from the configured secret; nothing is persisted server-side. Direct MCP clients continue to authenticate with a plain bearer token.
+- **Session idle-TTL sweep** and **crash/restart recovery** for the HTTP transport, so abandoned sessions and a browser crash mid-session don't leave the server wedged.
+- **Artifact delivery over HTTP** — artifacts up to 256 KB are delivered inline; over-cap artifacts are refused with a steering message rather than falling back to a server-local filesystem path, since an HTTP client has no way to dereference one.
+- **Read-only `charlotte_tools` reporter in HTTP mode** — reports the tool profile fixed at server startup; enable/disable requests are refused with a steering message pointing at the `http.profile` config option instead.
+- **`tools/list` cache hint** (`ttlMs` 1 hour, `private`) so HTTP clients can avoid re-fetching the tool listing on every call.
+- **Docker HTTP image** with the Chromium sandbox **enabled** by default, using a surgical seccomp profile scoped to what the sandbox needs, plus a `docker-compose.yml` for running Charlotte in HTTP mode.
+- **`charlotte doctor --http`** — a preflight smoke check for HTTP transport configuration.
+- **One-command demo mode in the Docker image** — `docker run` with no configuration stands up Charlotte behind a cloudflared quick tunnel (pinned binary baked into the image) and prints the claude.ai connector URL and a generated token once the server is healthy. Operators override the ladder with a mounted `charlotte.config.json`, `CHARLOTTE_TUNNEL=off` (local bearer-only), or `CHARLOTTE_PUBLIC_ORIGIN` (bring your own tunnel/proxy); explicit container commands still run verbatim.
+- **Release-drift and per-task benchmark instruments** — `benchmarks/run-drift.ts` measures orientation cost and tool-definition size for every release v0.2.0–v0.8.0 against the same live pages same-day (plus a Playwright MCP baseline); `benchmarks/run-tasks.ts` measures total token cost for three scripted tasks with documented per-server call paths. First canonical results published under `benchmarks/results/`.
+- **Docs restructure** — `SELF_HOSTING.md` rewritten as a short quickstart; new `SECURITY.md` covers the trust boundary, network guards, OAuth handshake mechanics, sizing, and known accepted risks.
+- **Full HTTP configuration surface** via `charlotte.config.json` and environment variables (including `CHARLOTTE_AUTH_TOKEN`), covering transport, auth, host/origin allowlisting, and session limits.
+
+### Security
+
+- **Outbound SSRF navigation guard.** An in-process filtering proxy resolves navigation targets at request time and default-denies loopback, RFC1918/link-local, and cloud-metadata addresses, with an operator-configurable CIDR allowlist for intentional exceptions.
+- **Inbound Host-header DNS-rebind guard.** Incoming HTTP requests are checked against an allowlist built from loopback, the configured bind host, `publicOrigin`, and any operator-configured `allowedHosts`.
 
 ### Changed
 

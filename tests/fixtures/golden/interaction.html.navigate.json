@@ -1,0 +1,473 @@
+{
+  "session_id": "default",
+  "url": "{{BASE}}/interaction.html",
+  "title": "Interaction Test Page",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "snapshot_id": 7,
+  "timestamp": "{{TS}}",
+  "structure": {
+    "landmarks": [
+      {
+        "id": "rgn-7104e5",
+        "role": "main",
+        "label": "Interaction test content",
+        "bounds": {
+          "x": 20,
+          "y": 20,
+          "w": 1400,
+          "h": 1423
+        }
+      },
+      {
+        "id": "rgn-3eaee9",
+        "role": "region",
+        "label": "Click tests",
+        "bounds": {
+          "x": 20,
+          "y": 117,
+          "w": 1400,
+          "h": 71
+        }
+      },
+      {
+        "id": "rgn-a4edf3",
+        "role": "region",
+        "label": "Type tests",
+        "bounds": {
+          "x": 20,
+          "y": 188,
+          "w": 1400,
+          "h": 223
+        }
+      },
+      {
+        "id": "rgn-431e52",
+        "role": "form",
+        "label": "Type form",
+        "bounds": {
+          "x": 20,
+          "y": 216,
+          "w": 1400,
+          "h": 195
+        }
+      },
+      {
+        "id": "rgn-e713a7",
+        "role": "region",
+        "label": "Select tests",
+        "bounds": {
+          "x": 20,
+          "y": 423,
+          "w": 1400,
+          "h": 85
+        }
+      },
+      {
+        "id": "rgn-b694a2",
+        "role": "region",
+        "label": "Toggle tests",
+        "bounds": {
+          "x": 20,
+          "y": 520,
+          "w": 1400,
+          "h": 136
+        }
+      },
+      {
+        "id": "rgn-ec3ca8",
+        "role": "region",
+        "label": "Hover tests",
+        "bounds": {
+          "x": 20,
+          "y": 660,
+          "w": 1400,
+          "h": 71
+        }
+      },
+      {
+        "id": "rgn-4ba920",
+        "role": "region",
+        "label": "Key tests",
+        "bounds": {
+          "x": 20,
+          "y": 731,
+          "w": 1400,
+          "h": 63
+        }
+      },
+      {
+        "id": "rgn-bf81ba",
+        "role": "region",
+        "label": "Scroll tests",
+        "bounds": {
+          "x": 20,
+          "y": 806,
+          "w": 1400,
+          "h": 138
+        }
+      },
+      {
+        "id": "rgn-5520d5",
+        "role": "region",
+        "label": "Async tests",
+        "bounds": {
+          "x": 20,
+          "y": 954,
+          "w": 1400,
+          "h": 71
+        }
+      },
+      {
+        "id": "rgn-1aa7e9",
+        "role": "region",
+        "label": "Coordinate click tests",
+        "bounds": {
+          "x": 20,
+          "y": 1025,
+          "w": 1400,
+          "h": 108
+        }
+      },
+      {
+        "id": "rgn-e0a9ff",
+        "role": "region",
+        "label": "Upload tests",
+        "bounds": {
+          "x": 20,
+          "y": 1133,
+          "w": 1400,
+          "h": 158
+        }
+      },
+      {
+        "id": "rgn-ae07c8",
+        "role": "region",
+        "label": "Submit tests",
+        "bounds": {
+          "x": 20,
+          "y": 1303,
+          "w": 1400,
+          "h": 140
+        }
+      },
+      {
+        "id": "rgn-fd7c03",
+        "role": "form",
+        "label": "Submit form",
+        "bounds": {
+          "x": 20,
+          "y": 1331,
+          "w": 1400,
+          "h": 112
+        }
+      }
+    ],
+    "headings": [
+      {
+        "level": 1,
+        "text": "Interaction Test",
+        "id": "hdg-33703a"
+      },
+      {
+        "level": 2,
+        "text": "Click Tests",
+        "id": "hdg-533f06"
+      },
+      {
+        "level": 2,
+        "text": "Type Tests",
+        "id": "hdg-bc724f"
+      },
+      {
+        "level": 2,
+        "text": "Select Tests",
+        "id": "hdg-d03fac"
+      },
+      {
+        "level": 2,
+        "text": "Toggle Tests",
+        "id": "hdg-3d26d5"
+      },
+      {
+        "level": 2,
+        "text": "Hover Tests",
+        "id": "hdg-a4250a"
+      },
+      {
+        "level": 2,
+        "text": "Key Tests",
+        "id": "hdg-300979"
+      },
+      {
+        "level": 2,
+        "text": "Scroll Tests",
+        "id": "hdg-96100e"
+      },
+      {
+        "level": 2,
+        "text": "Async Tests",
+        "id": "hdg-543d53"
+      },
+      {
+        "level": 2,
+        "text": "Coordinate Click Tests",
+        "id": "hdg-767043"
+      },
+      {
+        "level": 2,
+        "text": "Upload Tests",
+        "id": "hdg-bcf39f"
+      },
+      {
+        "level": 2,
+        "text": "Submit Tests",
+        "id": "hdg-9cd380"
+      }
+    ],
+    "content_summary": "Interaction test content: 1 headings; Click tests: 1 headings, 3 buttons; Type tests: 1 headings; Type form: 3 inputs; Select tests: 1 headings, 1 inputs; Toggle tests: 1 headings, 2 inputs; Hover tests: 1 headings, 1 buttons; Key tests: 1 headings, 1 inputs; Scroll tests: 1 headings, 3 paragraphs; Async tests: 1 headings, 2 buttons; Coordinate click tests: 1 headings; Upload tests: 1 headings, 2 buttons; Submit tests: 1 headings; Submit form: 1 buttons, 1 inputs",
+    "full_content": "Interaction Test\nReady\nClick Tests\nClick Me\nDouble Click Me\nRight Click Me\nType Tests\nText Input\ninitial value\nEmpty Input\nSearch\nSelect Tests\nColor\nToggle Tests\nHover Tests\nHover Over Me\nKey Tests\nScroll Tests\nLine 1\nLine at 200px\nLine at 400px\nAsync Tests\nStart Async\nSlow Action (2s)\nCoordinate Click Tests\nCustom Widget\n4\nUpload Tests\nSingle File\nMultiple Files\nSubmit Tests\nName\nSubmit"
+  },
+  "interactive": [
+    {
+      "id": "btn-9d10a1",
+      "type": "button",
+      "label": "Click Me",
+      "bounds": {
+        "x": 38,
+        "y": 155,
+        "w": 51,
+        "h": 15
+      },
+      "state": {}
+    },
+    {
+      "id": "btn-f05bf4",
+      "type": "button",
+      "label": "Double Click Me",
+      "bounds": {
+        "x": 138,
+        "y": 155,
+        "w": 97,
+        "h": 15
+      },
+      "state": {}
+    },
+    {
+      "id": "btn-8d89df",
+      "type": "button",
+      "label": "Right Click Me",
+      "bounds": {
+        "x": 283,
+        "y": 155,
+        "w": 86,
+        "h": 15
+      },
+      "state": {}
+    },
+    {
+      "id": "inp-22ce37",
+      "type": "text_input",
+      "label": "Text Input",
+      "bounds": {
+        "x": 30,
+        "y": 248,
+        "w": 280,
+        "h": 15
+      },
+      "state": {},
+      "value": "initial value"
+    },
+    {
+      "id": "inp-fe1d51",
+      "type": "text_input",
+      "label": "Empty Input",
+      "bounds": {
+        "x": 30,
+        "y": 317,
+        "w": 280,
+        "h": 15
+      },
+      "state": {},
+      "value": ""
+    },
+    {
+      "id": "inp-39bb05",
+      "type": "text_input",
+      "label": "Search",
+      "bounds": {
+        "x": 30,
+        "y": 386,
+        "w": 280,
+        "h": 15
+      },
+      "state": {},
+      "value": ""
+    },
+    {
+      "id": "sel-1581f6",
+      "type": "select",
+      "label": "Color",
+      "bounds": {
+        "x": 29,
+        "y": 482,
+        "w": 282,
+        "h": 17
+      },
+      "state": {
+        "expanded": false
+      },
+      "value": "Choose a color",
+      "options": [
+        "Choose a color",
+        "Red",
+        "Green",
+        "Blue"
+      ]
+    },
+    {
+      "id": "chk-6a62f0",
+      "type": "checkbox",
+      "label": "I agree to terms",
+      "bounds": {
+        "x": 20,
+        "y": 548,
+        "w": 300,
+        "h": 13
+      },
+      "state": {}
+    },
+    {
+      "id": "chk-6711a6",
+      "type": "checkbox",
+      "label": "Already checked",
+      "bounds": {
+        "x": 20,
+        "y": 613,
+        "w": 300,
+        "h": 13
+      },
+      "state": {
+        "checked": true
+      }
+    },
+    {
+      "id": "btn-92f8f2",
+      "type": "button",
+      "label": "Hover Over Me",
+      "bounds": {
+        "x": 38,
+        "y": 698,
+        "w": 90,
+        "h": 15
+      },
+      "state": {}
+    },
+    {
+      "id": "inp-1dcb4f",
+      "type": "text_input",
+      "label": "",
+      "bounds": {
+        "x": 30,
+        "y": 769,
+        "w": 280,
+        "h": 15
+      },
+      "state": {},
+      "value": ""
+    },
+    {
+      "id": "btn-2ed196",
+      "type": "button",
+      "label": "Start Async",
+      "bounds": {
+        "x": 38,
+        "y": 992,
+        "w": 67,
+        "h": 15
+      },
+      "state": {}
+    },
+    {
+      "id": "btn-0eee12",
+      "type": "button",
+      "label": "Slow Action (2s)",
+      "bounds": {
+        "x": 154,
+        "y": 992,
+        "w": 96,
+        "h": 15
+      },
+      "state": {}
+    },
+    {
+      "id": "inp-94cc4d",
+      "type": "file_input",
+      "label": "Single File",
+      "bounds": {
+        "x": 28,
+        "y": 1191,
+        "w": 284,
+        "h": 21
+      },
+      "state": {}
+    },
+    {
+      "id": "inp-c1cd9a",
+      "type": "file_input",
+      "label": "Multiple Files",
+      "bounds": {
+        "x": 28,
+        "y": 1262,
+        "w": 284,
+        "h": 21
+      },
+      "state": {}
+    },
+    {
+      "id": "inp-7e5b70",
+      "type": "text_input",
+      "label": "Name",
+      "bounds": {
+        "x": 30,
+        "y": 1363,
+        "w": 280,
+        "h": 15
+      },
+      "state": {},
+      "value": ""
+    },
+    {
+      "id": "btn-9cfe50",
+      "type": "button",
+      "label": "Submit",
+      "bounds": {
+        "x": 38,
+        "y": 1410,
+        "w": 41,
+        "h": 15
+      },
+      "state": {}
+    }
+  ],
+  "forms": [
+    {
+      "id": "frm-f255c1",
+      "fields": [
+        "inp-22ce37",
+        "inp-fe1d51",
+        "inp-39bb05"
+      ],
+      "submit": null
+    },
+    {
+      "id": "frm-75ca5e",
+      "fields": [
+        "inp-7e5b70"
+      ],
+      "submit": "btn-9cfe50"
+    }
+  ]
+}

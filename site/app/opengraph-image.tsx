@@ -5,7 +5,7 @@ export const dynamic = "force-static";
 export const contentType = "image/png";
 export const size = { width: 1200, height: 630 };
 export const alt =
-  "Charlotte — Token-efficient MCP server for AI agent web browsing. 136x smaller responses than Playwright MCP.";
+  "Charlotte — Token-efficient MCP server for AI agent web browsing. Up to ~140x smaller responses than Playwright MCP.";
 
 export default function OgImage() {
   return new ImageResponse(
@@ -92,7 +92,7 @@ export default function OgImage() {
             <span
               style={{ fontSize: "40px", fontWeight: 700, color: "#06b6d4" }}
             >
-              136x
+              140x
             </span>
             <span style={{ fontSize: "20px", color: "#737373" }}>
               smaller than Playwright
@@ -102,7 +102,7 @@ export default function OgImage() {
             <span
               style={{ fontSize: "40px", fontWeight: 700, color: "#06b6d4" }}
             >
-              40
+              43
             </span>
             <span style={{ fontSize: "20px", color: "#737373" }}>tools</span>
           </div>

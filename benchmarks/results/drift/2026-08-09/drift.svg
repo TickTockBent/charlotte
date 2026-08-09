@@ -1,0 +1,122 @@
+<svg viewBox="0 0 900 600" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, sans-serif">
+<rect x="0" y="0" width="900" height="600" fill="#ffffff" />
+<text x="450" y="28" text-anchor="middle" font-size="18" font-weight="700" fill="#111827">Charlotte release drift — orientation cost on live pages</text>
+<text x="450" y="48" text-anchor="middle" font-size="12" fill="#4B5563">Run date: 2026-08-09 · tokens ≈ chars/4 · Panel A uses a log y-axis</text>
+<text x="70" y="78" font-size="13" font-weight="600" fill="#111827">Panel A — navigate response tokens by version</text>
+<line x1="70" y1="90" x2="70" y2="380" stroke="#9CA3AF" stroke-width="1" />
+<line x1="70" y1="380" x2="870" y2="380" stroke="#9CA3AF" stroke-width="1" />
+<line x1="70" y1="380.0" x2="870" y2="380.0" stroke="#E5E7EB" stroke-width="1" />
+<text x="62" y="383.0" text-anchor="end" font-size="10" fill="#6B7280">71</text>
+<line x1="70" y1="322.0" x2="870" y2="322.0" stroke="#E5E7EB" stroke-width="1" />
+<text x="62" y="325.0" text-anchor="end" font-size="10" fill="#6B7280">216</text>
+<line x1="70" y1="264.0" x2="870" y2="264.0" stroke="#E5E7EB" stroke-width="1" />
+<text x="62" y="267.0" text-anchor="end" font-size="10" fill="#6B7280">655</text>
+<line x1="70" y1="206.0" x2="870" y2="206.0" stroke="#E5E7EB" stroke-width="1" />
+<text x="62" y="209.0" text-anchor="end" font-size="10" fill="#6B7280">1,986</text>
+<line x1="70" y1="148.0" x2="870" y2="148.0" stroke="#E5E7EB" stroke-width="1" />
+<text x="62" y="151.0" text-anchor="end" font-size="10" fill="#6B7280">6,016</text>
+<line x1="70" y1="90.0" x2="870" y2="90.0" stroke="#E5E7EB" stroke-width="1" />
+<text x="62" y="93.0" text-anchor="end" font-size="10" fill="#6B7280">18,226</text>
+<text x="70.0" y="398" text-anchor="middle" font-size="11" fill="#374151">v0.2.0</text>
+<text x="184.3" y="398" text-anchor="middle" font-size="11" fill="#374151">v0.3.0</text>
+<text x="298.6" y="398" text-anchor="middle" font-size="11" fill="#374151">v0.4.2</text>
+<text x="412.9" y="398" text-anchor="middle" font-size="11" fill="#374151">v0.5.1</text>
+<text x="527.1" y="398" text-anchor="middle" font-size="11" fill="#374151">v0.6.3</text>
+<text x="641.4" y="398" text-anchor="middle" font-size="11" fill="#374151">v0.7.0</text>
+<text x="755.7" y="398" text-anchor="middle" font-size="11" fill="#374151">v0.8.0</text>
+<text x="870.0" y="398" text-anchor="middle" font-size="11" fill="#374151">playwright 0.0.79</text>
+<circle cx="70.0" cy="371.5" r="3.5" fill="#0072B2" />
+<text x="70.0" y="363.5" text-anchor="middle" font-size="9" fill="#0072B2">84</text>
+<circle cx="184.3" cy="371.5" r="3.5" fill="#0072B2" />
+<text x="184.3" y="363.5" text-anchor="middle" font-size="9" fill="#0072B2">84</text>
+<circle cx="298.6" cy="371.5" r="3.5" fill="#0072B2" />
+<text x="298.6" y="363.5" text-anchor="middle" font-size="9" fill="#0072B2">84</text>
+<circle cx="412.9" cy="371.5" r="3.5" fill="#0072B2" />
+<text x="412.9" y="363.5" text-anchor="middle" font-size="9" fill="#0072B2">84</text>
+<circle cx="527.1" cy="370.9" r="3.5" fill="#0072B2" />
+<text x="527.1" y="362.9" text-anchor="middle" font-size="9" fill="#0072B2">85</text>
+<circle cx="641.4" cy="370.9" r="3.5" fill="#0072B2" />
+<text x="641.4" y="362.9" text-anchor="middle" font-size="9" fill="#0072B2">85</text>
+<circle cx="755.7" cy="367.3" r="3.5" fill="#0072B2" />
+<text x="755.7" y="359.3" text-anchor="middle" font-size="9" fill="#0072B2">91</text>
+<path d="M70.0,371.5 L184.3,371.5 L298.6,371.5 L412.9,371.5 L527.1,370.9 L641.4,370.9 L755.7,367.3" fill="none" stroke="#0072B2" stroke-width="2" />
+<polygon points="870,105.1 874.5,109.56651427292871 870,114.1 865.5,109.56651427292871" fill="#0072B2" />
+<text x="870.0" y="101.6" text-anchor="middle" font-size="9" fill="#0072B2">12,540</text>
+<circle cx="70.0" cy="268.9" r="3.5" fill="#D55E00" />
+<text x="70.0" y="260.9" text-anchor="middle" font-size="9" fill="#D55E00">597</text>
+<circle cx="184.3" cy="268.9" r="3.5" fill="#D55E00" />
+<text x="184.3" y="260.9" text-anchor="middle" font-size="9" fill="#D55E00">597</text>
+<circle cx="298.6" cy="265.1" r="3.5" fill="#D55E00" />
+<text x="298.6" y="257.1" text-anchor="middle" font-size="9" fill="#D55E00">642</text>
+<circle cx="412.9" cy="265.1" r="3.5" fill="#D55E00" />
+<text x="412.9" y="257.1" text-anchor="middle" font-size="9" fill="#D55E00">642</text>
+<circle cx="527.1" cy="261.3" r="3.5" fill="#D55E00" />
+<text x="527.1" y="253.3" text-anchor="middle" font-size="9" fill="#D55E00">690</text>
+<circle cx="641.4" cy="260.5" r="3.5" fill="#D55E00" />
+<text x="641.4" y="252.5" text-anchor="middle" font-size="9" fill="#D55E00">701</text>
+<circle cx="755.7" cy="260.0" r="3.5" fill="#D55E00" />
+<text x="755.7" y="252.0" text-anchor="middle" font-size="9" fill="#D55E00">707</text>
+<path d="M70.0,268.9 L184.3,268.9 L298.6,265.1 L412.9,265.1 L527.1,261.3 L641.4,260.5 L755.7,260.0" fill="none" stroke="#D55E00" stroke-width="2" />
+<polygon points="870,92.8 874.5,97.31298827464047 870,101.8 865.5,97.31298827464047" fill="#D55E00" />
+<text x="870.0" y="89.3" text-anchor="middle" font-size="9" fill="#D55E00">15,849</text>
+<circle cx="70.0" cy="272.1" r="3.5" fill="#009E73" />
+<text x="70.0" y="264.1" text-anchor="middle" font-size="9" fill="#009E73">561</text>
+<circle cx="184.3" cy="286.1" r="3.5" fill="#009E73" />
+<text x="184.3" y="278.1" text-anchor="middle" font-size="9" fill="#009E73">430</text>
+<circle cx="298.6" cy="282.5" r="3.5" fill="#009E73" />
+<text x="298.6" y="274.5" text-anchor="middle" font-size="9" fill="#009E73">460</text>
+<circle cx="412.9" cy="282.5" r="3.5" fill="#009E73" />
+<text x="412.9" y="274.5" text-anchor="middle" font-size="9" fill="#009E73">460</text>
+<circle cx="527.1" cy="277.8" r="3.5" fill="#009E73" />
+<text x="527.1" y="269.8" text-anchor="middle" font-size="9" fill="#009E73">503</text>
+<circle cx="641.4" cy="277.0" r="3.5" fill="#009E73" />
+<text x="641.4" y="269.0" text-anchor="middle" font-size="9" fill="#009E73">511</text>
+<circle cx="755.7" cy="276.3" r="3.5" fill="#009E73" />
+<text x="755.7" y="268.3" text-anchor="middle" font-size="9" fill="#009E73">518</text>
+<path d="M70.0,272.1 L184.3,286.1 L298.6,282.5 L412.9,282.5 L527.1,277.8 L641.4,277.0 L755.7,276.3" fill="none" stroke="#009E73" stroke-width="2" />
+<polygon points="870,126.8 874.5,131.34867267385394 870,135.8 865.5,131.34867267385394" fill="#009E73" />
+<text x="870.0" y="123.3" text-anchor="middle" font-size="9" fill="#009E73">8,270</text>
+<rect x="400" y="68" width="10" height="10" fill="#0072B2" />
+<text x="414" y="77" font-size="11" fill="#111827">Hacker News</text>
+<rect x="503.5" y="68" width="10" height="10" fill="#D55E00" />
+<text x="517.5" y="77" font-size="11" fill="#111827">Wikipedia</text>
+<rect x="594" y="68" width="10" height="10" fill="#009E73" />
+<text x="608" y="77" font-size="11" fill="#111827">GitHub</text>
+<circle cx="74" cy="73" r="3.5" fill="#6B7280" /><text x="82" y="77" font-size="10" fill="#6B7280">release</text>
+<polygon points="140,69.0 144.0,73 140,77.0 136.0,73" fill="#6B7280" /><text x="148" y="77" font-size="10" fill="#6B7280">playwright baseline</text>
+<text x="70" y="426" font-size="13" font-weight="600" fill="#111827">Panel B — tool-definition tokens by version (tool count above each bar)</text>
+<line x1="70" y1="440" x2="70" y2="555" stroke="#9CA3AF" stroke-width="1" />
+<line x1="70" y1="555" x2="870" y2="555" stroke="#9CA3AF" stroke-width="1" />
+<rect x="96.0" y="469.9" width="48.0" height="85.1" fill="#4B5563" opacity="0.85" />
+<text x="120.0" y="455.9" text-anchor="middle" font-size="10" fill="#111827">4,808</text>
+<text x="120.0" y="467.9" text-anchor="middle" font-size="9" fill="#6B7280">32 tools</text>
+<text x="120.0" y="571" text-anchor="middle" font-size="11" fill="#374151">v0.2.0</text>
+<rect x="196.0" y="459.2" width="48.0" height="95.8" fill="#4B5563" opacity="0.85" />
+<text x="220.0" y="445.2" text-anchor="middle" font-size="10" fill="#111827">5,412</text>
+<text x="220.0" y="457.2" text-anchor="middle" font-size="9" fill="#6B7280">36 tools</text>
+<text x="220.0" y="571" text-anchor="middle" font-size="11" fill="#374151">v0.3.0</text>
+<rect x="296.0" y="491.0" width="48.0" height="64.0" fill="#4B5563" opacity="0.85" />
+<text x="320.0" y="477.0" text-anchor="middle" font-size="10" fill="#111827">3,616</text>
+<text x="320.0" y="489.0" text-anchor="middle" font-size="9" fill="#6B7280">23 tools</text>
+<text x="320.0" y="571" text-anchor="middle" font-size="11" fill="#374151">v0.4.2</text>
+<rect x="396.0" y="486.2" width="48.0" height="68.8" fill="#4B5563" opacity="0.85" />
+<text x="420.0" y="472.2" text-anchor="middle" font-size="10" fill="#111827">3,887</text>
+<text x="420.0" y="484.2" text-anchor="middle" font-size="9" fill="#6B7280">23 tools</text>
+<text x="420.0" y="571" text-anchor="middle" font-size="11" fill="#374151">v0.5.1</text>
+<rect x="496.0" y="484.5" width="48.0" height="70.5" fill="#4B5563" opacity="0.85" />
+<text x="520.0" y="470.5" text-anchor="middle" font-size="10" fill="#111827">3,979</text>
+<text x="520.0" y="482.5" text-anchor="middle" font-size="9" fill="#6B7280">23 tools</text>
+<text x="520.0" y="571" text-anchor="middle" font-size="11" fill="#374151">v0.6.3</text>
+<rect x="596.0" y="480.9" width="48.0" height="74.1" fill="#4B5563" opacity="0.85" />
+<text x="620.0" y="466.9" text-anchor="middle" font-size="10" fill="#111827">4,187</text>
+<text x="620.0" y="478.9" text-anchor="middle" font-size="9" fill="#6B7280">23 tools</text>
+<text x="620.0" y="571" text-anchor="middle" font-size="11" fill="#374151">v0.7.0</text>
+<rect x="696.0" y="487.3" width="48.0" height="67.7" fill="#4B5563" opacity="0.85" />
+<text x="720.0" y="473.3" text-anchor="middle" font-size="10" fill="#111827">3,825</text>
+<text x="720.0" y="485.3" text-anchor="middle" font-size="9" fill="#6B7280">23 tools</text>
+<text x="720.0" y="571" text-anchor="middle" font-size="11" fill="#374151">v0.8.0</text>
+<rect x="796.0" y="473.1" width="48.0" height="81.9" fill="#7C3AED" opacity="0.85" />
+<text x="820.0" y="459.1" text-anchor="middle" font-size="10" fill="#111827">4,626</text>
+<text x="820.0" y="471.1" text-anchor="middle" font-size="9" fill="#6B7280">24 tools</text>
+<text x="820.0" y="571" text-anchor="middle" font-size="11" fill="#374151">playwright 0.0.79</text>
+</svg>

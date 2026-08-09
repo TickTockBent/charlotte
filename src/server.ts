@@ -1,24 +1,10 @@
 import { readFileSync } from "node:fs";
 
 const { version } = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf-8"));
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { BrowserManager } from "./browser/browser-manager.js";
-import type { PageManager } from "./browser/page-manager.js";
-import type { CDPSessionManager } from "./browser/cdp-session.js";
-import type { RendererPipeline } from "./renderer/renderer-pipeline.js";
-import type { ElementIdGenerator } from "./renderer/element-id-generator.js";
-import type { SnapshotStore } from "./state/snapshot-store.js";
-import type { ArtifactStore } from "./state/artifact-store.js";
-import type { CharlotteConfig } from "./types/config.js";
-import { registerEvaluateTools } from "./tools/evaluate.js";
-import { registerNavigationTools } from "./tools/navigation.js";
-import { registerObservationTools } from "./tools/observation.js";
-import { registerInteractionTools } from "./tools/interaction.js";
-import { registerDialogTools } from "./tools/dialog.js";
-import { registerSessionTools } from "./tools/session.js";
-import { registerMonitoringTools } from "./tools/monitoring.js";
-import { registerDevModeTools } from "./tools/dev-mode.js";
+import { McpServer } from "@modelcontextprotocol/server";
+import type { SessionContext } from "./core/types.js";
 import { registerMetaTool, type ToolRegistry } from "./tools/meta-tool.js";
+import { registerCoreTools } from "./transports/stdio.js";
 import {
   type ToolProfile,
   type ToolGroupName,
@@ -28,19 +14,20 @@ import {
   ALL_GROUP_NAMES,
   GROUP_DESCRIPTIONS,
 } from "./tools/tool-groups.js";
-import type { DevModeState } from "./dev/dev-mode-state.js";
 
-export interface ServerDeps {
-  browserManager: BrowserManager;
-  pageManager: PageManager;
-  cdpSessionManager: CDPSessionManager;
-  rendererPipeline: RendererPipeline;
-  elementIdGenerator: ElementIdGenerator;
-  snapshotStore: SnapshotStore;
-  artifactStore: ArtifactStore;
-  config: CharlotteConfig;
-  devModeState?: DevModeState;
-}
+export type { SessionContext } from "./core/types.js";
+
+/** MCP server identity, shared by every transport adapter. */
+export const SERVER_NAME = "charlotte";
+/** Package version, read once from package.json and reported in `initialize`. */
+export const SERVER_VERSION: string = version;
+
+/**
+ * @deprecated Historical name for {@link SessionContext}. Retained so existing
+ * callers and tests (`import type { ServerDeps } from "./server.js"`) compile
+ * unchanged.
+ */
+export type ServerDeps = SessionContext;
 
 export interface ServerOptions {
   profile?: ToolProfile;
@@ -50,6 +37,21 @@ export interface ServerOptions {
 export interface CreateServerResult {
   server: McpServer;
   registry: ToolRegistry;
+}
+
+export interface InstructionsOptions {
+  /**
+   * Whether the `charlotte_tools` meta-tool can mutate the tool registry on
+   * this server.
+   *
+   * True over stdio (mutable per-connection registry). False over HTTP
+   * (read-only reporter — the set is fixed at startup, change http.profile to
+   * alter it). Both values now imply the tool exists — over HTTP it is a
+   * read-only reporter, not absent — so the group listing stays either way,
+   * since it is still the honest inventory of what this deployment does and
+   * doesn't expose, but the call to action differs.
+   */
+  metaToolMutable?: boolean;
 }
 
 /**
@@ -62,7 +64,12 @@ export interface CreateServerResult {
  *
  * Exported (and pure) so it can be unit-tested without standing up a server.
  */
-export function buildServerInstructions(enabledTools: Set<string>, activeLabel: string): string {
+export function buildServerInstructions(
+  enabledTools: Set<string>,
+  activeLabel: string,
+  options: InstructionsOptions = {},
+): string {
+  const metaToolMutable = options.metaToolMutable ?? true;
   const fullyDisabledGroups: ToolGroupName[] = [];
   const partiallyEnabledGroups: Array<{ group: ToolGroupName; enabled: number; total: number }> =
     [];
@@ -78,24 +85,38 @@ export function buildServerInstructions(enabledTools: Set<string>, activeLabel: 
 
   const instructionLines = [`Charlotte browser automation server. ${activeLabel}`];
   if (fullyDisabledGroups.length > 0) {
-    instructionLines.push("Additional tool groups available via charlotte_tools:");
+    instructionLines.push(
+      metaToolMutable
+        ? "Additional tool groups available via charlotte_tools:"
+        : "Tool groups not exposed by this server:",
+    );
     for (const group of fullyDisabledGroups) {
       instructionLines.push(`  - ${group}: ${GROUP_DESCRIPTIONS[group]}`);
     }
   }
   if (partiallyEnabledGroups.length > 0) {
-    instructionLines.push("Partially-enabled groups (enable via charlotte_tools for more tools):");
+    instructionLines.push(
+      metaToolMutable
+        ? "Partially-enabled groups (enable via charlotte_tools for more tools):"
+        : "Partially-exposed groups:",
+    );
     for (const { group, enabled, total } of partiallyEnabledGroups) {
       const disabledTools = TOOL_GROUPS[group]
         .filter((t) => !enabledTools.has(t))
         .map((t) => t.replace(/^charlotte_/, ""));
       instructionLines.push(
-        `  - ${group} (${enabled}/${total} enabled — enable for ${disabledTools.join(", ")})`,
+        metaToolMutable
+          ? `  - ${group} (${enabled}/${total} enabled — enable for ${disabledTools.join(", ")})`
+          : `  - ${group} (${enabled}/${total} exposed — not exposed: ${disabledTools.join(", ")})`,
       );
     }
   }
   if (fullyDisabledGroups.length > 0 || partiallyEnabledGroups.length > 0) {
-    instructionLines.push("Call charlotte_tools to list groups or enable/disable them.");
+    instructionLines.push(
+      metaToolMutable
+        ? "Call charlotte_tools to list groups or enable/disable them."
+        : "Call charlotte_tools to list the exposed groups (read-only). The tool set is fixed for this server; change http.profile to expose more.",
+    );
   }
 
   return instructionLines.join("\n");
@@ -122,47 +143,20 @@ export function createServer(deps: ServerDeps, options: ServerOptions = {}): Cre
       capabilities: {
         // listChanged: prep for runtime tool toggling (e.g. profile switching)
         tools: { listChanged: true },
-        logging: {},
+        // `logging` capability dropped (slice-0.md Step 3): sendLoggingMessage
+        // is never called anywhere in this codebase (verified by grep), and
+        // the MCP logging capability itself is deprecated as of 2026-07-28.
       },
       instructions,
     },
   );
 
   // ─── Register all tools and collect references ───
+  // Every tool handler lives in src/core/ as a transport-agnostic
+  // ToolDefinition; the stdio adapter binds them to this server, in the
+  // canonical charlotteTools order.
 
-  const registry: ToolRegistry = {};
-
-  // Evaluate tool (different deps signature)
-  Object.assign(
-    registry,
-    registerEvaluateTools(server, {
-      browserManager: deps.browserManager,
-      pageManager: deps.pageManager,
-      getActivePage: () => deps.pageManager.getActivePage(),
-      maxEvaluateBytes: deps.config.limits.maxEvaluateBytes,
-    }),
-  );
-
-  // All other tool modules share the same dependency bundle
-  const toolDeps = {
-    browserManager: deps.browserManager,
-    pageManager: deps.pageManager,
-    cdpSessionManager: deps.cdpSessionManager,
-    rendererPipeline: deps.rendererPipeline,
-    elementIdGenerator: deps.elementIdGenerator,
-    snapshotStore: deps.snapshotStore,
-    artifactStore: deps.artifactStore,
-    config: deps.config,
-    devModeState: deps.devModeState,
-  };
-
-  Object.assign(registry, registerNavigationTools(server, toolDeps));
-  Object.assign(registry, registerObservationTools(server, toolDeps));
-  Object.assign(registry, registerInteractionTools(server, toolDeps));
-  Object.assign(registry, registerDialogTools(server, toolDeps));
-  Object.assign(registry, registerSessionTools(server, toolDeps));
-  Object.assign(registry, registerMonitoringTools(server, toolDeps));
-  Object.assign(registry, registerDevModeTools(server, toolDeps));
+  const registry: ToolRegistry = registerCoreTools(server, deps);
 
   // ─── Apply profile: disable tools not in the enabled set ───
   // Set .enabled directly to batch state changes before a single

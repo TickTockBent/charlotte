@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatPageResponse, stripEmptyFields } from "../../../src/tools/tool-helpers.js";
+import { formatPageResponse, stripEmptyFields } from "../../../src/core/tool-helpers.js";
 import type {
   PageRepresentation,
   InteractiveElement,

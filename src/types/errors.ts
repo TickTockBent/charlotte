@@ -7,6 +7,8 @@ export enum CharlotteErrorCode {
   SESSION_ERROR = "SESSION_ERROR",
   SNAPSHOT_EXPIRED = "SNAPSHOT_EXPIRED",
   INVALID_ARGUMENT = "INVALID_ARGUMENT",
+  /** Outbound navigation refused by the SSRF guard (slice 2, D14). */
+  NAVIGATION_BLOCKED = "NAVIGATION_BLOCKED",
 }
 
 export class CharlotteError extends Error {

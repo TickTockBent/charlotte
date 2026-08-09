@@ -8,9 +8,13 @@ import { logger } from "../utils/logger.js";
 import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 import { createDefaultConfig } from "../types/config.js";
 import type { CharlotteConfig } from "../types/config.js";
+import { startFilteringProxy, type FilteringProxyHandle } from "./filtering-proxy.js";
+import type { NavigationDenyInfo } from "./navigation-guard.js";
 
 export type OnFirstConnect = (browser: Browser) => Promise<void> | void;
 export type OnDisconnected = () => void;
+/** Sink for the filtering proxy's refusals (D15) — fed to the navigate tool. */
+export type NavigationGuardOnDeny = (info: NavigationDenyInfo) => void;
 
 /**
  * Browser launch tunables resolved from config/CLI (issues #19, #184).
@@ -30,11 +34,15 @@ export class BrowserManager {
   private browser: Browser | null = null;
   private launchOptions: LaunchOptions = {};
   private launching: Promise<void> | null = null;
+  private closing: Promise<void> | null = null;
   private config: CharlotteConfig;
   private cdpEndpoint: string | undefined;
   private onFirstConnect: OnFirstConnect | undefined;
   private onDisconnected: OnDisconnected | undefined;
   private firstConnectDone = false;
+  /** Running SSRF filtering proxy (D15), or null when the guard is off/stopped. */
+  private guardProxy: FilteringProxyHandle | null = null;
+  private navigationGuardOnDeny: NavigationGuardOnDeny | undefined;
 
   constructor(
     config?: CharlotteConfig,
@@ -76,9 +84,56 @@ export class BrowserManager {
     this.onDisconnected = callback;
   }
 
+  /**
+   * Register the sink for SSRF-guard refusals (D15). When set AND
+   * `config.navigationGuard.enabled`, a launched browser gets the filtering
+   * proxy in front of it, and denials flow to this callback (which the caller
+   * points at `PageManager.recordNavigationBlock` so the navigate tool can raise
+   * NAVIGATION_BLOCKED). Set this before the first launch.
+   */
+  setNavigationGuardOnDeny(callback: NavigationGuardOnDeny): void {
+    this.navigationGuardOnDeny = callback;
+  }
+
+  /**
+   * Start the loopback filtering proxy if the guard is enabled and not already
+   * running. Must complete (listening) before Chromium launches so the
+   * `--proxy-server` flag points at a live port. CDP-attach mode (no launch)
+   * cannot inject a proxy, so this is a no-op there.
+   */
+  private async startGuardProxyIfEnabled(): Promise<void> {
+    if (this.guardProxy) return;
+    if (this.cdpEndpoint) return; // no launch to attach a proxy to
+    if (!this.config.navigationGuard?.enabled || !this.navigationGuardOnDeny) return;
+    this.guardProxy = await startFilteringProxy({
+      allowlist: this.config.navigationGuard.allowPrivateNetworks ?? [],
+      onDeny: this.navigationGuardOnDeny,
+      logger,
+    });
+    logger.info(
+      `SSRF filtering proxy listening on 127.0.0.1:${this.guardProxy.port} ` +
+        `(allowPrivateNetworks: ${
+          this.config.navigationGuard.allowPrivateNetworks.length > 0
+            ? this.config.navigationGuard.allowPrivateNetworks.join(", ")
+            : "none — all private ranges denied"
+        })`,
+    );
+  }
+
+  /** Stop the filtering proxy if running (browser close / crash / reconnect). */
+  private async stopGuardProxy(): Promise<void> {
+    const proxy = this.guardProxy;
+    if (!proxy) return;
+    this.guardProxy = null;
+    await proxy.close().catch((error) => logger.warn("filtering proxy close failed", { error }));
+  }
+
   /** Fire the disconnect hook, swallowing callback errors. */
   private handleDisconnect(): void {
     this.browser = null;
+    // The proxy fronted the now-dead browser; tear it down so a reconnect
+    // starts a fresh one on a fresh port (D15).
+    void this.stopGuardProxy();
     if (this.onDisconnected) {
       try {
         this.onDisconnected();
@@ -112,8 +167,24 @@ export class BrowserManager {
   }
 
   private async doLaunch(): Promise<void> {
+    // The proxy must be listening BEFORE launch so --proxy-server points at a
+    // live port (D15). No-op when the guard is off (stdio, or HTTP guard off).
+    await this.startGuardProxyIfEnabled();
+    const launchOptions = this.guardProxy
+      ? {
+          ...this.launchOptions,
+          args: [
+            ...(this.launchOptions.args ?? []),
+            `--proxy-server=http://127.0.0.1:${this.guardProxy.port}`,
+            // Load-bearing (s2 spike): without it Chromium bypasses loopback,
+            // letting the exact SSRF targets we guard skip the proxy entirely.
+            "--proxy-bypass-list=<-loopback>",
+          ],
+        }
+      : this.launchOptions;
+
     logger.info("Launching Chromium");
-    this.browser = await puppeteer.launch(this.launchOptions);
+    this.browser = await puppeteer.launch(launchOptions);
 
     this.browser.on("disconnected", () => {
       logger.warn("Chromium disconnected unexpectedly");
@@ -177,6 +248,13 @@ export class BrowserManager {
   }
 
   async ensureConnected(): Promise<void> {
+    // A teardown (idle sweep, shutdown) is in flight — wait for it to FULLY finish
+    // before (re)launching, so we never build a fresh session on a half-torn-down
+    // one (D18). Once it resolves this.browser is null → we fall through to relaunch.
+    if (this.closing) {
+      await this.closing;
+    }
+
     // Fully ready: connected AND (in CDP mode) page adoption has completed.
     // We deliberately do NOT short-circuit on a connected-but-unadopted CDP
     // session, so a prior adoption failure is retried here (#202).
@@ -241,15 +319,42 @@ export class BrowserManager {
   }
 
   async close(): Promise<void> {
-    if (this.browser) {
-      if (this.cdpEndpoint) {
-        logger.info("Disconnecting from remote browser");
-        await this.browser.disconnect();
-      } else {
-        logger.info("Closing Chromium");
-        await this.browser.close();
+    // Re-entrant: concurrent close() calls (idle sweep + shutdown) share one teardown.
+    if (this.closing) return this.closing;
+    this.closing = (async () => {
+      // A launch is in flight — wait for it to FULLY finish before deciding what
+      // to tear down (D25). Otherwise we'd snapshot a null browser, skip the
+      // browser branch, stop the guard proxy anyway, and the launch would then
+      // install a Chromium permanently wired to a dead --proxy-server port.
+      // Symmetric with ensureConnected()'s await of this.closing (D18). A
+      // rejected launch installed nothing to close, so swallow its failure —
+      // it is already reported to the caller that started the launch.
+      if (this.launching) {
+        await this.launching.catch(() => {});
       }
-      this.browser = null;
+      // Snapshotted after the launching-await so it sees the browser the launch
+      // installed, not the null that preceded it.
+      const browserBeingClosed = this.browser;
+      if (browserBeingClosed) {
+        if (this.cdpEndpoint) {
+          logger.info("Disconnecting from remote browser");
+          await browserBeingClosed.disconnect();
+        } else {
+          logger.info("Closing Chromium");
+          await browserBeingClosed.close();
+        }
+        // Generation-guard: never null a browser a concurrent relaunch installed.
+        if (this.browser === browserBeingClosed) {
+          this.browser = null;
+        }
+      }
+      // Always stop the proxy, even if the browser was already gone (D15).
+      await this.stopGuardProxy();
+    })();
+    try {
+      await this.closing;
+    } finally {
+      this.closing = null;
     }
   }
 

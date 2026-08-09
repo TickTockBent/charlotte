@@ -58,17 +58,20 @@ const DETAIL_LEVEL_SERVERS = ["charlotte-browse"];
 
 type Suite = "comparison" | "profiles" | "detail-levels";
 
-function parseArgs(): { servers: string[]; tests: string[]; suite: Suite | null } {
+function parseArgs(): { servers: string[]; tests: string[]; suite: Suite | null; outVersion: string } {
   const args = process.argv.slice(2);
   const servers: string[] = [];
   const tests: string[] = [];
   let suite: Suite | null = null;
+  let outVersion = "v0.7.0";
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--server" && args[i + 1]) {
       servers.push(args[++i]);
     } else if (args[i] === "--test" && args[i + 1]) {
       tests.push(args[++i]);
+    } else if (args[i] === "--out-version" && args[i + 1]) {
+      outVersion = args[++i];
     } else if (args[i] === "--suite" && args[i + 1]) {
       const suiteArg = args[++i];
       if (suiteArg === "comparison" || suiteArg === "profiles" || suiteArg === "detail-levels") {
@@ -86,6 +89,7 @@ function parseArgs(): { servers: string[]; tests: string[]; suite: Suite | null 
       servers: servers.length > 0 ? servers : DETAIL_LEVEL_SERVERS,
       tests: tests.length > 0 ? tests : [],
       suite,
+      outVersion,
     };
   }
 
@@ -94,6 +98,7 @@ function parseArgs(): { servers: string[]; tests: string[]; suite: Suite | null 
       servers: servers.length > 0 ? servers : PROFILE_SERVERS,
       tests: tests.length > 0 ? tests : [],
       suite,
+      outVersion,
     };
   }
 
@@ -102,6 +107,7 @@ function parseArgs(): { servers: string[]; tests: string[]; suite: Suite | null 
       servers: servers.length > 0 ? servers : COMPARISON_SERVERS,
       tests: tests.length > 0 ? tests : [],
       suite,
+      outVersion,
     };
   }
 
@@ -110,6 +116,7 @@ function parseArgs(): { servers: string[]; tests: string[]; suite: Suite | null 
     servers: servers.length > 0 ? servers : COMPARISON_SERVERS,
     tests: tests.length > 0 ? tests : [],
     suite: null,
+    outVersion,
   };
 }
 
@@ -144,7 +151,7 @@ function filterTests(tests: BenchmarkTest[], testFilter: string[]): BenchmarkTes
 }
 
 async function main() {
-  const { servers: serverNames, tests: testFilter, suite } = parseArgs();
+  const { servers: serverNames, tests: testFilter, suite, outVersion } = parseArgs();
 
   // Select test pool based on suite
   let testPool: BenchmarkTest[];
@@ -178,9 +185,9 @@ async function main() {
   if (suite === "detail-levels") {
     outputDir = join(import.meta.dirname, "results", "raw", "detail-levels-v1");
   } else if (suite === "profiles") {
-    outputDir = join(import.meta.dirname, "results", "raw", "v0.7.0", "profiles");
+    outputDir = join(import.meta.dirname, "results", "raw", outVersion, "profiles");
   } else if (suite === "comparison") {
-    outputDir = join(import.meta.dirname, "results", "raw", "v0.7.0");
+    outputDir = join(import.meta.dirname, "results", "raw", outVersion);
   }
 
   const allResults: TestRunResult[] = [];

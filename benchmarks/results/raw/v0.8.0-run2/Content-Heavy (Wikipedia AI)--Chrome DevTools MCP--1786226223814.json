@@ -1,0 +1,40 @@
+{
+  "testName": "Content-Heavy (Wikipedia AI)",
+  "serverName": "Chrome DevTools MCP",
+  "calls": [
+    {
+      "toolName": "navigate_page",
+      "arguments": {
+        "url": "https://en.wikipedia.org/wiki/Artificial_intelligence"
+      },
+      "responseChars": 236,
+      "estimatedTokens": 59,
+      "wallTimeMs": 1141.2419770000051,
+      "isError": false
+    },
+    {
+      "toolName": "take_snapshot",
+      "arguments": {},
+      "responseChars": 1319687,
+      "estimatedTokens": 329922,
+      "wallTimeMs": 1337.0817319999987,
+      "isError": false
+    }
+  ],
+  "cumulative": {
+    "totalChars": 1319923,
+    "totalEstimatedTokens": 329981,
+    "totalWallTimeMs": 2478.323709000004,
+    "totalCalls": 2
+  },
+  "toolDefinitions": {
+    "toolCount": 29,
+    "definitionChars": 22608,
+    "estimatedDefinitionTokens": 6460,
+    "cumulativeDefinitionTokens": 12920
+  },
+  "success": true,
+  "successCriteria": "Server identifies the article title, table of contents structure, and sidebar elements.",
+  "notes": "Snapshot: 1319687 chars; Title found: true",
+  "timestamp": 1786226223813
+}

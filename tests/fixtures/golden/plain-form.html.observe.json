@@ -1,0 +1,58 @@
+{
+  "session_id": "default",
+  "url": "{{BASE}}/plain-form.html",
+  "title": "Plain Form Submit Test Page",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "snapshot_id": 6,
+  "timestamp": "{{TS}}",
+  "structure": {
+    "landmarks": [
+      {
+        "id": "rgn-679c32",
+        "role": "form",
+        "label": "Plain form",
+        "bounds": {
+          "x": 8,
+          "y": 80,
+          "w": 1424,
+          "h": 21
+        }
+      }
+    ],
+    "headings": [
+      {
+        "level": 1,
+        "text": "Plain Form",
+        "id": "hdg-9ac8c6"
+      }
+    ],
+    "content_summary": "Plain form: 1 inputs"
+  },
+  "interactive": [
+    {
+      "id": "inp-65b300",
+      "type": "text_input",
+      "label": "Query",
+      "bounds": {
+        "x": 56,
+        "y": 83,
+        "w": 177,
+        "h": 15
+      },
+      "state": {},
+      "value": ""
+    }
+  ],
+  "forms": [
+    {
+      "id": "frm-8718c0",
+      "fields": [
+        "inp-65b300"
+      ],
+      "submit": null
+    }
+  ]
+}

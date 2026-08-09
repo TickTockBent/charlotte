@@ -5,24 +5,24 @@ import { useState } from "react";
 type Tab = "navigate" | "observe" | "cost";
 
 const navigateData = [
-  { site: "Wikipedia (AI)", charlotte: "7,667", playwright: "1,040,636", factor: "136x smaller" },
-  { site: "Hacker News", charlotte: "336", playwright: "61,230", factor: "182x smaller" },
-  { site: "GitHub repo", charlotte: "3,185", playwright: "80,297", factor: "25x smaller" },
-  { site: "example.com", charlotte: "612", playwright: "817", factor: "1.3x smaller" },
+  { site: "Wikipedia (AI)", charlotte: "22,134", playwright: "1,137,928", factor: "51x smaller" },
+  { site: "Hacker News", charlotte: "364", playwright: "50,706", factor: "139x smaller" },
+  { site: "GitHub repo", charlotte: "3,778", playwright: "38,983", factor: "10x smaller" },
+  { site: "example.com", charlotte: "415", playwright: "465", factor: "1.1x smaller" },
 ];
 
 const observeData = [
-  { site: "Wikipedia (AI)", charlotte: "521,127", playwright: "1,040,878", factor: "2x smaller" },
-  { site: "Hacker News", charlotte: "30,781", playwright: "61,143", factor: "2x smaller" },
-  { site: "GitHub repo", charlotte: "37,628", playwright: "80,190", factor: "2.1x smaller" },
-  { site: "example.com", charlotte: "612", playwright: "498", factor: "comparable" },
+  { site: "Wikipedia (AI)", charlotte: "294,142", playwright: "1,137,928", factor: "3.9x smaller" },
+  { site: "Hacker News", charlotte: "31,489", playwright: "50,706", factor: "1.6x smaller" },
+  { site: "GitHub repo", charlotte: "23,447", playwright: "38,983", factor: "1.7x smaller" },
+  { site: "example.com", charlotte: "543", playwright: "465", factor: "comparable" },
 ];
 
 const costData = [
-  { model: "Claude Sonnet 4", charlotte: "$0.05", playwright: "$9.18", savings: "$9.13" },
-  { model: "Claude Opus 4", charlotte: "$0.09", playwright: "$15.30", savings: "$15.21" },
-  { model: "GPT-4o", charlotte: "$0.04", playwright: "$7.65", savings: "$7.61" },
-  { model: "Claude Haiku 4", charlotte: "$0.01", playwright: "$2.45", savings: "$2.43" },
+  { model: "Claude Sonnet 5", charlotte: "$0.03", playwright: "$3.82", savings: "$3.80" },
+  { model: "Claude Opus 5", charlotte: "$0.05", playwright: "$6.37", savings: "$6.33" },
+  { model: "GPT-5.6 Terra", charlotte: "$0.02", playwright: "$2.55", savings: "$2.53" },
+  { model: "Claude Haiku 4.5", charlotte: "$0.01", playwright: "$1.27", savings: "$1.27" },
 ];
 
 function BarComparison({
@@ -106,7 +106,7 @@ export default function Benchmarks() {
           Benchmarks
         </h2>
         <p className="text-muted text-lg mb-10 max-w-3xl">
-          Charlotte v0.2.0 vs Playwright MCP on real websites. Every character an MCP server returns
+          Charlotte v0.8.0 vs Playwright MCP v0.0.79 on real websites, measured 2026-08-08. Every character an MCP server returns
           enters the agent&apos;s context window — smaller responses mean lower costs, more room for
           reasoning, and longer browsing sessions.
         </p>
@@ -200,8 +200,8 @@ export default function Benchmarks() {
         <div className="mt-10 p-6 rounded-lg border border-accent/20 bg-accent/5">
           <p className="text-sm text-foreground leading-relaxed">
             <span className="font-semibold text-accent">The workflow difference:</span>{" "}
-            Playwright agents receive 61K+ characters every time they look at Hacker News — whether
-            they&apos;re reading headlines or looking for a login button. Charlotte agents get 336
+            Playwright agents receive 50K+ characters every time they look at Hacker News — whether
+            they&apos;re reading headlines or looking for a login button. Charlotte agents get 364
             characters on arrival, call{" "}
             <code className="font-mono text-accent text-xs">find({`{ type: "link", text: "login" }`})</code>{" "}
             to get exactly what they need, and never pay for the rest.

@@ -58,6 +58,20 @@ Every section is optional. An empty `{}` is valid.
     "maxFullContentChars": 200000,
     "maxResponseBytes": 1000000,
     "maxEvaluateBytes": 256000
+  },
+  "http": {
+    "port": 3737,
+    "host": "127.0.0.1",
+    "authToken": null,
+    "profile": "browse",
+    "debugRequests": false,
+    "publicOrigin": null,
+    "allowedHosts": [],
+    "sessionIdleTtlMs": 1800000,
+    "maxSessions": 1,
+    "allowPrivateNetworks": [],
+    "enableDevTools": false,
+    "artifactDelivery": "inline"
   }
 }
 ```
@@ -79,6 +93,62 @@ Every section is optional. An empty `{}` is valid.
 | `limits.maxFullContentChars` | int > 0 | Max characters of `full_content` text before truncation. Default `200000`. |
 | `limits.maxResponseBytes` | int > 0 | Total byte ceiling for a formatted page response; above this the response degrades to a compact summary with an `output_file` suggestion. Default `1000000`. |
 | `limits.maxEvaluateBytes` | int > 0 | Byte ceiling for a `charlotte_evaluate` result before it is truncated. Default `256000`. |
+| `http.port` | int 1–65535 | Port for `--http`. Default `3737`. CLI: `--port`. |
+| `http.host` | string | Bind address for `--http`. Default `127.0.0.1` (loopback only). |
+| `http.authToken` | string \| null | Static bearer token. **Required** in HTTP mode — no default. `CHARLOTTE_AUTH_TOKEN` wins over this. |
+| `http.profile` | enum | Tool profile served over HTTP, fixed at startup. Default `browse`. `--profile` overrides it. |
+| `http.debugRequests` | boolean | **Diagnostics only, not for production.** Logs every request's method, path, and headers (credentials redacted) plus its response status to stderr. Default `false`. Env: `CHARLOTTE_DEBUG_HTTP=1`. |
+| `http.publicOrigin` | string \| null | The origin claude.ai (or any OAuth client) reaches the server at, e.g. `https://charlotte.example.com`. Enables the OAuth facade and is added to the Host-header allowlist. `null` (default) disables the facade — bearer-token clients only. |
+| `http.allowedHosts` | string[] | Extra `Host` header hostnames to accept beyond the always-allowed set (loopback, bind host, `publicOrigin`'s hostname). Requests with any other `Host` are rejected (DNS-rebind guard). Default `[]`. |
+| `http.sessionIdleTtlMs` | int > 0 | Idle ms with no authorized `/mcp` activity before the browser is torn down (the next tool call relaunches it). Default `1800000` (30 min). **No enforced minimum** — a very low value will tear the browser down between (or even during) requests; don't set it below your slowest expected request. |
+| `http.maxSessions` | int > 0 | *Reserved.* Concurrent sessions; today there is exactly one. Validated, not yet consumed. |
+| `http.allowPrivateNetworks` | string[] | CIDR allowlist punching holes in the SSRF guard's default-deny of loopback / RFC1918 / link-local / cloud-metadata navigation. Empty (default) = all private ranges denied. |
+| `http.enableDevTools` | boolean | *Reserved.* Expose filesystem-serving dev tools over HTTP. Validated, not yet consumed. |
+| `http.artifactDelivery` | enum | *Reserved.* `inline` or `resource`. Validated, not yet consumed (inline delivery with a size cap is the live behavior). |
+
+### HTTP mode (`http`)
+
+`charlotte --http [--port N]` serves the MCP streamable HTTP endpoint instead of
+stdio. The two modes are mutually exclusive — one process serves one transport.
+
+- `POST /mcp` — the MCP endpoint. Requires `Authorization: Bearer <token>`;
+  anything else is answered `401 {"error":"unauthorized"}` before any browser or
+  session activity. The server **refuses to start** without a token.
+- `GET /healthz` — unauthenticated liveness: `{version, uptime_s,
+  browser_connected}`. No page data, no config echo.
+
+The tool set is fixed at startup from `http.profile` (`--profile` overrides;
+`--tools` is ignored with a warning), because a stateless HTTP transport has no
+per-connection registry to mutate — over HTTP, `charlotte_tools` is a
+**read-only reporter**: it reports the active profile and group status, and
+`enable`/`disable` requests are refused with a pointer at `http.profile`.
+Default `browse` excludes the dev-mode, evaluate, and monitoring groups.
+
+Any path that is neither `/mcp` nor `/healthz` answers `404
+{"error":"not_found"}`.
+
+Keys marked *Reserved* above are validated and documented now so a config
+written today keeps working when their consumers land; they have no effect yet.
+
+#### Request observation (`http.debugRequests` / `CHARLOTTE_DEBUG_HTTP`)
+
+Either switch turns on a **diagnostic** mode that logs, to stderr, every
+inbound request — method, path with query string, and headers — plus the
+response status once the request finishes. Unmatched paths are logged
+explicitly, which is the point: it exists to capture which discovery endpoints
+a connector client probes before that support is designed.
+
+`authorization`, `proxy-authorization`, `cookie`, `set-cookie`, `x-api-key`,
+and `x-auth-token` values are **never** logged. They are replaced by a marker
+recording that the header was present and, for auth headers, its scheme
+(`<redacted: present, scheme=Bearer>`).
+
+Leave it off in normal operation: it is noisy, it writes request metadata
+(paths, query strings, user agents) into your logs, and nothing depends on it.
+
+```bash
+CHARLOTTE_DEBUG_HTTP=1 charlotte --http    # one observation run, no config edit
+```
 
 ### Output-size limits (`limits`)
 
@@ -98,6 +168,8 @@ marker so agents can tell the output was clipped.
 | `CHARLOTTE_NO_SANDBOX` | `browser.noSandbox` | `1`/`true`/`yes`/`on` enable; `0`/`false`/`no`/`off` disable. |
 | `CHARLOTTE_OUTPUT_DIR` | `output.dir` | |
 | `CHARLOTTE_CDP_ENDPOINT` | `browser.cdpEndpoint` | |
+| `CHARLOTTE_AUTH_TOKEN` | `http.authToken` | HTTP-mode bearer token. Wins over the config file. Empty value = unset. |
+| `CHARLOTTE_DEBUG_HTTP` | `http.debugRequests` | `1`/`true`/`yes`/`on` turn request logging on; anything else is off. Read directly by the HTTP transport, so it enables observation even when the config file says `false`. Diagnostics only. |
 
 ## The Chromium sandbox (`--no-sandbox`)
 

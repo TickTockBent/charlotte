@@ -1,5 +1,11 @@
-# Charlotte MCP Server Docker Image
-# Uses Puppeteer's bundled Chromium for reliability
+# Charlotte MCP Server Docker Image — HTTP mode, sandbox-enabled self-host image
+# Uses Puppeteer's bundled Chromium for reliability. Chromium's own sandbox is
+# left ON (verified via spike R4 / decision D22): run this with the surgical
+# seccomp profile at docker/chrome-seccomp.json (or the SYS_ADMIN fallback —
+# see docker-compose.yml and DOCKER.md). Do NOT add `--security-opt
+# apparmor=unconfined`; Docker's default AppArmor profile is required for the
+# sandbox to initialize on hosts with the unprivileged-userns AppArmor
+# restriction (Ubuntu 23.10+/24.04).
 
 FROM node:22-slim
 
@@ -30,6 +36,24 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
+# cloudflared — powers the zero-config demo tunnel in docker/entrypoint.sh (D27).
+# Pinned to a specific release and fetched at build time so the image is
+# reproducible and needs no network fetch at container start. Downloaded with
+# Node's fetch (already in the base image) rather than adding curl/wget.
+# TARGETARCH is supplied by BuildKit: amd64 / arm64 match the asset names.
+ARG TARGETARCH
+ARG CLOUDFLARED_VERSION=2026.7.3
+RUN node -e "\
+const [, version, arch, outputPath] = process.argv; \
+const url = \`https://github.com/cloudflare/cloudflared/releases/download/\${version}/cloudflared-linux-\${arch}\`; \
+fetch(url).then(async (response) => { \
+  if (!response.ok) throw new Error(\`\${response.status} \${response.statusText} for \${url}\`); \
+  require('fs').writeFileSync(outputPath, Buffer.from(await response.arrayBuffer())); \
+}).catch((error) => { console.error(error.message); process.exit(1); }); \
+" "$CLOUDFLARED_VERSION" "${TARGETARCH:-amd64}" /usr/local/bin/cloudflared \
+    && chmod 0755 /usr/local/bin/cloudflared \
+    && cloudflared --version
+
 # Create non-root user for security
 RUN groupadd -r charlotte && useradd -r -g charlotte -G audio,video charlotte \
     && mkdir -p /home/charlotte/Downloads \
@@ -55,14 +79,38 @@ RUN npm run build
 # Fix ownership so non-root user can access node_modules and dist
 RUN chown -R charlotte:charlotte /app
 
+# Container entrypoint: the mode ladder (mounted config / tunnel off / your own
+# public origin / cloudflared demo tunnel). See the header comment in the script.
+# Copied AFTER the recursive chown above, which takes minutes on this tree —
+# this way editing the script doesn't invalidate it. The file stays root-owned;
+# 0755 is all the charlotte user needs to read and execute it.
+COPY --chmod=0755 docker/entrypoint.sh ./docker/entrypoint.sh
+
 # Switch to non-root user
 USER charlotte
 
-# The Chromium sandbox is ON by default (issue #184), but inside a container
-# the kernel sandbox usually cannot be set up, so opt out explicitly here.
-# On bare metal the sandbox stays enabled. Override with CHARLOTTE_NO_SANDBOX=0
-# if you run with a seccomp profile / user namespaces that support the sandbox.
-ENV CHARLOTTE_NO_SANDBOX=1
+# Sandbox posture (D22): CHARLOTTE_NO_SANDBOX is intentionally left UNSET.
+# load-config.ts only disables the sandbox when the value is explicitly
+# truthy; unset means the code default applies — sandbox ON. This image is
+# meant to be run with the surgical seccomp profile (docker/chrome-seccomp.json)
+# so Chromium's own namespace + seccomp-BPF sandbox can actually initialize
+# in-container. See DOCKER.md / SELF_HOSTING.md for the run/compose incantation.
 
-# Charlotte MCP uses stdio transport
-CMD ["dumb-init", "node", "dist/index.js"]
+# Default HTTP port (src/config/schema.ts HttpConfigSchema.port default 3737).
+# The operator's mounted charlotte.config.json / CHARLOTTE_AUTH_TOKEN supply
+# the rest of the http block (host, authToken, publicOrigin, allowedHosts).
+EXPOSE 3737
+
+# Liveness check against the unauthenticated /healthz route. Uses Node's
+# built-in fetch (Node 22) instead of installing curl, to keep the image lean.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:3737/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
+# Charlotte Remote: streamable HTTP transport, sandbox-enabled Chromium.
+#
+# dumb-init stays PID 1 (signal forwarding + zombie reaping) and hands off to
+# the entrypoint, which supervises Charlotte and — in demo mode — cloudflared.
+# There is deliberately no CMD: an empty argv means "run the mode ladder", and
+# any argv the operator passes is exec'd verbatim instead, which is what keeps
+# `docker compose run --rm charlotte node dist/index.js doctor --http` working.
+ENTRYPOINT ["dumb-init", "--", "/app/docker/entrypoint.sh"]

@@ -1,0 +1,18 @@
+{
+  "session_id": "default",
+  "elements": [
+    {
+      "id": "inp-65b300",
+      "type": "text_input",
+      "label": "Query",
+      "bounds": {
+        "x": 56,
+        "y": 83,
+        "w": 177,
+        "h": 15
+      },
+      "state": {},
+      "value": ""
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 {
   "name": "@ticktockbent/charlotte",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Token-efficient browser MCP server — structured web pages for AI agents, not raw accessibility dumps",
   "type": "module",
   "main": "dist/index.js",
@@ -44,20 +44,25 @@
     "test:unit": "vitest run tests/unit/",
     "test:integration": "vitest run tests/integration/",
     "test:coverage": "vitest run --coverage",
+    "goldens:refresh": "tsx scripts/refresh-goldens.ts",
+    "report:remote": "tsx benchmarks/remote-report.ts",
     "lint": "eslint src/ tests/",
     "lint:fix": "eslint src/ tests/ --fix",
     "format": "prettier --write 'src/**/*.ts' 'tests/**/*.ts'",
     "format:check": "prettier --check 'src/**/*.ts' 'tests/**/*.ts'"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.12.0",
+    "@modelcontextprotocol/node": "^2.0.0",
+    "@modelcontextprotocol/server": "^2.0.0",
     "chokidar": "^4.0.0",
     "express": "^4.21.0",
-    "puppeteer": "^25.3.0",
-    "zod": "^3.25.0"
+    "ipaddr.js": "^2.4.0",
+    "puppeteer": "^24.0.0",
+    "zod": "^4.2.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@modelcontextprotocol/client": "^2.0.0",
     "@types/express": "^4.17.0",
     "@types/node": "^22.0.0",
     "@vitest/coverage-v8": "^4.1.8",

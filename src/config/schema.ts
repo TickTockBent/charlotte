@@ -118,6 +118,104 @@ const LimitsConfigSchema = z
   })
   .strict();
 
+/** `http.artifactDelivery` — how screenshots reach a remote client. */
+const ArtifactDeliverySchema = z.enum(["inline", "resource"]);
+
+/**
+ * `http` section — the remote (streamable HTTP) transport, landed in its FULL
+ * shape per the remote design spec §5 even where this slice ignores fields
+ * (design principle 0.5, "reserve schema early"). Every reserved field is
+ * validated here and annotated with the slice that will consume it, so a
+ * config written today against the documented surface keeps working when the
+ * consumer lands.
+ *
+ * Consumed in slice 1: `port`, `host`, `authToken`, `profile`.
+ */
+const HttpConfigSchema = z
+  .object({
+    /** TCP port for `charlotte --http`. Default 3737 ⟨tune⟩. CLI: --port. */
+    port: z.number().int().min(1).max(65535).optional(),
+    /**
+     * Bind address. Default 127.0.0.1 — loopback-only is this slice's security
+     * posture (reach it through a tunnel, never by binding 0.0.0.0).
+     *
+     * NOT in design spec §5; added here because slice 3's container packaging
+     * has to bind 0.0.0.0 inside the container to be reachable at all.
+     */
+    host: z.string().min(1).optional(),
+    /**
+     * Static bearer token. REQUIRED in HTTP mode, no default — the server
+     * refuses to start without one. `CHARLOTTE_AUTH_TOKEN` takes precedence
+     * over this field; `null` means "not set here".
+     */
+    authToken: z.string().nullable().optional(),
+    /**
+     * Tool profile, fixed at startup in HTTP mode (the tool set cannot be
+     * mutated per-connection over a stateless transport). Default "browse",
+     * which already excludes the dev_mode/evaluate/monitoring groups.
+     */
+    profile: ToolProfileSchema.optional(),
+    /**
+     * Log every inbound HTTP request (method, path, redacted headers) and its
+     * response status to stderr. Default false. Diagnostics only — it exists
+     * to capture which discovery endpoints a connector client probes (D2's
+     * observe-then-build path), not for normal operation.
+     * Env: CHARLOTTE_DEBUG_HTTP=1 turns it on independently of this field.
+     */
+    debugRequests: z.boolean().optional(),
+    /**
+     * Public https origin clients reach this server at, e.g.
+     * "https://charlotte.example.com". No default. Setting it enables the
+     * minimal OAuth provider facade ⟨D2⟩ — discovery, dynamic client
+     * registration, a consent page, and a token endpoint — which is how
+     * claude.ai's connector authenticates (it cannot send a static bearer).
+     * Leave it unset for bearer-only mode. `null` means "not set here".
+     *
+     * Only the shape is checked here; the transport rejects non-https,
+     * credentialed, or path-bearing origins at startup with a specific message.
+     */
+    publicOrigin: z.string().nullable().optional(),
+    /**
+     * Idle milliseconds before the session's browser is torn down (D17,
+     * consumed by the HTTP transport's idle sweep; the next tool call
+     * relaunches). Default 1800000 ⟨tune⟩. No schema floor (D25): a very low
+     * value tears the browser down between — or even during — requests.
+     */
+    sessionIdleTtlMs: z.number().int().positive().optional(),
+    /**
+     * RESERVED (post-MVP — multi-session): concurrent sessions per server.
+     * MVP is a hard 1 (one implicit session). Validated and ignored.
+     */
+    maxSessions: z.number().int().positive().optional(),
+    /**
+     * CIDR allowlist punching holes in the SSRF guard's default-deny of
+     * loopback/RFC1918/link-local/cloud-metadata navigation (D15, consumed by
+     * the HTTP transport — wired into the navigation guard at startup).
+     * Empty = deny all private ranges.
+     */
+    allowPrivateNetworks: z.array(z.string()).optional(),
+    /**
+     * Consumed (slice 2 — D16 inbound host guard): extra `Host` header
+     * hostnames to accept beyond the derived set (loopback trio + bind host +
+     * publicOrigin hostname). Hostnames only, no ports; IPv6 in brackets.
+     */
+    allowedHosts: z.array(z.string()).optional(),
+    /**
+     * RESERVED (slice 2 — remote threat posture): expose the filesystem-serving
+     * dev_mode tools over HTTP. Default false; enabling it will carry a loud
+     * startup warning. Validated and ignored in slice 1 (the default `browse`
+     * profile excludes those tools regardless).
+     */
+    enableDevTools: z.boolean().optional(),
+    /**
+     * RESERVED (slice 2 ⟨D6⟩ — artifact delivery): how screenshot artifacts
+     * reach a client that cannot read the server's filesystem. Default
+     * "inline". Validated and ignored in slice 1.
+     */
+    artifactDelivery: ArtifactDeliverySchema.optional(),
+  })
+  .strict();
+
 /**
  * Full Charlotte config-file schema. Every section is optional; an empty
  * `{}` is valid and simply falls through to defaults.
@@ -131,6 +229,7 @@ export const CharlotteFileConfigSchema = z
     dialog: DialogConfigSchema.optional(),
     output: OutputConfigSchema.optional(),
     limits: LimitsConfigSchema.optional(),
+    http: HttpConfigSchema.optional(),
   })
   .strict();
 

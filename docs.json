@@ -1,0 +1,43 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Charlotte",
+  "description": "An MCP server that renders web pages into structured, agent-readable representations.",
+  "colors": {
+    "primary": "#06b6d4",
+    "light": "#22d3ee",
+    "dark": "#0e7490"
+  },
+  "favicon": "/site/app/favicon.ico",
+  "navigation": {
+    "groups": [
+      {
+        "group": "Get started",
+        "pages": ["README", "SELF_HOSTING"]
+      },
+      {
+        "group": "Reference",
+        "pages": ["docs/configuration"]
+      },
+      {
+        "group": "Operating",
+        "pages": ["DOCKER", "SECURITY"]
+      },
+      {
+        "group": "Project",
+        "pages": ["CHANGELOG", "CONTRIBUTING"]
+      }
+    ]
+  },
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/TickTockBent/charlotte"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/TickTockBent/charlotte"
+    }
+  }
+}

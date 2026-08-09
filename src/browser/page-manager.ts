@@ -6,6 +6,7 @@ import { createDefaultConfig } from "../types/config.js";
 import type { CharlotteConfig } from "../types/config.js";
 import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 import { logger } from "../utils/logger.js";
+import type { NavigationDenyInfo } from "./navigation-guard.js";
 
 export interface TabInfo {
   id: string;
@@ -55,6 +56,17 @@ export class PageManager {
   private newTabQueue: string[] = [];
 
   private cdpSessionManager?: CDPSessionManager;
+
+  /**
+   * The most recent navigation refusal recorded by the SSRF filtering proxy
+   * (D15), or null. The proxy fronts every target, so this is a single
+   * session-level field (not per-tab): it is cleared at the start of each
+   * navigation via {@link clearErrors} and read immediately after a `page.goto`
+   * failure by the navigate tool to raise a NAVIGATION_BLOCKED error. Because it
+   * is only read when a navigation throws, a stale value left by a background
+   * subresource denial can never turn a successful navigation into a false block.
+   */
+  private lastNavigationBlock: NavigationDenyInfo | null = null;
 
   constructor(config?: CharlotteConfig, cdpSessionManager?: CDPSessionManager) {
     // Accept optional config; callers without config get a permissive default
@@ -190,6 +202,9 @@ export class PageManager {
     };
 
     this.wirePageListeners(managedPopup);
+    // No per-page guard install: the SSRF guard is the network-layer filtering
+    // proxy (D15), which already fronts every target including this popup's
+    // initial request. See src/browser/filtering-proxy.ts.
     this.pages.set(popupTabId, managedPopup);
     this.newTabQueue.push(popupTabId);
 
@@ -328,6 +343,7 @@ export class PageManager {
     this.pages.clear();
     this.activeTabId = null;
     this.newTabQueue = [];
+    this.lastNavigationBlock = null;
     if (this.cdpSessionManager) {
       this.cdpSessionManager.clearAll();
     }
@@ -453,6 +469,31 @@ export class PageManager {
       managedPage.consoleMessages = [];
       managedPage.networkRequests = [];
     }
+    // Cleared per navigation so a NAVIGATION_BLOCKED raised for one navigation
+    // can never be attributed to a later one (D14). Session-level, independent
+    // of the active tab, since the browser-level guard covers every target.
+    this.lastNavigationBlock = null;
+  }
+
+  /**
+   * Record a navigation refusal from the SSRF filtering proxy (D15). Called from
+   * the proxy's `onDeny` (wired through BrowserManager); the navigate tool reads
+   * it via
+   * {@link getLastNavigationBlock} after a `page.goto` failure.
+   */
+  recordNavigationBlock(info: NavigationDenyInfo): void {
+    this.lastNavigationBlock = info;
+    logger.warn("Navigation blocked by SSRF guard", info);
+  }
+
+  /**
+   * The SSRF guard's most recent refusal, or null (D15). The navigate tool reads
+   * this after a `page.goto` failure to turn a proxy refusal (HTTP 403 →
+   * `ERR_PROXY_CONNECTION_FAILED`-class, or a denied CONNECT →
+   * `ERR_TUNNEL_CONNECTION_FAILED`) into a legible NAVIGATION_BLOCKED error.
+   */
+  getLastNavigationBlock(): NavigationDenyInfo | null {
+    return this.lastNavigationBlock;
   }
 
   getPendingDialogInfo(): PendingDialog | null {

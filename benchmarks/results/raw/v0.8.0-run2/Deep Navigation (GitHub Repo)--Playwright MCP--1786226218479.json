@@ -1,0 +1,40 @@
+{
+  "testName": "Deep Navigation (GitHub Repo)",
+  "serverName": "Playwright MCP",
+  "calls": [
+    {
+      "toolName": "browser_navigate",
+      "arguments": {
+        "url": "https://github.com/anthropics/anthropic-cookbook"
+      },
+      "responseChars": 570,
+      "estimatedTokens": 143,
+      "wallTimeMs": 1222.0954310000016,
+      "isError": false
+    },
+    {
+      "toolName": "browser_snapshot",
+      "arguments": {},
+      "responseChars": 38983,
+      "estimatedTokens": 9746,
+      "wallTimeMs": 66.95110400000704,
+      "isError": false
+    }
+  ],
+  "cumulative": {
+    "totalChars": 39553,
+    "totalEstimatedTokens": 9889,
+    "totalWallTimeMs": 1289.0465350000086,
+    "totalCalls": 2
+  },
+  "toolDefinitions": {
+    "toolCount": 24,
+    "definitionChars": 18502,
+    "estimatedDefinitionTokens": 5287,
+    "cumulativeDefinitionTokens": 10574
+  },
+  "success": true,
+  "successCriteria": "Server can observe the repo page structure.",
+  "notes": "Snapshot: 38983 chars",
+  "timestamp": 1786226218475
+}

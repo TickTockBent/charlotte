@@ -19,6 +19,29 @@ interface Release {
 
 const releases: Release[] = [
   {
+    version: "0.8.0",
+    date: "2026-08-09",
+    entries: [
+      { type: "added", text: "Charlotte Remote — optional streamable-HTTP transport (charlotte --http): a stateless /mcp endpoint with a mandatory bearer token, an unauthenticated /healthz status endpoint, and a single implicit session per server process, alongside the existing stdio transport." },
+      { type: "added", text: "OAuth facade for claude.ai's custom connector — satisfies the remote-connector OAuth flow with HMAC-derived tokens computed on demand from the configured secret; nothing is persisted server-side. Direct MCP clients keep plain bearer auth." },
+      { type: "added", text: "One-command demo mode — docker run with no configuration stands up Charlotte behind a cloudflared quick tunnel and prints the claude.ai connector URL and a generated token. Override with a mounted config, CHARLOTTE_TUNNEL=off, or CHARLOTTE_PUBLIC_ORIGIN." },
+      { type: "added", text: "Session idle-TTL sweep, crash/restart recovery, inline artifact delivery (256 KB cap), charlotte doctor --http preflight, and a full HTTP configuration surface via charlotte.config.json and environment variables." },
+      { type: "added", text: "Security guards, mandatory in HTTP mode: an outbound SSRF navigation guard (resolves targets at request time and default-denies loopback, RFC1918/link-local, and cloud-metadata addresses) and an inbound Host-header DNS-rebind guard." },
+      { type: "added", text: "Release-drift and per-task benchmark instruments with first published results — orientation cost and tool-definition size across every release v0.2.0–v0.8.0 plus a Playwright MCP baseline, and total-token cost for three scripted tasks." },
+      { type: "added", text: "Docs restructure — SELF_HOSTING.md rewritten as a short quickstart; new SECURITY.md covering the trust boundary, network guards, OAuth mechanics, sizing, and known accepted risks." },
+      { type: "changed", text: "CDP attach now recovers from a dropped transport — after a host sleep/wake, the next tool call re-attaches to a --cdp-endpoint browser and re-runs page adoption instead of failing until restart." },
+      { type: "changed", text: "v0.7.0 was merged but never published as a standalone release; its changes (sandbox-on default, security hardening, config file, element-ID format) ship as part of v0.8.0. The v0.7.0 git tag exists for reference only." },
+    ],
+  },
+  {
+    version: "0.6.3",
+    date: "2026-04-17",
+    entries: [
+      { type: "fixed", text: "Republished with correct dist/ artifacts — the v0.6.2 npm tarball was packaged from a stale dist/ and did not include the v0.6.2 source changes despite them being present at the git tag. v0.6.3 ships the intended feature set with correct compiled output; no source-level changes versus v0.6.2. Fixes #164." },
+      { type: "added", text: "prepublishOnly script (npm run build && npm test) so npm publish rebuilds and re-tests before packaging, preventing stale-dist publishes." },
+    ],
+  },
+  {
     version: "0.6.2",
     date: "2026-04-16",
     entries: [

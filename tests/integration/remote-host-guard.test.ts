@@ -15,10 +15,7 @@
  */
 import { describe, it, expect } from "vitest";
 import http from "node:http";
-import {
-  setupUnlaunchedHttpHarness,
-  type HttpHarness,
-} from "../helpers/http-harness.js";
+import { setupUnlaunchedHttpHarness, type HttpHarness } from "../helpers/http-harness.js";
 
 /**
  * Raw HTTP request with a caller-chosen `Host` header — the one thing undici's

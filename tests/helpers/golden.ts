@@ -47,10 +47,7 @@ import { parseToolJson } from "./mcp-harness.js";
  * `tests/integration/parity-core-direct.test.ts` (I3, stdio half) replay the
  * exact same scenario script instead of maintaining two copies of it.
  */
-export type CallToolFn = (
-  name: string,
-  args?: Record<string, unknown>,
-) => Promise<CallToolResult>;
+export type CallToolFn = (name: string, args?: Record<string, unknown>) => Promise<CallToolResult>;
 
 /** Keys whose string values are ISO-8601 timestamps, normalized to `"{{TS}}"`. */
 const TIMESTAMP_KEYS = new Set<string>(["timestamp"]);

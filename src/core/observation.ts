@@ -4,7 +4,12 @@ import { logger } from "../utils/logger.js";
 import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 import { diffRepresentations } from "../state/differ.js";
 import type { DiffScope } from "../state/differ.js";
-import { defineTool, DEFAULT_SESSION_ID, type SessionContext, type ToolDefinition } from "./types.js";
+import {
+  defineTool,
+  DEFAULT_SESSION_ID,
+  type SessionContext,
+  type ToolDefinition,
+} from "./types.js";
 import type { Bounds } from "../types/page-representation.js";
 import {
   ensureReady,

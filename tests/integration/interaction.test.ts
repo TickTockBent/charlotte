@@ -411,9 +411,9 @@ describe("Interaction integration", () => {
       });
 
       expect(result.isError).toBe(true);
-      const parsed = parseToolJson<{ error: { code: string; message: string; suggestion?: string } }>(
-        result,
-      );
+      const parsed = parseToolJson<{
+        error: { code: string; message: string; suggestion?: string };
+      }>(result);
       expect(parsed.error.code).toBe("INVALID_ARGUMENT");
       expect(parsed.error.message).toContain("not a native <select>");
       expect(parsed.error.suggestion).toContain("charlotte_click the element to expand it");

@@ -291,10 +291,7 @@ describe("registerMetaToolReporter", () => {
   });
 
   it("enable: refuses and steers to http.profile, echoing the requested action and group", async () => {
-    const result = await reporterTool.handler(
-      { action: "enable", group: "dev_mode" },
-      {} as any,
-    );
+    const result = await reporterTool.handler({ action: "enable", group: "dev_mode" }, {} as any);
 
     expect((result as any).isError).toBe(true);
     const parsed = JSON.parse((result as any).content[0].text);

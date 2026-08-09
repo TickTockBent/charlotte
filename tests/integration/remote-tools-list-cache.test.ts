@@ -31,7 +31,10 @@ describe("HTTP tools/list cache hint (D20, modern 2026-07-28)", () => {
         params: {
           _meta: {
             "io.modelcontextprotocol/protocolVersion": "2026-07-28",
-            "io.modelcontextprotocol/clientInfo": { name: "charlotte-cache-test", version: "1.0.0" },
+            "io.modelcontextprotocol/clientInfo": {
+              name: "charlotte-cache-test",
+              version: "1.0.0",
+            },
             "io.modelcontextprotocol/clientCapabilities": {},
           },
         },

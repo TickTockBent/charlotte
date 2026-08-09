@@ -78,7 +78,7 @@ describe("session envelope: every tool result carries session_id", () => {
     elements: Array<{ id: string; label?: string; type?: string }>;
   }
 
-  it("every registered tool's JSON payload carries session_id: \"default\"", async () => {
+  it('every registered tool\'s JSON payload carries session_id: "default"', async () => {
     // ─── navigation (4): navigate, back, forward, reload ───
     await callAndAssertEnvelope("charlotte_navigate", {
       url: `${baseUrl}/form.html`,
@@ -167,10 +167,10 @@ describe("session envelope: every tool result carries session_id", () => {
     await callAndAssertEnvelope("charlotte_submit", { form_id: submitForm!.id });
 
     // ─── observation: screenshot family + diff ───
-    const shot = await callAndAssertEnvelope<{ artifact: { id: string } }>(
-      "charlotte_screenshot",
-      { save: true, full_page: false },
-    );
+    const shot = await callAndAssertEnvelope<{ artifact: { id: string } }>("charlotte_screenshot", {
+      save: true,
+      full_page: false,
+    });
     // charlotte_screenshot without save/output_file returns a bare image
     // content block with no JSON text payload — there is nothing to carry
     // session_id, so it is exercised (for coverage) but not asserted on.

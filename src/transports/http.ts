@@ -319,8 +319,7 @@ export async function startHttpTransport(
         ...(publicOrigin !== undefined ? [new URL(publicOrigin).hostname] : []),
         ...(options.allowedHosts ?? []),
       ].filter(
-        (hostname): hostname is string =>
-          typeof hostname === "string" && hostname.trim() !== "",
+        (hostname): hostname is string => typeof hostname === "string" && hostname.trim() !== "",
       ),
     ),
   );

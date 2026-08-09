@@ -200,9 +200,7 @@ export function registerMetaToolReporter(
         group: z
           .enum(ALL_GROUP_NAMES as [ToolGroupName, ...ToolGroupName[]])
           .optional()
-          .describe(
-            "Tool group (only meaningful for enable/disable, which this server rejects)",
-          ),
+          .describe("Tool group (only meaningful for enable/disable, which this server rejects)"),
       },
     },
     async ({ action, group }) => {

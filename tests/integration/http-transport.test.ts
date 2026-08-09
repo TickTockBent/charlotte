@@ -374,7 +374,10 @@ describe("HTTP transport (slice 1 step 2 smoke)", () => {
           // /mcp itself is unaffected by observation mode.
           const message = await readJsonRpc(response);
           const tools = message.result?.tools as Array<{ name: string }>;
-          expect(tools.map((tool) => tool.name)).toEqual([...PROFILE_TOOLS.browse, "charlotte_tools"]);
+          expect(tools.map((tool) => tool.name)).toEqual([
+            ...PROFILE_TOOLS.browse,
+            "charlotte_tools",
+          ]);
           await waitForLog(chunks, "http response");
         });
 

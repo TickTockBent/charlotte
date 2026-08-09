@@ -22,11 +22,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import * as path from "node:path";
-import {
-  setupMcpHarness,
-  parseToolJson,
-  type McpHarness,
-} from "../helpers/mcp-harness.js";
+import { setupMcpHarness, parseToolJson, type McpHarness } from "../helpers/mcp-harness.js";
 import type { SnapshotDiff } from "../../src/types/snapshot.js";
 
 const FIXTURES = path.resolve(import.meta.dirname, "../fixtures/pages");

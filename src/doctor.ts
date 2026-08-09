@@ -115,7 +115,10 @@ export function checkConfig(options: DoctorOptions): {
         ? `, publicOrigin ${resolved.httpConfig.publicOrigin}`
         : "")
     : "stdio mode";
-  return { result: pass("Config loads & validates", `Configuration is valid (${modeNote}).`), resolved };
+  return {
+    result: pass("Config loads & validates", `Configuration is valid (${modeNote}).`),
+    resolved,
+  };
 }
 
 /**
@@ -194,9 +197,7 @@ export async function checkBrowser(resolved: ResolvedOptions): Promise<DoctorChe
     await browserManager.launch();
     const page = await browserManager.newPage();
     try {
-      await page.goto(
-        "data:text/html,<title>Charlotte%20Doctor</title><h1>charlotte doctor</h1>",
-      );
+      await page.goto("data:text/html,<title>Charlotte%20Doctor</title><h1>charlotte doctor</h1>");
       const title = await page.title();
       if (title !== "Charlotte Doctor") {
         return fail(

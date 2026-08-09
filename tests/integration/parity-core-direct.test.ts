@@ -54,7 +54,7 @@ describe("parity: core-direct execution matches the committed goldens", () => {
       expect(
         fresh,
         `core-direct output for scenario "${scenarioName}" diverges from the MCP-path golden — ` +
-          "the registration/transport layer is not \"thin\" (rule-0.1 finding).",
+          'the registration/transport layer is not "thin" (rule-0.1 finding).',
       ).toEqual(committed);
     }
 

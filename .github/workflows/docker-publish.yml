@@ -84,13 +84,9 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            ${{ env.GHCR_IMAGE }}:latest
             ${{ env.GHCR_IMAGE }}:alpine
-            ${{ env.GHCR_IMAGE }}:${{ steps.version.outputs.version }}
             ${{ env.GHCR_IMAGE }}:${{ steps.version.outputs.version }}-alpine
-            ${{ env.DOCKERHUB_IMAGE }}:latest
             ${{ env.DOCKERHUB_IMAGE }}:alpine
-            ${{ env.DOCKERHUB_IMAGE }}:${{ steps.version.outputs.version }}
             ${{ env.DOCKERHUB_IMAGE }}:${{ steps.version.outputs.version }}-alpine
           cache-from: type=gha,scope=alpine
           cache-to: type=gha,mode=max,scope=alpine
@@ -102,10 +98,17 @@ jobs:
           file: Dockerfile
           platforms: linux/amd64
           push: true
+          # :latest is the Debian image: it carries the D27 demo-mode entrypoint
+          # (cloudflared quick tunnel) that the README's one-command docker run
+          # depends on. The Alpine image stays available as :alpine.
           tags: |
+            ${{ env.GHCR_IMAGE }}:latest
             ${{ env.GHCR_IMAGE }}:debian
+            ${{ env.GHCR_IMAGE }}:${{ steps.version.outputs.version }}
             ${{ env.GHCR_IMAGE }}:${{ steps.version.outputs.version }}-debian
+            ${{ env.DOCKERHUB_IMAGE }}:latest
             ${{ env.DOCKERHUB_IMAGE }}:debian
+            ${{ env.DOCKERHUB_IMAGE }}:${{ steps.version.outputs.version }}
             ${{ env.DOCKERHUB_IMAGE }}:${{ steps.version.outputs.version }}-debian
           cache-from: type=gha,scope=debian
           cache-to: type=gha,mode=max,scope=debian
@@ -119,6 +122,15 @@ jobs:
           echo "Verifying Debian image..."
           docker pull ${{ env.GHCR_IMAGE }}:${{ steps.version.outputs.version }}-debian
           docker inspect ${{ env.GHCR_IMAGE }}:${{ steps.version.outputs.version }}-debian --format '{{.Os}}/{{.Architecture}} {{.Size}}'
+
+          echo "Verifying :latest carries the demo-mode entrypoint (D27)..."
+          docker pull ${{ env.GHCR_IMAGE }}:latest
+          latest_entrypoint="$(docker inspect ${{ env.GHCR_IMAGE }}:latest --format '{{json .Config.Entrypoint}}')"
+          echo ":latest entrypoint: $latest_entrypoint"
+          case "$latest_entrypoint" in
+            *docker/entrypoint.sh*) echo ":latest is the demo image — OK" ;;
+            *) echo "FATAL: :latest does not carry docker/entrypoint.sh — tag map regressed"; exit 1 ;;
+          esac
 
           echo "All images published and verified."
 

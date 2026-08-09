@@ -1,0 +1,40 @@
+<svg viewBox="0 0 900 600" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, sans-serif">
+<rect x="0" y="0" width="900" height="600" fill="#ffffff" />
+<text x="450" y="28" text-anchor="middle" font-size="18" font-weight="700" fill="#111827">Charlotte vs Playwright — per-task token cost</text>
+<text x="450" y="48" text-anchor="middle" font-size="12" fill="#4B5563">Run date: 2026-08-09 · tokens ≈ chars/4 · headline = run 1 · log x-axis</text>
+<rect x="190" y="58" width="10" height="10" fill="#0072B2" /><text x="204" y="67" font-size="11" fill="#111827">Charlotte</text>
+<rect x="300" y="58" width="10" height="10" fill="#D55E00" /><text x="314" y="67" font-size="11" fill="#111827">Playwright</text>
+<line x1="190" y1="540" x2="860" y2="540" stroke="#9CA3AF" stroke-width="1" />
+<line x1="190.0" y1="90" x2="190.0" y2="540" stroke="#E5E7EB" stroke-width="1" />
+<text x="190.0" y="556" text-anchor="middle" font-size="10" fill="#6B7280">210</text>
+<line x1="324.0" y1="90" x2="324.0" y2="540" stroke="#E5E7EB" stroke-width="1" />
+<text x="324.0" y="556" text-anchor="middle" font-size="10" fill="#6B7280">494</text>
+<line x1="458.0" y1="90" x2="458.0" y2="540" stroke="#E5E7EB" stroke-width="1" />
+<text x="458.0" y="556" text-anchor="middle" font-size="10" fill="#6B7280">1,159</text>
+<line x1="592.0" y1="90" x2="592.0" y2="540" stroke="#E5E7EB" stroke-width="1" />
+<text x="592.0" y="556" text-anchor="middle" font-size="10" fill="#6B7280">2,720</text>
+<line x1="726.0" y1="90" x2="726.0" y2="540" stroke="#E5E7EB" stroke-width="1" />
+<text x="726.0" y="556" text-anchor="middle" font-size="10" fill="#6B7280">6,382</text>
+<line x1="860.0" y1="90" x2="860.0" y2="540" stroke="#E5E7EB" stroke-width="1" />
+<text x="860.0" y="556" text-anchor="middle" font-size="10" fill="#6B7280">14,975</text>
+<text x="178" y="169.0" text-anchor="end" font-size="12" font-weight="600" fill="#111827">T1: orient-and-read</text>
+<rect x="190" y="148.0" width="567.8" height="28.0" fill="#0072B2" opacity="0.9" />
+<text x="763.8" y="166.0" font-size="10" fill="#111827">7,812 tok / 2 calls</text>
+<rect x="190" y="168.0" width="642.9" height="28.0" fill="#D55E00" opacity="0.9" />
+<text x="838.9" y="186.0" font-size="10" fill="#111827">12,601 tok / 2 calls</text>
+<text x="860" y="169.0" text-anchor="end" font-size="10" font-weight="600" fill="#4B5563">1 : 1.6</text>
+<line x1="190" y1="240.0" x2="860" y2="240.0" stroke="#F3F4F6" stroke-width="1" />
+<text x="178" y="319.0" text-anchor="end" font-size="12" font-weight="600" fill="#111827">T2: find-and-act</text>
+<rect x="190" y="298.0" width="108.9" height="28.0" fill="#0072B2" opacity="0.9" />
+<text x="304.9" y="316.0" font-size="10" fill="#111827">421 tok / 3 calls</text>
+<rect x="190" y="318.0" width="648.0" height="28.0" fill="#D55E00" opacity="0.9" />
+<text x="844.0" y="336.0" font-size="10" fill="#111827">13,022 tok / 3 calls</text>
+<text x="860" y="319.0" text-anchor="end" font-size="10" font-weight="600" fill="#4B5563">1 : 30.9</text>
+<line x1="190" y1="390.0" x2="860" y2="390.0" stroke="#F3F4F6" stroke-width="1" />
+<text x="178" y="469.0" text-anchor="end" font-size="12" font-weight="600" fill="#111827">T3: form-fill</text>
+<rect x="190" y="448.0" width="501.9" height="28.0" fill="#0072B2" opacity="0.9" />
+<text x="697.9" y="466.0" font-size="10" fill="#111827">5,136 tok / 7 calls</text>
+<rect x="190" y="468.0" width="243.4" height="28.0" fill="#D55E00" opacity="0.9" />
+<text x="439.4" y="486.0" font-size="10" fill="#111827">991 tok / 4 calls</text>
+<text x="860" y="469.0" text-anchor="end" font-size="10" font-weight="600" fill="#4B5563">1 : 0.2</text>
+</svg>

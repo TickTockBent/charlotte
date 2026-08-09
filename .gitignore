@@ -46,3 +46,6 @@ charlotte.config.local.json
 
 # Playwright MCP snapshot spill (benchmark byproduct)
 .playwright-mcp/
+
+# Drift benchmark version cache (npm installs + git worktree builds per release)
+benchmarks/.drift-cache/

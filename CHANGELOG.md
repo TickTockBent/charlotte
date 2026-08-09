@@ -20,6 +20,9 @@ Re-verified benchmarks: Charlotte's `navigate` orientation is still ~10–140x s
 - **`tools/list` cache hint** (`ttlMs` 1 hour, `private`) so HTTP clients can avoid re-fetching the tool listing on every call.
 - **Docker HTTP image** with the Chromium sandbox **enabled** by default, using a surgical seccomp profile scoped to what the sandbox needs, plus a `docker-compose.yml` for running Charlotte in HTTP mode.
 - **`charlotte doctor --http`** — a preflight smoke check for HTTP transport configuration.
+- **One-command demo mode in the Docker image** — `docker run` with no configuration stands up Charlotte behind a cloudflared quick tunnel (pinned binary baked into the image) and prints the claude.ai connector URL and a generated token once the server is healthy. Operators override the ladder with a mounted `charlotte.config.json`, `CHARLOTTE_TUNNEL=off` (local bearer-only), or `CHARLOTTE_PUBLIC_ORIGIN` (bring your own tunnel/proxy); explicit container commands still run verbatim.
+- **Release-drift and per-task benchmark instruments** — `benchmarks/run-drift.ts` measures orientation cost and tool-definition size for every release v0.2.0–v0.8.0 against the same live pages same-day (plus a Playwright MCP baseline); `benchmarks/run-tasks.ts` measures total token cost for three scripted tasks with documented per-server call paths. First canonical results published under `benchmarks/results/`.
+- **Docs restructure** — `SELF_HOSTING.md` rewritten as a short quickstart; new `SECURITY.md` covers the trust boundary, network guards, OAuth handshake mechanics, sizing, and known accepted risks.
 - **Full HTTP configuration surface** via `charlotte.config.json` and environment variables (including `CHARLOTTE_AUTH_TOKEN`), covering transport, auth, host/origin allowlisting, and session limits.
 
 ### Security

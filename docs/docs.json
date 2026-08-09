@@ -8,24 +8,24 @@
     "light": "#22d3ee",
     "dark": "#0e7490"
   },
-  "favicon": "/site/app/favicon.ico",
+  "favicon": "/favicon.ico",
   "navigation": {
     "groups": [
       {
         "group": "Get started",
-        "pages": ["README", "SELF_HOSTING"]
+        "pages": ["index", "self-hosting"]
       },
       {
         "group": "Reference",
-        "pages": ["docs/configuration"]
+        "pages": ["configuration", "benchmarks"]
       },
       {
         "group": "Operating",
-        "pages": ["DOCKER", "SECURITY"]
+        "pages": ["docker", "security"]
       },
       {
         "group": "Project",
-        "pages": ["CHANGELOG", "CONTRIBUTING"]
+        "pages": ["changelog"]
       }
     ]
   },

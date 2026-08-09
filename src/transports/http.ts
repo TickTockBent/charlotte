@@ -309,7 +309,7 @@ export async function startHttpTransport(
   // Inbound DNS-rebind guard (D16, I10) allowlist, derived once at startup.
   // Always admits the loopback trio (direct local clients send Host:
   // 127.0.0.1:<port>) and the publicOrigin hostname (cloudflared forwards the
-  // original public Host verbatim — empirically confirmed, docs/logs.txt); plus
+  // original public Host verbatim — empirically confirmed, docs-internal/logs.txt); plus
   // the configured bind host and any operator-configured extras.
   const allowedHostnames = Array.from(
     new Set<string>(

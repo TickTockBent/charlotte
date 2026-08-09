@@ -1,3 +1,9 @@
+---
+title: Configuration
+description: Every Charlotte config key, environment variable, and precedence rule.
+icon: gear
+---
+
 # Configuration
 
 Charlotte resolves its settings from four sources. When the same setting is
@@ -124,8 +130,7 @@ per-connection registry to mutate — over HTTP, `charlotte_tools` is a
 `enable`/`disable` requests are refused with a pointer at `http.profile`.
 Default `browse` excludes the dev-mode, evaluate, and monitoring groups.
 
-Any path that is neither `/mcp` nor `/healthz` answers `404
-{"error":"not_found"}`.
+Any path that is neither `/mcp` nor `/healthz` answers `404 {"error":"not_found"}`.
 
 Keys marked *Reserved* above are validated and documented now so a config
 written today keeps working when their consumers land; they have no effect yet.

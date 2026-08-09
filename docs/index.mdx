@@ -1,0 +1,67 @@
+---
+title: Charlotte
+description: The Web, Readable — an MCP server that gives AI agents structured, token-efficient access to the web.
+icon: spider-web
+---
+
+{/*
+  Canonical source: README.md (opening paragraph) and the README "Self-Hosting
+  (Charlotte Remote)" section. Changes flow canonical → this page, not the
+  reverse — update README.md first, then mirror the change here.
+*/}
+
+Charlotte is an MCP server that gives AI agents structured, token-efficient access to the web.
+Instead of dumping the full accessibility tree on every call, Charlotte returns only what
+the agent needs: a compact page summary on arrival, targeted queries for specific elements,
+and full detail only when explicitly requested. On content-heavy pages that orientation is
+up to ~140x smaller than a full accessibility-tree snapshot from [Playwright MCP](https://github.com/microsoft/playwright-mcp); on trivially small pages the two are roughly the same size.
+
+## Try it in one command
+
+Run Charlotte as a remote MCP server and connect it to claude.ai — no domain, no config:
+
+```bash
+docker run --cap-add SYS_ADMIN --shm-size 2g -p 3737:3737 ghcr.io/ticktockbent/charlotte
+```
+
+It prints a public connector URL and an operator token. In claude.ai:
+**Settings → Connectors → Add custom connector** — paste the URL, leave the
+OAuth Client ID/Secret fields blank, and enter the token on Charlotte's consent
+page when it appears. That's it; you're browsing.
+
+<Note>
+  The demo URL and token are ephemeral — both rotate on restart. For a stable
+  domain, your own tunnel or reverse proxy, and docker compose, see
+  [Self-Hosting](/self-hosting).
+</Note>
+
+Prefer the stdio transport for a local MCP client (Claude Code, Claude Desktop, Cursor, and others)?
+
+```bash
+npm install -g @ticktockbent/charlotte
+```
+
+Full client configuration and CLI usage live in the [project README](https://github.com/TickTockBent/charlotte#readme).
+
+## Where to go next
+
+<CardGroup cols={2}>
+  <Card title="Self-Hosting" icon="server" href="/self-hosting">
+    Stand up Charlotte Remote on your own host: token, config, compose, and connecting claude.ai.
+  </Card>
+  <Card title="Security" icon="shield-halved" href="/security">
+    The trust boundary, SSRF and Host-header guards, the OAuth handshake, and sizing.
+  </Card>
+  <Card title="Docker" icon="docker" href="/docker">
+    Image choices, sandbox posture, and running the container in production.
+  </Card>
+  <Card title="Configuration" icon="gear" href="/configuration">
+    Every config key, environment variable, and precedence rule.
+  </Card>
+  <Card title="Benchmarks" icon="chart-line" href="/benchmarks">
+    Charlotte vs. Playwright MCP, measured — orientation cost, per-task cost, and where Charlotte still loses.
+  </Card>
+  <Card title="Changelog" icon="clock-rotate-left" href="/changelog">
+    Release history and what's new.
+  </Card>
+</CardGroup>

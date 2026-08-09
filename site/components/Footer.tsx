@@ -22,6 +22,15 @@ export default function Footer() {
           </a>
           <span className="text-surface-border">|</span>
           <a
+            href="https://charlotte.mintlify.site"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-foreground transition-colors"
+          >
+            Docs
+          </a>
+          <span className="text-surface-border">|</span>
+          <a
             href="https://github.com/TickTockBent/charlotte/blob/main/LICENSE"
             target="_blank"
             rel="noopener noreferrer"

@@ -42,7 +42,7 @@ The advantage scales with page complexity: on content-heavy pages the structured
 | browse (default) | 23 | 4,372 | **~49%** |
 | core | 7 | 2,186 | **~75%** |
 
-Tool definitions are sent on every API round-trip. With the default `browse` profile, Charlotte carries ~49% less definition overhead than loading all 43 tools; the minimal `core` profile cuts it by ~75%. See the [profile benchmark report](docs/charlotte-profile-benchmark-report.md) for full results.
+Tool definitions are sent on every API round-trip. With the default `browse` profile, Charlotte carries ~49% less definition overhead than loading all 43 tools; the minimal `core` profile cuts it by ~75%. See the [profile benchmark report](docs-internal/charlotte-profile-benchmark-report.md) for full results.
 
 **The workflow difference:** A Playwright agent that reads the full snapshot receives ~50,000 characters every time it looks at Hacker News, whether it's reading headlines or hunting for a login button. A Charlotte agent gets 364 characters on arrival, calls `find({ type: "link", text: "login" })` to get exactly what it needs, and never pays for the rest.
 
@@ -286,7 +286,7 @@ Add to `~/.amp/settings.json`:
 }
 ```
 
-See [docs/mcp-setup.md](docs/mcp-setup.md) for the full setup guide, including development mode, generic MCP clients, verification steps, and troubleshooting.
+See [docs-internal/mcp-setup.md](docs-internal/mcp-setup.md) for the full setup guide, including development mode, generic MCP clients, verification steps, and troubleshooting.
 
 ## Configuration
 
@@ -514,7 +514,7 @@ Charlotte includes a test website in `tests/sandbox/` that exercises all tools w
 dev_serve({ path: "tests/sandbox" })
 ```
 
-Five pages cover navigation, forms, interactive elements, popups, delayed content, scroll containers, and more. See [docs/sandbox.md](docs/sandbox.md) for the full page reference and a tool-by-tool exercise checklist.
+Five pages cover navigation, forms, interactive elements, popups, delayed content, scroll containers, and more. See [docs-internal/sandbox.md](docs-internal/sandbox.md) for the full page reference and a tool-by-tool exercise checklist.
 
 ## Known Issues
 
@@ -534,11 +534,11 @@ Five pages cover navigation, forms, interactive elements, popups, delayed conten
 
 **ARM64 Docker Images** — Add `linux/arm64` platform support to the Docker publish workflow for native performance on Apple Silicon Macs and ARM servers.
 
-See [docs/playwright-mcp-gap-analysis.md](docs/playwright-mcp-gap-analysis.md) for the full gap analysis against Playwright MCP, including lower-priority items (vision tools, testing/verification, tracing, transport, security) and areas where Charlotte has advantages.
+See [docs-internal/playwright-mcp-gap-analysis.md](docs-internal/playwright-mcp-gap-analysis.md) for the full gap analysis against Playwright MCP, including lower-priority items (vision tools, testing/verification, tracing, transport, security) and areas where Charlotte has advantages.
 
 ## Full Specification
 
-See [docs/CHARLOTTE_SPEC.md](docs/CHARLOTTE_SPEC.md) for the complete specification including all tool parameters, the page representation format, element identity strategy, and architecture details.
+See [docs-internal/CHARLOTTE_SPEC.md](docs-internal/CHARLOTTE_SPEC.md) for the complete specification including all tool parameters, the page representation format, element identity strategy, and architecture details.
 
 ## License
 

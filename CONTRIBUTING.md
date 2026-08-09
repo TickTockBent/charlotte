@@ -130,7 +130,7 @@ Charlotte ships a multi-page test website in `tests/sandbox/` that exercises the
 dev_serve({ path: "tests/sandbox" })
 ```
 
-This gives you a safe, offline environment to test navigation, forms, interactions, async waits, session management, and dev mode tools. See [docs/sandbox.md](docs/sandbox.md) for the full walkthrough.
+This gives you a safe, offline environment to test navigation, forms, interactions, async waits, session management, and dev mode tools. See [docs-internal/sandbox.md](docs-internal/sandbox.md) for the full walkthrough.
 
 ## Adding a New Tool
 

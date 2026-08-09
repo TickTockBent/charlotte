@@ -35,7 +35,7 @@ agents.md
 # MCP Registry tokens
 .mcpregistry_*
 .vercel
-docs/internal
+docs-internal/internal
 
 # Local operator config for HTTP/remote mode (holds publicOrigin etc; token via env, never here)
 charlotte.config.json

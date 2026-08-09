@@ -1,0 +1,77 @@
+---
+title: Benchmarks
+description: Charlotte vs. Playwright MCP, measured — orientation cost, per-task cost, and where Charlotte still loses.
+icon: chart-line
+---
+
+{/*
+  Canonical source: README.md ("Benchmarks" section) and benchmarks/results/
+  (tasks/, drift/, raw/ — the underlying JSON runs and generated reports) at
+  the repo root. Changes flow canonical → this page, not the reverse — update
+  the source data/README first, then mirror the change here.
+*/}
+
+Measured on Charlotte v0.8.0 against [Playwright MCP](https://github.com/microsoft/playwright-mcp) v0.0.79, by characters returned per tool call on real websites (`npx tsx benchmarks/run-benchmarks.ts --suite comparison`), 2026-08-08. Full raw results and methodology live in [`benchmarks/results/`](https://github.com/TickTockBent/charlotte/tree/main/benchmarks/results) on GitHub — this page is a summary, not the methodology document.
+
+## Orientation cost
+
+What an agent pays to "see" a page on arrival. A Charlotte `navigate` returns a usable orientation by default — landmarks, headings, and interactive element counts grouped by page region. The Playwright MCP equivalent is `browser_snapshot`, which returns the full accessibility tree (`browser_navigate` alone returns only a short confirmation, not page content, so it isn't a like-for-like comparison).
+
+| Site | Charlotte `navigate` | Playwright `browser_snapshot` | Smaller by |
+|:---|---:|---:|---:|
+| example.com | 415 | 465 | 1.1x |
+| httpbin form | 619 | 1,847 | 3.0x |
+| GitHub repo | 3,778 | 38,983 | 10x |
+| Wikipedia (AI article) | 22,134 | 1,137,928 | 51x |
+| Hacker News | 364 | 50,706 | 139x |
+
+The advantage scales with page complexity: on content-heavy pages the structured orientation is **~10–140x smaller** than the full snapshot, while on a trivially small page like example.com the two are within ~20% of each other (and on a page that small, the structured representation can be the larger of the two — there is simply nothing to summarize away).
+
+## Tool definition overhead
+
+Tool definitions are sent on every API round-trip, whether or not the agent uses them.
+
+| Profile | Tools | Def. tokens/call | Savings vs full |
+|:---|---:|---:|---:|
+| full | 43 | 8,500 | — |
+| browse (default) | 23 | 4,372 | **~49%** |
+| core | 7 | 2,186 | **~75%** |
+
+## Per-task token cost
+
+A same-day, same-live-page battery of three scripted agent tasks against Charlotte v0.8.0 (23 tools, 3,825 def tokens) and Playwright MCP v0.0.79 (24 tools, 4,626 def tokens). Full call-by-call sequences: [`benchmarks/results/tasks/2026-08-09/tasks.md`](https://github.com/TickTockBent/charlotte/blob/main/benchmarks/results/tasks/2026-08-09/tasks.md).
+
+| Task | Charlotte | Playwright | Ratio |
+|:---|---:|---:|---:|
+| **T1** orient-and-read (Hacker News headlines) | 7,812 tok / 2 calls | 12,601 tok / 2 calls | 1 : 1.6 (Charlotte cheaper) |
+| **T2** find-and-act (locate and click a link) | 421 tok / 3 calls | 13,022 tok / 3 calls | 1 : 30.9 (Charlotte cheaper) |
+| **T3** form-fill (fill and submit a form) | 5,136 tok / 7 calls | 991 tok / 4 calls | 1 : 0.2 (Charlotte ~5x more expensive) |
+
+<Warning>
+  **T3 is a genuine loss, published as such.** Charlotte is far cheaper on read-oriented tasks (T1, T2) but comes out ~5x more expensive than Playwright on this multi-step form-fill task. Here's what we know about it:
+
+  - **Caught:** the per-task battery (run 2026-08-09) measured T3 flipping the pattern seen in T1/T2 — Charlotte costs 5,136 tokens across 7 calls, Playwright 991 across 4, because every Charlotte mutating call (`type`, `select`, `click`) returns the *full* page representation by design.
+  - **Cause:** a follow-up probe (replaying the exact T3 sequence and diffing consecutive mutation responses character-by-character) found same-page mutation responses are ~94–98% identical to the one before — about 96% redundant. The response already computes a `delta` field (structural diff) for exactly this purpose; the full representation ships alongside it anyway.
+  - **Fix (planned, not yet shipped):** v0.9 planning evidence proposes delta-first responses for same-page mutations (full representation only on navigation, reload, or explicit request) plus a batched fill verb, projected to bring T3 to roughly parity with Playwright. No decision record exists yet — this is evidence banked for v0.9 planning, not a committed change.
+</Warning>
+
+## Release drift
+
+Charlotte's `navigate` orientation cost, tracked across every release against the same live pages, same day (2026-08-09). Full chart and methodology: [`benchmarks/results/drift/2026-08-09/drift.md`](https://github.com/TickTockBent/charlotte/blob/main/benchmarks/results/drift/2026-08-09/drift.md).
+
+| Version | Hacker News | Wikipedia | GitHub | Tool-def tokens | Tool count |
+|:---|---:|---:|---:|---:|---:|
+| v0.2.0 | 84 | 597 | 561 | 4,808 | 32 |
+| v0.3.0 | 84 | 597 | 430 | 5,412 | 36 |
+| v0.4.2 | 84 | 642 | 460 | 3,616 | 23 |
+| v0.5.1 | 84 | 642 | 460 | 3,887 | 23 |
+| v0.6.3 | 85 | 690 | 503 | 3,979 | 23 |
+| v0.7.0 | 85 | 701 | 511 | 4,187 | 23 |
+| v0.8.0 | 91 | 707 | 518 | 3,825 | 23 |
+| playwright 0.0.79 | 12,540 | 15,849 | 8,270 | 4,626 | 24 |
+
+Charlotte's orientation cost has stayed within a narrow band across seven releases while the tool surface was cut roughly in half (v0.3.0's 36 tools down to v0.8.0's 23); Playwright's baseline sits one to two orders of magnitude higher throughout because its `browser_snapshot` scales with page *content*, not page *structure*. See the drift report for the live-page-drift and Chromium-version caveats that qualify these numbers.
+
+<Info>
+  Live pages drift — Hacker News, Wikipedia, and GitHub content changes day to day, so these numbers include real content drift alongside Charlotte's own changes. See the linked methodology for the same-day rule and per-version Chromium caveats.
+</Info>

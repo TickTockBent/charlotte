@@ -117,6 +117,16 @@ export default function Hero() {
                 </svg>
                 npm
               </a>
+              <a
+                href="https://charlotte.mintlify.site"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-surface-border font-medium text-sm hover:bg-surface-hover transition-colors"
+                data-asm-action="navigate"
+                data-asm-intent="view-documentation"
+              >
+                Docs
+              </a>
             </div>
           </div>
 

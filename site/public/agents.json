@@ -3,12 +3,13 @@
 
   "site": {
     "name": "Charlotte",
-    "description": "Open-source MCP server that renders web pages into structured, agent-readable representations using headless Chromium. 43 tools for AI agents to navigate, observe, and interact with the web.",
+    "description": "Open-source MCP server that renders web pages into structured, agent-readable representations using headless Chromium. Runs locally over stdio or self-hosted as a remote HTTP server (Docker) that clients like claude.ai can connect to over a tunnel. 43 tools for AI agents to navigate, observe, and interact with the web.",
     "primary_language": "en",
     "contact": "https://github.com/TickTockBent/charlotte/issues",
     "sameAs": [
       "https://github.com/TickTockBent/charlotte",
-      "https://www.npmjs.com/package/@ticktockbent/charlotte"
+      "https://www.npmjs.com/package/@ticktockbent/charlotte",
+      "https://charlotte.mintlify.site"
     ]
   },
 
@@ -84,6 +85,19 @@
         "name": "Changelog",
         "path": "/changelog/",
         "description": "Release history from v0.1.0 to current."
+      },
+      {
+        "name": "Documentation",
+        "path": "https://charlotte.mintlify.site/",
+        "description": "Full documentation site: installation, self-hosting Charlotte Remote, security, Docker, configuration, benchmarks, and changelog.",
+        "children": [
+          { "name": "Self-Hosting", "path": "https://charlotte.mintlify.site/self-hosting", "description": "Run Charlotte as a remote HTTP server reachable from claude.ai and other remote MCP clients." },
+          { "name": "Security", "path": "https://charlotte.mintlify.site/security", "description": "Trust model, network guards, and operator token." },
+          { "name": "Docker", "path": "https://charlotte.mintlify.site/docker", "description": "Container images and docker run / compose usage." },
+          { "name": "Configuration", "path": "https://charlotte.mintlify.site/configuration", "description": "Tool profiles, gated groups, and client setup." },
+          { "name": "Benchmarks", "path": "https://charlotte.mintlify.site/benchmarks", "description": "Methodology and full benchmark data vs Playwright MCP." },
+          { "name": "Changelog", "path": "https://charlotte.mintlify.site/changelog", "description": "Release history." }
+        ]
       }
     ],
     "sitemap": "/sitemap.xml"

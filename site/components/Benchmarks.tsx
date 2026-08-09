@@ -211,7 +211,7 @@ export default function Benchmarks() {
         {/* Link to full report */}
         <div className="mt-6">
           <a
-            href="https://github.com/TickTockBent/charlotte/blob/main/docs/charlotte-benchmark-report.md"
+            href="https://charlotte.mintlify.site/benchmarks"
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm text-accent hover:text-accent/80 transition-colors"

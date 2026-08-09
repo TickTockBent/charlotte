@@ -58,7 +58,7 @@ function RemoteSelfHost({ compact = false }: { compact?: boolean }) {
       </p>
       <div className="flex flex-wrap gap-4 pt-3 text-sm">
         <a
-          href="https://github.com/TickTockBent/charlotte/blob/main/SELF_HOSTING.md"
+          href="https://charlotte.mintlify.site/self-hosting"
           target="_blank"
           rel="noopener noreferrer"
           className="text-accent hover:text-accent/80 transition-colors"
@@ -66,7 +66,7 @@ function RemoteSelfHost({ compact = false }: { compact?: boolean }) {
           Self-hosting guide &rarr;
         </a>
         <a
-          href="https://github.com/TickTockBent/charlotte/blob/main/SECURITY.md"
+          href="https://charlotte.mintlify.site/security"
           target="_blank"
           rel="noopener noreferrer"
           className="text-accent hover:text-accent/80 transition-colors"
@@ -208,7 +208,7 @@ find({ type: "link" })
           Full setup guide &rarr;
         </a>
         <a
-          href="https://github.com/TickTockBent/charlotte/blob/main/SELF_HOSTING.md"
+          href="https://charlotte.mintlify.site/self-hosting"
           target="_blank"
           rel="noopener noreferrer"
           className="text-sm text-accent hover:text-accent/80 transition-colors"
@@ -216,7 +216,7 @@ find({ type: "link" })
           Self-hosting guide &rarr;
         </a>
         <a
-          href="https://github.com/TickTockBent/charlotte/blob/main/SECURITY.md"
+          href="https://charlotte.mintlify.site/security"
           target="_blank"
           rel="noopener noreferrer"
           className="text-sm text-accent hover:text-accent/80 transition-colors"

@@ -94,13 +94,16 @@ Charlotte's BrowserManager passes `--disable-dev-shm-usage` to Chromium, which m
 
 ### Sandbox / Security Posture
 
-Project decision D22 settled this after a
-spike (R4) confirmed Chromium's own sandbox (user-namespaces + seccomp-BPF)
-runs **enabled** in-container, **without `--privileged`**, on this host's
-Docker (27.4.1) — the Ubuntu unprivileged-userns AppArmor restriction that
-normally blocks it can be worked around without relaxing AppArmor. There are
-three postures, in the order the Debian HTTP image expects you to reach for
-them:
+Chromium's own sandbox (user-namespaces + seccomp-BPF) is a load-bearing
+defense for the HTTP image: Charlotte navigates its browser to arbitrary,
+often untrusted, URLs, and in HTTP mode a hostile page would otherwise be
+exploiting the renderer on *your server*, not a visitor's machine. Project
+decision D22 settled this after a
+spike (R4) confirmed Chromium's own sandbox runs **enabled** in-container,
+**without `--privileged`**, on this host's Docker (27.4.1) — the Ubuntu
+unprivileged-userns AppArmor restriction that normally blocks it can be
+worked around without relaxing AppArmor. There are three postures, in the
+order the Debian HTTP image expects you to reach for them:
 
 1. **Surgical seccomp profile (default, recommended)** —
    `docker/chrome-seccomp.json`. It's Docker's own default seccomp profile
@@ -127,7 +130,15 @@ them:
    23.10+/24.04-like kernel/AppArmor combo), Chromium's sandbox may already
    initialize under Docker's plain defaults. Worth trying first if you're
    unsure which camp your host falls into; postures 1/2 are what to reach
-   for if you see `No usable sandbox!` in the logs (see Troubleshooting).
+   for if you see `No usable sandbox!` in the logs (see Troubleshooting). The
+   shipped `docker-compose.yml` already applies posture 1 regardless, which
+   is safe to leave on even on a host where posture 3 would also work.
+
+**Do not run the HTTP image with `--no-sandbox` / `CHARLOTTE_NO_SANDBOX=1`.**
+That's a real option in `browser.noSandbox` / the CLI, but it's a hardening
+regression specifically in remote mode — `charlotte doctor --http` will WARN
+about it on purpose (see [docs/configuration.md](docs/configuration.md) for
+the flag).
 
 The **Alpine image's sandbox posture is unverified** — spike R4 only tested
 the Debian image (Puppeteer's bundled Chromium). `Dockerfile.alpine` keeps

@@ -2,7 +2,7 @@
 
 All notable changes to Charlotte will be documented in this file.
 
-## [0.8.0] - UNRELEASED
+## [0.8.0] - 2026-08-09
 
 This release introduces **Charlotte Remote** — an optional streamable-HTTP transport that lets Charlotte run as a self-hosted, network-reachable MCP server alongside its existing stdio transport. Read the **Security** section before exposing an instance to a network; several guards below are new and are mandatory whenever HTTP mode is enabled.
 

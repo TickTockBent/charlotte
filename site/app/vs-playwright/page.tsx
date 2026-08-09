@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Footer from "../../components/Footer";
+import ReleaseDrift from "../../components/ReleaseDrift";
+import CostPerTask from "../../components/CostPerTask";
 
 export const metadata: Metadata = {
   title: "Charlotte vs Playwright MCP — Head-to-Head Comparison",
@@ -875,6 +877,10 @@ export default function VsPlaywrightPage() {
             </div>
           </div>
         </section>
+
+        <ReleaseDrift />
+
+        <CostPerTask />
 
         {/* Getting started */}
         <section className="mb-16" aria-labelledby="start-heading">

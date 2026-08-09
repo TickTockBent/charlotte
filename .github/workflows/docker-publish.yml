@@ -116,8 +116,8 @@ jobs:
       - name: Verify published images
         run: |
           echo "Verifying Alpine image..."
-          docker pull ${{ env.GHCR_IMAGE }}:${{ steps.version.outputs.version }}
-          docker inspect ${{ env.GHCR_IMAGE }}:${{ steps.version.outputs.version }} --format '{{.Os}}/{{.Architecture}} {{.Size}}'
+          docker pull ${{ env.GHCR_IMAGE }}:${{ steps.version.outputs.version }}-alpine
+          docker inspect ${{ env.GHCR_IMAGE }}:${{ steps.version.outputs.version }}-alpine --format '{{.Os}}/{{.Architecture}} {{.Size}}'
 
           echo "Verifying Debian image..."
           docker pull ${{ env.GHCR_IMAGE }}:${{ steps.version.outputs.version }}-debian

@@ -1,0 +1,29 @@
+# Charlotte
+
+> Open-source MCP server that renders web pages into structured, agent-readable
+> representations using headless Chromium. It gives an agent the page as
+> structure rather than a raw accessibility dump, which is where most of the
+> token cost in browser automation goes.
+
+Charlotte runs locally over stdio, or self-hosted as a remote HTTP server via
+Docker that clients such as claude.ai can reach over a tunnel. It exposes 43
+tools for navigating, observing and interacting with the web.
+
+Structured capabilities, navigation and access policy for this site are
+published at https://charlotte-rose.vercel.app/.well-known/agents.json
+
+## Pages
+
+- [Home](https://charlotte-rose.vercel.app/): overview, architecture diagram, key stats and quick start
+- [Charlotte vs Playwright MCP](https://charlotte-rose.vercel.app/vs-playwright/): head-to-head comparison with benchmark data from Wikipedia, GitHub, Hacker News and LinkedIn
+- [Changelog](https://charlotte-rose.vercel.app/changelog/): release history from v0.1.0 to current
+
+## Documentation
+
+- [Full documentation](https://charlotte.mintlify.site/): installation, self-hosting Charlotte Remote, security, Docker and configuration
+
+## Source and packages
+
+- [GitHub](https://github.com/TickTockBent/charlotte): source, issues and contribution guide
+- [npm](https://www.npmjs.com/package/@ticktockbent/charlotte): published package
+- License: MIT

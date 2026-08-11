@@ -1,4 +1,15 @@
 {
   "framework": "nextjs",
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- ."
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- .",
+  "headers": [
+    {
+      "source": "/((?!_next/static|_next/image|favicon.ico).*)",
+      "headers": [
+        {
+          "key": "Link",
+          "value": "</.well-known/agents.json>; rel=\"agents-manifest\""
+        }
+      ]
+    }
+  ]
 }

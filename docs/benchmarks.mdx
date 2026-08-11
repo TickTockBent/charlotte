@@ -11,7 +11,7 @@ icon: chart-line
   the reverse — update the source data/README first, then mirror the change here.
 */}
 
-Measured on Charlotte v0.8.0 against [Playwright MCP](https://github.com/microsoft/playwright-mcp) v0.0.79, by characters returned per tool call on real websites (`npx tsx benchmarks/run-benchmarks.ts --suite comparison`), 2026-08-08. Full raw results and methodology live in [`benchmarks/`](https://github.com/TickTockBent/charlotte/blob/main/benchmarks/README.md) on GitHub — this page is a summary, not the methodology document.
+Measured on Charlotte v0.8.0 against [Playwright MCP](https://github.com/microsoft/playwright-mcp) v0.0.79, by characters returned per tool call on real websites (`npx tsx benchmarks/run-benchmarks.ts --suite comparison`), 2026-08-08. Full raw results and methodology live in [`benchmarks/`](https://github.com/TickTockBent/charlotte/blob/main/benchmarks/README.md) on GitHub. This page is a summary, not the methodology document.
 
 ## Orientation cost
 
@@ -25,7 +25,7 @@ What an agent pays to "see" a page on arrival. A Charlotte `navigate` returns a 
 | Wikipedia (AI article) | 22,134 | 1,137,928 | 51x |
 | Hacker News | 364 | 50,706 | 139x |
 
-The advantage scales with page complexity: on content-heavy pages the structured orientation is **~10–140x smaller** than the full snapshot, while on a trivially small page like example.com the two are within ~20% of each other (and on a page that small, the structured representation can be the larger of the two — there is simply nothing to summarize away).
+The advantage scales with page complexity: on content-heavy pages the structured orientation is **~10–140x smaller** than the full snapshot, while on a trivially small page like example.com the two are within ~20% of each other. On a page that small, the structured representation can be the larger of the two, because there is simply nothing to summarize away.
 
 ## Tool definition overhead
 
@@ -50,9 +50,9 @@ A same-day, same-live-page battery of three scripted agent tasks against Charlot
 <Warning>
   **T3 is a genuine loss, published as such.** Charlotte is far cheaper on read-oriented tasks (T1, T2) but comes out ~5x more expensive than Playwright on this multi-step form-fill task. Here's what we know about it:
 
-  - **Caught:** the per-task battery (run 2026-08-09) measured T3 flipping the pattern seen in T1/T2 — Charlotte costs 5,136 tokens across 7 calls, Playwright 991 across 4, because every Charlotte mutating call (`type`, `select`, `click`) returns the *full* page representation by design.
-  - **Cause:** a follow-up probe (replaying the exact T3 sequence and diffing consecutive mutation responses character-by-character) found same-page mutation responses are ~94–98% identical to the one before — about 96% redundant. The response already computes a `delta` field (structural diff) for exactly this purpose; the full representation ships alongside it anyway.
-  - **Fix (planned, not yet shipped):** v0.9 planning evidence proposes delta-first responses for same-page mutations (full representation only on navigation, reload, or explicit request) plus a batched fill verb, projected to bring T3 to roughly parity with Playwright. No decision record exists yet — this is evidence banked for v0.9 planning, not a committed change.
+  - **Caught:** the per-task battery (run 2026-08-09) measured T3 flipping the pattern seen in T1/T2. Charlotte costs 5,136 tokens across 7 calls, Playwright 991 across 4, because every Charlotte mutating call (`type`, `select`, `click`) returns the *full* page representation by design.
+  - **Cause:** a follow-up probe (replaying the exact T3 sequence and diffing consecutive mutation responses character-by-character) found same-page mutation responses are ~94–98% identical to the one before, about 96% redundant. The response already computes a `delta` field (structural diff) for exactly this purpose; the full representation ships alongside it anyway.
+  - **Fix (planned, not yet shipped):** v0.9 planning evidence proposes delta-first responses for same-page mutations (full representation only on navigation, reload, or explicit request) plus a batched fill verb, projected to bring T3 to roughly parity with Playwright. No decision record exists yet. This is evidence banked for v0.9 planning, not a committed change.
 </Warning>
 
 ## Release drift

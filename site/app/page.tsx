@@ -11,9 +11,10 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background" data-asm-page-type="homepage" data-asm-page-purpose="Learn about Charlotte, an MCP server for token-efficient web browsing by AI agents. View benchmarks, tools, examples, and installation instructions.">
       {/* Nav */}
+      <header>
       <nav aria-label="Primary navigation" className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b border-surface-border">
         <div className="max-w-5xl mx-auto px-6 sm:px-8 lg:px-12 h-14 flex items-center justify-between">
-          <a href="#" className="font-mono font-bold text-foreground">
+          <a href="/" className="font-mono font-bold text-foreground">
             charlotte
           </a>
           <div className="hidden sm:flex items-center gap-6 text-sm text-muted">
@@ -58,6 +59,7 @@ export default function Home() {
           </a>
         </div>
       </nav>
+      </header>
 
       {/* Main content */}
       <main>

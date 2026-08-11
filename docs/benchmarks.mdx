@@ -11,11 +11,11 @@ icon: chart-line
   the reverse — update the source data/README first, then mirror the change here.
 */}
 
-Measured on Charlotte v0.8.0 against [Playwright MCP](https://github.com/microsoft/playwright-mcp) v0.0.79, by characters returned per tool call on real websites (`npx tsx benchmarks/run-benchmarks.ts --suite comparison`), 2026-08-08. Full raw results and methodology live in [`benchmarks/`](https://github.com/TickTockBent/charlotte/blob/main/benchmarks/README.md) on GitHub. This page is a summary, not the methodology document.
+Measured on Charlotte v0.8.0 against [Playwright MCP](https://github.com/microsoft/playwright-mcp) v0.0.79 on 2026-08-08. Results are characters returned per tool call on real websites, using `npx tsx benchmarks/run-benchmarks.ts --suite comparison`. Full raw results and methodology live in [`benchmarks/`](https://github.com/TickTockBent/charlotte/blob/main/benchmarks/README.md) on GitHub. This page is a summary, not the methodology document.
 
 ## Orientation cost
 
-What an agent pays to "see" a page on arrival. A Charlotte `navigate` returns a usable orientation by default — landmarks, headings, and interactive element counts grouped by page region. The Playwright MCP equivalent is `browser_snapshot`, which returns the full accessibility tree (`browser_navigate` alone returns only a short confirmation, not page content, so it isn't a like-for-like comparison).
+What an agent pays to "see" a page on arrival. A Charlotte `navigate` returns a usable orientation by default. That orientation includes landmarks, headings, and interactive element counts grouped by page region. The Playwright MCP equivalent is `browser_snapshot`, which returns the full accessibility tree. `browser_navigate` alone returns only a short confirmation, not page content, so it isn't a like-for-like comparison.
 
 | Site | Charlotte `navigate` | Playwright `browser_snapshot` | Smaller by |
 |:---|---:|---:|---:|
@@ -25,7 +25,7 @@ What an agent pays to "see" a page on arrival. A Charlotte `navigate` returns a 
 | Wikipedia (AI article) | 22,134 | 1,137,928 | 51x |
 | Hacker News | 364 | 50,706 | 139x |
 
-The advantage scales with page complexity: on content-heavy pages the structured orientation is **~10–140x smaller** than the full snapshot, while on a trivially small page like example.com the two are within ~20% of each other. On a page that small, the structured representation can be the larger of the two, because there is simply nothing to summarize away.
+The advantage scales with page complexity. On content-heavy pages the structured orientation is **~10–140x smaller** than the full snapshot. On a trivially small page like example.com the two are within ~20% of each other. On a page that small, the structured representation can be the larger of the two, because there is simply nothing to summarize away.
 
 ## Tool definition overhead
 
@@ -70,8 +70,8 @@ Charlotte's `navigate` orientation cost, tracked across every release against th
 | v0.8.0 | 91 | 707 | 518 | 3,825 | 23 |
 | playwright 0.0.79 | 12,540 | 15,849 | 8,270 | 4,626 | 24 |
 
-Charlotte's orientation cost has stayed within a narrow band across seven releases while the tool surface was cut roughly in half (v0.3.0's 36 tools down to v0.8.0's 23); Playwright's baseline sits one to two orders of magnitude higher throughout because its `browser_snapshot` scales with page *content*, not page *structure*. See the drift report for the live-page-drift and Chromium-version caveats that qualify these numbers.
+Charlotte's orientation cost has stayed within a narrow band across seven releases while the tool surface was cut roughly in half, from v0.3.0's 36 tools down to v0.8.0's 23. Playwright's baseline sits one to two orders of magnitude higher throughout, because its `browser_snapshot` scales with page *content*, not page *structure*. See the drift report for the live-page-drift and Chromium-version caveats that qualify these numbers.
 
 <Info>
-  Live pages drift — Hacker News, Wikipedia, and GitHub content changes day to day, so these numbers include real content drift alongside Charlotte's own changes. See the linked methodology for the same-day rule and per-version Chromium caveats.
+  Live pages drift. Hacker News, Wikipedia, and GitHub content changes day to day, so these numbers include real content drift alongside Charlotte's own changes. See the linked methodology for the same-day rule and per-version Chromium caveats.
 </Info>

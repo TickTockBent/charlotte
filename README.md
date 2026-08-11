@@ -18,7 +18,7 @@ Charlotte decomposes each page into a typed, structured representation — landm
 
 ### Benchmarks
 
-Measured on Charlotte v0.8.0 against [Playwright MCP](https://github.com/microsoft/playwright-mcp) v0.0.79, by characters returned per tool call on real websites (`npx tsx benchmarks/run-benchmarks.ts --suite comparison`), 2026-08-08. Raw results: [`benchmarks/results/raw/v0.8.0/`](benchmarks/results/raw/v0.8.0/).
+Measured on Charlotte v0.8.0 against [Playwright MCP](https://github.com/microsoft/playwright-mcp) v0.0.79, by characters returned per tool call on real websites (`npx tsx benchmarks/run-benchmarks.ts --suite comparison`), 2026-08-08. Methodology, instruments, and raw results: [`benchmarks/`](benchmarks/README.md).
 
 **Orientation cost** (what an agent pays to "see" a page on arrival):
 

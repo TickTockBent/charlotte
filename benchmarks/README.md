@@ -8,7 +8,7 @@ Three things are measured, by three separate instruments:
 
 | Instrument | Question it answers | Published results |
 |:---|:---|:---|
-| `run-benchmarks.ts` | How many characters does each server return per tool call on real sites? | [`results/raw/v0.8.0/`](results/raw/v0.8.0/) |
+| `run-benchmarks.ts` | How many characters does each server return per tool call on real sites? | [`results/raw/v0.8.0/summary.md`](results/raw/v0.8.0/summary.md) |
 | `run-drift.ts` | Has Charlotte's orientation cost crept up across releases? | [`results/drift/2026-08-09/drift.md`](results/drift/2026-08-09/drift.md) |
 | `run-tasks.ts` | What does a whole realistic agent task cost, end to end? | [`results/tasks/2026-08-09/tasks.md`](results/tasks/2026-08-09/tasks.md) |
 

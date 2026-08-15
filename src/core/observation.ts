@@ -435,10 +435,19 @@ const screenshotTool = defineTool({
       .boolean()
       .optional()
       .describe(
-        "Capture the entire scrollable page (default: true). Set false to capture only the current viewport — much smaller output for long pages. Ignored when 'selector' is provided.",
+        "Capture the entire scrollable page (default: true, or false in remote mode). Set false to capture only the current viewport — much smaller output for long pages. Ignored when 'selector' is provided.",
+      ),
+    max_height: z
+      .number()
+      .int()
+      .min(100)
+      .max(16384)
+      .optional()
+      .describe(
+        "Maximum screenshot height in pixels (default: 2000). When full_page is true and the page exceeds this height, the screenshot is clipped from the top. Prevents multi-minute waits on very long pages (e.g. Wikipedia articles 28000+px tall). Set to 16384 to disable clipping.",
       ),
   },
-  async handler(deps, { selector, format, quality, save, output_file, full_page }) {
+  async handler(deps, { selector, format, quality, save, output_file, full_page, max_height }) {
     try {
       if (save && output_file) {
         throw new CharlotteError(
@@ -472,6 +481,33 @@ const screenshotTool = defineTool({
 
       let screenshotBase64: string;
 
+      // Compute clip for full-page captures that would exceed max_height.
+      // Chromium's compositor scales super-linearly with screenshot height:
+      // a 28000px Wikipedia article takes 60+ seconds, while a 4000px clip
+      // takes ~3 seconds. We cap the height to keep screenshots responsive.
+      const maxScreenshotHeight = max_height ?? 2000;
+      let clipRegion: { x: number; y: number; width: number; height: number } | undefined;
+      if (!selector && effectiveFullPage && maxScreenshotHeight < 16384) {
+        try {
+          const scrollHeight = await page.evaluate(() => document.documentElement.scrollHeight);
+          if (scrollHeight > maxScreenshotHeight) {
+            const viewportWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+            clipRegion = {
+              x: 0,
+              y: 0,
+              width: viewportWidth,
+              height: maxScreenshotHeight,
+            };
+            logger.info("Clipping full-page screenshot", {
+              scrollHeight,
+              clipHeight: maxScreenshotHeight,
+            });
+          }
+        } catch {
+          // If we can't read the scroll height, proceed with fullPage
+        }
+      }
+
       if (selector) {
         const element = await page.$(selector);
         if (!element) {
@@ -488,6 +524,14 @@ const screenshotTool = defineTool({
           type: screenshotFormat,
           quality: screenshotFormat !== "png" ? quality : undefined,
           encoding: "base64",
+        })) as string;
+      } else if (clipRegion) {
+        // Use clip instead of fullPage to avoid super-linear compositor cost
+        screenshotBase64 = (await page.screenshot({
+          type: screenshotFormat,
+          quality: screenshotFormat !== "png" ? quality : undefined,
+          encoding: "base64",
+          clip: clipRegion,
         })) as string;
       } else {
         screenshotBase64 = (await page.screenshot({

@@ -3,8 +3,22 @@ name: CI
 on:
   push:
     branches: [main]
+    # Docs-only changes (docs/, the marketing site, root markdown) can't
+    # affect the build, tests, or audit — they get the lightweight docs.yml
+    # workflow (lint:docs) instead. A PR touching docs AND code still runs
+    # full CI: paths-ignore skips only when ALL changed files match.
+    paths-ignore:
+      - "docs/**"
+      - "site/**"
+      - "**.md"
+      - "LICENSE"
   pull_request:
     branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "site/**"
+      - "**.md"
+      - "LICENSE"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

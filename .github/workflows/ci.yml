@@ -63,9 +63,15 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: npm
       - name: Install Chromium system dependencies
+        # A wedged Azure apt mirror hangs apt indefinitely (no default HTTP
+        # timeout), eating the whole 15-minute job budget. Fail fast + retry
+        # instead, and cap the step so a pathological hang costs 4 minutes.
+        timeout-minutes: 4
+        env:
+          APT_OPTS: -o Acquire::Retries=3 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
+          sudo apt-get $APT_OPTS update
+          sudo apt-get $APT_OPTS install -y --no-install-recommends \
             libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 \
             libcups2 libdrm2 libxkbcommon0 libxcomposite1 \
             libxdamage1 libxfixes3 libxrandr2 libgbm1 \
@@ -95,9 +101,15 @@ jobs:
           node-version: 22
           cache: npm
       - name: Install Chromium system dependencies
+        # A wedged Azure apt mirror hangs apt indefinitely (no default HTTP
+        # timeout), eating the whole 15-minute job budget. Fail fast + retry
+        # instead, and cap the step so a pathological hang costs 4 minutes.
+        timeout-minutes: 4
+        env:
+          APT_OPTS: -o Acquire::Retries=3 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
+          sudo apt-get $APT_OPTS update
+          sudo apt-get $APT_OPTS install -y --no-install-recommends \
             libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 \
             libcups2 libdrm2 libxkbcommon0 libxcomposite1 \
             libxdamage1 libxfixes3 libxrandr2 libgbm1 \

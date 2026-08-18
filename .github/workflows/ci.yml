@@ -43,8 +43,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --ignore-scripts
-      # Fail on high-severity vulnerabilities; report lower severities as informational.
-      - run: npm audit --audit-level=high
+      # Fail on high/critical advisories EXCEPT the reviewed accepted-risk
+      # allowlist in scripts/audit-check.mts (each entry documented under
+      # "Known accepted risks" in docs/security.mdx).
+      - run: npm run audit:check
 
   test:
     name: Test (Node ${{ matrix.node-version }})

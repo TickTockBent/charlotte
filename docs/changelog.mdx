@@ -1,10 +1,10 @@
 ---
 title: Charlotte changelog and release notes
-description: Weekly product updates, new features, and the full versioned release history for Charlotte, the MCP server that renders web pages for agents.
+description: Weekly product updates and new features for Charlotte, the MCP server that renders web pages into structured, agent-readable representations.
 icon: clock-rotate-left
 ---
 
-Weekly summaries of what shipped live on this page. The complete, versioned history stays in the repo.
+Weekly summaries of what shipped live on this page. The complete versioned history stays in the repo.
 
 <CardGroup cols={2}>
   <Card title="CHANGELOG.md" icon="file-lines" href="https://github.com/TickTockBent/charlotte/blob/main/CHANGELOG.md">
@@ -19,7 +19,7 @@ Weekly summaries of what shipped live on this page. The complete, versioned hist
 
 ### New features
 
-- **`max_height` on `charlotte_screenshot` clips long pages.** Full-page screenshots now stop at 2000 pixels by default, so a single call on a very tall page no longer returns a multi-megabyte image that exceeds the 256 KB inline artifact cap. Set `max_height` to raise or lower the cutoff, up to the Chromium limit of `16384` to effectively disable clipping. When clipping happens, the response includes a `clipped` block reporting the original page height and the height that was captured, so agents can decide whether to scroll and take a follow-up screenshot. Existing calls pick up the new `2000` default automatically.
+- **`max_height` on `charlotte_screenshot` clips long pages.** Full-page screenshots now stop at 2000 pixels by default. This keeps a single call on a very tall page from returning a multi-megabyte image that exceeds the 256 KB inline artifact cap. Set `max_height` to raise or lower the cutoff, up to the Chromium limit of `16384` to effectively disable clipping. When clipping happens, the response includes a `clipped` block reporting the original page height and the captured height. Agents can use it to decide whether to scroll and take a follow-up screenshot. Existing calls pick up the new `2000` default automatically.
 
     ```json
     {

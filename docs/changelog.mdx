@@ -16,9 +16,3 @@ Charlotte's full release history is kept in one place, in the repo:
 </CardGroup>
 
 This page intentionally doesn't duplicate the changelog's content. `CHANGELOG.md` in the repo is the single source of truth, updated with every version bump.
-
-## Week of August 18, 2026
-
-### New features
-
-- **`max_height` on `charlotte_screenshot`.** Full-page screenshots now clip from the top when the page exceeds `max_height` (default `2000`px). This keeps `charlotte_screenshot` responsive on very long pages, where Chromium's compositor cost grows super-linearly with height. When a clip fires, the response includes a `clipped` block reporting `captured_height` and `full_page_height`. Callers can use these fields to tell a complete short capture from a top slice of a taller page. Set `max_height: 16384` to disable clipping and always capture the full page. Calls that don't pass `max_height` get the new default automatically, with no code changes required.

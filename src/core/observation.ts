@@ -159,6 +159,17 @@ function isContainedWithin(boundsInner: Bounds, boundsOuter: Bounds): boolean {
 
 const NEAR_THRESHOLD_PX = 200;
 
+/**
+ * Screenshots taller than this are outside webp's encode range (D6 §5) and
+ * Chromium's own fullPage cap; `max_height` maxes out here to fully disable
+ * clipping. Shared by the zod schema bound below and the handler's clip check
+ * so the two can't drift.
+ */
+const MAX_SCREENSHOT_HEIGHT = 16384;
+
+/** Default clip height when `max_height` is not specified. */
+const DEFAULT_SCREENSHOT_HEIGHT = 2000;
+
 const observeTool = defineTool({
   name: "charlotte_observe",
   description:
@@ -441,10 +452,10 @@ const screenshotTool = defineTool({
       .number()
       .int()
       .min(100)
-      .max(16384)
+      .max(MAX_SCREENSHOT_HEIGHT)
       .optional()
       .describe(
-        "Maximum screenshot height in pixels (default: 2000). When full_page is true and the page exceeds this height, the screenshot is clipped from the top. Prevents multi-minute waits on very long pages (e.g. Wikipedia articles 28000+px tall). Set to 16384 to disable clipping.",
+        `Maximum screenshot height in pixels (default: ${DEFAULT_SCREENSHOT_HEIGHT}). When full_page is true and the page exceeds this height, the screenshot is clipped from the top and the response carries a 'clipped' text block alongside the image. Prevents multi-minute waits on very long pages (e.g. Wikipedia articles 28000+px tall). Set to ${MAX_SCREENSHOT_HEIGHT} to disable clipping.`,
       ),
   },
   async handler(deps, { selector, format, quality, save, output_file, full_page, max_height }) {
@@ -485,26 +496,33 @@ const screenshotTool = defineTool({
       // Chromium's compositor scales super-linearly with screenshot height:
       // a 28000px Wikipedia article takes 60+ seconds, while a 4000px clip
       // takes ~3 seconds. We cap the height to keep screenshots responsive.
-      const maxScreenshotHeight = max_height ?? 2000;
+      const maxScreenshotHeight = max_height ?? DEFAULT_SCREENSHOT_HEIGHT;
       let clipRegion: { x: number; y: number; width: number; height: number } | undefined;
-      if (!selector && effectiveFullPage && maxScreenshotHeight < 16384) {
+      let clipInfo: { fullPageHeight: number; capturedHeight: number } | undefined;
+      if (!selector && effectiveFullPage && maxScreenshotHeight < MAX_SCREENSHOT_HEIGHT) {
         try {
-          const scrollHeight = await page.evaluate(() => document.documentElement.scrollHeight);
+          const { scrollHeight, scrollWidth } = await page.evaluate(() => ({
+            scrollHeight: document.documentElement.scrollHeight,
+            scrollWidth: document.documentElement.scrollWidth,
+          }));
           if (scrollHeight > maxScreenshotHeight) {
-            const viewportWidth = await page.evaluate(() => document.documentElement.scrollWidth);
             clipRegion = {
               x: 0,
               y: 0,
-              width: viewportWidth,
+              width: scrollWidth,
               height: maxScreenshotHeight,
             };
+            clipInfo = { fullPageHeight: scrollHeight, capturedHeight: maxScreenshotHeight };
             logger.info("Clipping full-page screenshot", {
               scrollHeight,
               clipHeight: maxScreenshotHeight,
             });
           }
-        } catch {
-          // If we can't read the scroll height, proceed with fullPage
+        } catch (error: unknown) {
+          // If we can't read the scroll height, proceed with fullPage.
+          logger.debug("Failed to read page height for clipping, falling back to fullPage", {
+            error: error instanceof Error ? error.message : String(error),
+          });
         }
       }
 
@@ -592,6 +610,22 @@ const screenshotTool = defineTool({
           mimeType: `image/${screenshotFormat}`,
         },
       ];
+
+      // Announce the clip so the caller (an agent with no independent
+      // knowledge of the page height) can tell a complete short capture
+      // from the top slice of a much taller page, and knows how to see
+      // the rest if it needs to.
+      if (clipInfo) {
+        content.push({
+          type: "text" as const,
+          text: JSON.stringify({
+            clipped: true,
+            captured_height: clipInfo.capturedHeight,
+            full_page_height: clipInfo.fullPageHeight,
+            message: `Page is ${clipInfo.fullPageHeight}px tall; captured the top ${clipInfo.capturedHeight}px. Re-capture with a larger max_height, a 'selector', or full_page: false after scrolling to see more.`,
+          }),
+        });
+      }
 
       // Persist as artifact when requested
       if (save) {

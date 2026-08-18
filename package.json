@@ -47,6 +47,7 @@
     "goldens:refresh": "tsx scripts/refresh-goldens.ts",
     "report:remote": "tsx benchmarks/remote-report.ts",
     "lint": "eslint src/ tests/",
+    "lint:docs": "tsx scripts/lint-docs.mts",
     "lint:fix": "eslint src/ tests/ --fix",
     "format": "prettier --write 'src/**/*.ts' 'tests/**/*.ts'",
     "format:check": "prettier --check 'src/**/*.ts' 'tests/**/*.ts'"

@@ -2,7 +2,8 @@ services:
   # Primary service: Debian image, HTTP transport, Chromium sandbox ENABLED
   # (decision D22 — spike R4 verified this in-container without --privileged).
   # Full walkthrough (token generation, publicOrigin/OAuth facade, tunnel
-  # setup): SELF_HOSTING.md. Sandbox posture details: DOCKER.md.
+  # setup): https://charlotte.mintlify.site/self-hosting. Sandbox posture
+  # details: https://charlotte.mintlify.site/docker.
   charlotte:
     build:
       context: .
@@ -45,7 +46,8 @@ services:
       # keeps the sandbox ON (see Dockerfile comment / D22).
     volumes:
       # Supplies the `http` block (host, port, publicOrigin, allowedHosts,
-      # profile, ...) — see charlotte.config.example.json and SELF_HOSTING.md.
+      # profile, ...) — see charlotte.config.example.json and
+      # https://charlotte.mintlify.site/self-hosting.
       # `host` must be "0.0.0.0" here so the server is reachable from outside
       # the container; the code default (127.0.0.1) is loopback-only and
       # would only be reachable from inside this container's own network

@@ -1,0 +1,38 @@
+# Lightweight gate for docs-only changes. Full CI (ci.yml) ignores docs/,
+# site/, and markdown via paths-ignore; this workflow is the one check that
+# DOES care about docs/ — the GitHub-safe MDX lint (see CLAUDE.md "Docs").
+# Mixed docs+code PRs run both workflows; ci.yml's check job also runs
+# lint:docs, so the overlap is harmless.
+name: Docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "docs/**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint-docs:
+    name: Docs lint (GitHub-safe MDX)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      # --ignore-scripts skips Puppeteer's Chromium download — not needed for lint
+      - run: npm ci --ignore-scripts
+      - run: npm run lint:docs

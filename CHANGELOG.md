@@ -184,7 +184,7 @@ This release hardens Charlotte for untrusted pages, fixes a long tail of silent-
 
 ### Added
 
-- **Popup and target="\_blank" tab capture** — Clicks on `target="_blank"` links and `window.open()` calls were silently lost because PageManager had no `popup` event handler. New tabs are now auto-captured via `page.on("popup")`, auto-cleaned when pages close themselves, and surfaced as `opened_tabs` in tool responses using single-consumption semantics. Fixes #103, #98.
+- **Popup and target="_blank" tab capture** — Clicks on `target="_blank"` links and `window.open()` calls were silently lost because PageManager had no `popup` event handler. New tabs are now auto-captured via `page.on("popup")`, auto-cleaned when pages close themselves, and surfaced as `opened_tabs` in tool responses using single-consumption semantics. Fixes #103, #98.
 - **Contributor issue templates** — Bug report, feature request, and tool request templates added to the repository. Community links added to README. (#102)
 
 ### Changed

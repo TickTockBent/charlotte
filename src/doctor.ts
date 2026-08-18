@@ -211,7 +211,7 @@ export async function checkBrowser(resolved: ResolvedOptions): Promise<DoctorChe
         return warn(
           "Browser launches & renders",
           `Chromium launched and rendered a test page (${sandboxNote}).`,
-          "Remote + unsandboxed Chromium is a hardening regression (design spec §3.5): a hostile page now exploits the renderer on your server, not the visitor's machine. Only run --no-sandbox / CHARLOTTE_NO_SANDBOX in a container with a working seccomp profile (see SELF_HOSTING.md and DOCKER.md).",
+          "Remote + unsandboxed Chromium is a hardening regression (design spec §3.5): a hostile page now exploits the renderer on your server, not the visitor's machine. Only run --no-sandbox / CHARLOTTE_NO_SANDBOX in a container with a working seccomp profile (see https://charlotte.mintlify.site/self-hosting and https://charlotte.mintlify.site/docker).",
         );
       }
       return pass(
@@ -226,7 +226,7 @@ export async function checkBrowser(resolved: ResolvedOptions): Promise<DoctorChe
     return fail(
       "Browser launches & renders",
       `Chromium failed to launch or render: ${detail}`,
-      "If running in a container, pass --no-sandbox (or CHARLOTTE_NO_SANDBOX=1) and make sure a seccomp profile / userns setup is available (see SELF_HOSTING.md and DOCKER.md); on bare metal, check that Chromium's dependencies are installed.",
+      "If running in a container, pass --no-sandbox (or CHARLOTTE_NO_SANDBOX=1) and make sure a seccomp profile / userns setup is available (see https://charlotte.mintlify.site/self-hosting and https://charlotte.mintlify.site/docker); on bare metal, check that Chromium's dependencies are installed.",
     );
   } finally {
     await browserManager.close().catch(() => {});

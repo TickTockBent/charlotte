@@ -4,13 +4,7 @@ description: The trust boundary, network guards, OAuth handshake, and sizing for
 icon: shield-halved
 ---
 
-{/*
-  Canonical source: SECURITY.md at the repo root. Changes flow
-  canonical → this page, not the reverse — update SECURITY.md first,
-  then mirror the change here.
-*/}
-
-This is the security model for Charlotte Remote (HTTP mode) — the trust boundary, the network guards, the OAuth handshake, and the sizing you should know before exposing Charlotte to claude.ai or any other MCP client over HTTPS. For the self-hosting walkthrough, see [Self-Hosting](/self-hosting); for container/sandbox internals, see [Docker](/docker).
+This is the security model for Charlotte Remote (HTTP mode) — the trust boundary, the network guards, the OAuth handshake, and the sizing you should know before exposing Charlotte to claude.ai or any other MCP client over HTTPS. For the self-hosting walkthrough, see [Self-Hosting](https://charlotte.mintlify.site/self-hosting); for container/sandbox internals, see [Docker](https://charlotte.mintlify.site/docker).
 
 ## The token is the whole trust boundary
 
@@ -22,7 +16,7 @@ This is the security model for Charlotte Remote (HTTP mode) — the trust bounda
 
 ## Outbound SSRF / navigation guard
 
-Every navigation Charlotte's browser makes is checked against a deny-by-default list of private address ranges — loopback, RFC1918 (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), link-local (`169.254.0.0/16`, including the `169.254.169.254` cloud metadata address), CGNAT/Tailscale (`100.64.0.0/10`), and their IPv6 equivalents. This is checked against the **resolved** IP at request time (not just the URL string), so it isn't fooled by a hostname that resolves to a private address or a redirect chain that ends up there. `http.allowPrivateNetworks` (see [Configuration](/configuration)) is the only way to punch a hole in this — leave it `[]` unless you have a specific reason your Charlotte needs to reach something on your own network.
+Every navigation Charlotte's browser makes is checked against a deny-by-default list of private address ranges — loopback, RFC1918 (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), link-local (`169.254.0.0/16`, including the `169.254.169.254` cloud metadata address), CGNAT/Tailscale (`100.64.0.0/10`), and their IPv6 equivalents. This is checked against the **resolved** IP at request time (not just the URL string), so it isn't fooled by a hostname that resolves to a private address or a redirect chain that ends up there. `http.allowPrivateNetworks` (see [Configuration](https://charlotte.mintlify.site/configuration)) is the only way to punch a hole in this — leave it `[]` unless you have a specific reason your Charlotte needs to reach something on your own network.
 
 ## Inbound Host-header guard
 
@@ -32,26 +26,12 @@ Requests whose `Host` header doesn't match an expected hostname are refused with
 
 This is claude.ai's real, observed connector behavior against Charlotte's OAuth facade, not a guess:
 
-<Steps>
-  <Step title="Unauthenticated probe">
-    claude.ai `POST`s `/mcp` with no credential → `401`.
-  </Step>
-  <Step title="Discovery">
-    It fetches Charlotte's OAuth discovery documents (`/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`) — both only exist because `publicOrigin` is set; without it these 404 and the connector add fails with an error about not being able to register a sign-in service.
-  </Step>
-  <Step title="Dynamic client registration">
-    It dynamically registers itself as an OAuth client (`POST /oauth/register`) and gets back a `client_id` — no manual credential-copying required on your end.
-  </Step>
-  <Step title="Consent">
-    **Your browser** is redirected to Charlotte's consent page (`GET /oauth/authorize`) — a plain server-rendered page with one field. **Enter your `CHARLOTTE_AUTH_TOKEN` here.** This is the one and only place you type the token during connector setup.
-  </Step>
-  <Step title="Token exchange">
-    On success, Charlotte redirects back to claude.ai with an authorization code; claude.ai's backend exchanges it (`POST /oauth/token`) for a bearer token derived from your operator token — distinct from it, but cryptographically tied to it (no server-side storage: restart Charlotte with the same token and the derived credential is unchanged; restart with a *different* token and claude.ai's stored credential silently stops working, which is how you revoke it — see above).
-  </Step>
-  <Step title="Steady state">
-    From then on, claude.ai's connector authenticates every `/mcp` call with that derived bearer token, transparently — no further prompts.
-  </Step>
-</Steps>
+1. **Unauthenticated probe.** claude.ai `POST`s `/mcp` with no credential → `401`.
+2. **Discovery.** It fetches Charlotte's OAuth discovery documents (`/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`) — both only exist because `publicOrigin` is set; without it these 404 and the connector add fails with an error about not being able to register a sign-in service.
+3. **Dynamic client registration.** It dynamically registers itself as an OAuth client (`POST /oauth/register`) and gets back a `client_id` — no manual credential-copying required on your end.
+4. **Consent.** **Your browser** is redirected to Charlotte's consent page (`GET /oauth/authorize`) — a plain server-rendered page with one field. **Enter your `CHARLOTTE_AUTH_TOKEN` here.** This is the one and only place you type the token during connector setup.
+5. **Token exchange.** On success, Charlotte redirects back to claude.ai with an authorization code; claude.ai's backend exchanges it (`POST /oauth/token`) for a bearer token derived from your operator token — distinct from it, but cryptographically tied to it (no server-side storage: restart Charlotte with the same token and the derived credential is unchanged; restart with a *different* token and claude.ai's stored credential silently stops working, which is how you revoke it — see above).
+6. **Steady state.** From then on, claude.ai's connector authenticates every `/mcp` call with that derived bearer token, transparently — no further prompts.
 
 ## Not multi-tenant
 
@@ -69,7 +49,7 @@ A screenshot or similar artifact up to 256 KB is returned inline in the tool res
 
 ## Container sandbox posture
 
-Chromium's own sandbox is a load-bearing part of this model — the Docker image ships with it enabled, not disabled, so a hostile page a session navigates to is exploiting the renderer inside the sandbox, not your server. See [Docker: Sandbox / Security Posture](/docker#sandbox-/-security-posture) for the full mechanics and troubleshooting.
+Chromium's own sandbox is a load-bearing part of this model — the Docker image ships with it enabled, not disabled, so a hostile page a session navigates to is exploiting the renderer inside the sandbox, not your server. See [Docker: Sandbox and security posture](https://charlotte.mintlify.site/docker#sandbox-and-security-posture) for the full mechanics and troubleshooting.
 
 ## Known accepted risks
 
@@ -81,3 +61,7 @@ Chromium's own sandbox is a load-bearing part of this model — the Docker image
   Linux. Accepted for v0.8.0 (2026-08-09); will clear when the MCP SDK moves
   to `@hono/node-server` ≥ 2.0.5. If you run Charlotte's HTTP mode directly on
   Windows, weigh this yourself.
+
+## Reporting a vulnerability
+
+Report suspected vulnerabilities privately via [GitHub security advisories](https://github.com/TickTockBent/charlotte/security/advisories/new) rather than public issues.

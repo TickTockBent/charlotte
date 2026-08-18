@@ -1,55 +1,13 @@
 # Security
 
-This is the security model for Charlotte Remote (HTTP mode) — the trust boundary, the network guards, the OAuth handshake, and the sizing you should know before exposing Charlotte to claude.ai or any other MCP client over HTTPS. For the self-hosting walkthrough, see [SELF_HOSTING.md](SELF_HOSTING.md); for container/sandbox internals, see [DOCKER.md](DOCKER.md).
+Charlotte's canonical security documentation lives at
+[docs/security.mdx](docs/security.mdx), rendered at
+**<https://charlotte.mintlify.site/security>** — the trust boundary, the SSRF
+and Host-header guards, the claude.ai OAuth handshake, sizing, sandbox posture,
+and known accepted risks for Charlotte Remote (HTTP mode).
 
-## The token is the whole trust boundary
+## Reporting a vulnerability
 
-Anyone holding a valid bearer (your operator token, or a derived one claude.ai's connector obtained through consent) can drive Charlotte's browser to fetch anything the SSRF guard below doesn't block. Keep `CHARLOTTE_AUTH_TOKEN` as secret as any other credential.
-
-**To revoke access** (e.g. claude.ai's stored derived token, or a leaked operator token): generate a new token and restart Charlotte with it — every previously derived credential stops matching immediately, since nothing is stored server-side to selectively revoke.
-
-## Outbound SSRF / navigation guard
-
-Every navigation Charlotte's browser makes is checked against a deny-by-default list of private address ranges — loopback, RFC1918 (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), link-local (`169.254.0.0/16`, including the `169.254.169.254` cloud metadata address), CGNAT/Tailscale (`100.64.0.0/10`), and their IPv6 equivalents. This is checked against the **resolved** IP at request time (not just the URL string), so it isn't fooled by a hostname that resolves to a private address or a redirect chain that ends up there. `http.allowPrivateNetworks` (see [docs/configuration.md](docs/configuration.md)) is the only way to punch a hole in this — leave it `[]` unless you have a specific reason your Charlotte needs to reach something on your own network.
-
-## Inbound Host-header guard
-
-Requests whose `Host` header doesn't match an expected hostname are refused with `403` before touching the session or browser — this defends against a malicious page in someone else's browser "DNS-rebinding" its own domain to your loopback address and POSTing straight to Charlotte's listener. The allowlist is derived automatically from `localhost`/`127.0.0.1`/`[::1]`, your configured `host`, and your `publicOrigin` hostname; `http.allowedHosts` extends it if a proxy sits in between and presents some other hostname.
-
-## The claude.ai OAuth handshake, under the hood
-
-This is claude.ai's real, observed connector behavior against Charlotte's OAuth facade, not a guess:
-
-- claude.ai `POST`s `/mcp` with no credential → `401`.
-- It fetches Charlotte's OAuth discovery documents (`/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`) — both only exist because `publicOrigin` is set; without it these 404 and the connector add fails with an error about not being able to register a sign-in service.
-- It dynamically registers itself as an OAuth client (`POST /oauth/register`) and gets back a `client_id` — no manual credential-copying required on your end.
-- **Your browser** is redirected to Charlotte's consent page (`GET /oauth/authorize`) — a plain server-rendered page with one field. **Enter your `CHARLOTTE_AUTH_TOKEN` here.** This is the one and only place you type the token during connector setup.
-- On success, Charlotte redirects back to claude.ai with an authorization code; claude.ai's backend exchanges it (`POST /oauth/token`) for a bearer token derived from your operator token — distinct from it, but cryptographically tied to it (no server-side storage: restart Charlotte with the same token and the derived credential is unchanged; restart with a *different* token and claude.ai's stored credential silently stops working, which is how you revoke it — see above).
-- From then on, claude.ai's connector authenticates every `/mcp` call with that derived bearer token, transparently — no further prompts.
-
-## Not multi-tenant
-
-Charlotte Remote is a single implicit session shared by every client that holds a valid token — it is **not multi-tenant**. Two different callers hitting the same server see the same tabs, same navigation history, same everything. Don't point multiple untrusted parties at one Charlotte instance expecting isolation between them.
-
-## Sizing: budget about 1 GB of RAM per running session
-
-Measured against Chromium's actual process tree: summed RSS (what a container memory limit / `top` will show you) peaks around 923 MB per idle session; the "honest" per-session share accounting for pages shared across Chromium's process tree (PSS) is about 330 MB. Size your host/container memory limit for the larger, ~1 GB figure — that's what will actually get enforced against you if you set a hard cgroup limit.
-
-## Screenshots and other artifacts are capped, not paths
-
-A screenshot or similar artifact up to 256 KB is returned inline in the tool response; above that cap, the tool call is refused with a steering message instead of returning a filesystem path — an HTTP client (unlike a local stdio client) has no way to read a path on your server's disk, so there is no "here's a file on the server, go read it" fallback in HTTP mode.
-
-## Container sandbox posture
-
-Chromium's own sandbox is a load-bearing part of this model — the Docker image ships with it enabled, not disabled, so a hostile page a session navigates to is exploiting the renderer inside the sandbox, not your server. See [DOCKER.md § Sandbox / Security Posture](DOCKER.md#sandbox--security-posture) for the full mechanics and troubleshooting.
-
-## Known accepted risks
-
-- **GHSA-frvp-7c67-39w9** (`@hono/node-server` < 2.0.5, moderate): path
-  traversal in that package's `serve-static` handler on **Windows** hosts via
-  an encoded backslash. Present transitively through
-  `@modelcontextprotocol/node`; Charlotte never invokes the affected
-  `serveStatic` code path, and the documented deployment target is Docker on
-  Linux. Accepted for v0.8.0 (2026-08-09); will clear when the MCP SDK moves
-  to `@hono/node-server` ≥ 2.0.5. If you run Charlotte's HTTP mode directly on
-  Windows, weigh this yourself.
+Report suspected vulnerabilities privately via
+[GitHub security advisories](https://github.com/TickTockBent/charlotte/security/advisories/new)
+rather than public issues.

@@ -4,12 +4,6 @@ description: The Web, Readable — an MCP server that gives AI agents structured
 icon: spider-web
 ---
 
-{/*
-  Canonical source: README.md (opening paragraph) and the README "Self-Hosting
-  (Charlotte Remote)" section. Changes flow canonical → this page, not the
-  reverse — update README.md first, then mirror the change here.
-*/}
-
 Charlotte is an MCP server that gives AI agents structured, token-efficient access to the web.
 Instead of dumping the full accessibility tree on every call, Charlotte returns only what
 the agent needs: a compact page summary on arrival, targeted queries for specific elements,
@@ -32,7 +26,7 @@ page when it appears. That's it; you're browsing.
 <Note>
   The demo URL and token are ephemeral — both rotate on restart. For a stable
   domain, your own tunnel or reverse proxy, and docker compose, see
-  [Self-Hosting](/self-hosting).
+  [Self-Hosting](https://charlotte.mintlify.site/self-hosting).
 </Note>
 
 Prefer the stdio transport for a local MCP client (Claude Code, Claude Desktop, Cursor, and others)?
@@ -45,23 +39,9 @@ Full client configuration and CLI usage live in the [project README](https://git
 
 ## Where to go next
 
-<CardGroup cols={2}>
-  <Card title="Self-Hosting" icon="server" href="/self-hosting">
-    Stand up Charlotte Remote on your own host: token, config, compose, and connecting claude.ai.
-  </Card>
-  <Card title="Security" icon="shield-halved" href="/security">
-    The trust boundary, SSRF and Host-header guards, the OAuth handshake, and sizing.
-  </Card>
-  <Card title="Docker" icon="docker" href="/docker">
-    Image choices, sandbox posture, and running the container in production.
-  </Card>
-  <Card title="Configuration" icon="gear" href="/configuration">
-    Every config key, environment variable, and precedence rule.
-  </Card>
-  <Card title="Benchmarks" icon="chart-line" href="/benchmarks">
-    Charlotte vs. Playwright MCP, measured — orientation cost, per-task cost, and where Charlotte still loses.
-  </Card>
-  <Card title="Changelog" icon="clock-rotate-left" href="/changelog">
-    Release history and what's new.
-  </Card>
-</CardGroup>
+- **[Self-Hosting](https://charlotte.mintlify.site/self-hosting)** — stand up Charlotte Remote on your own host: token, config, compose, and connecting claude.ai.
+- **[Security](https://charlotte.mintlify.site/security)** — the trust boundary, SSRF and Host-header guards, the OAuth handshake, and sizing.
+- **[Docker](https://charlotte.mintlify.site/docker)** — image choices, sandbox posture, and running the container in production.
+- **[Configuration](https://charlotte.mintlify.site/configuration)** — every config key, environment variable, and precedence rule.
+- **[Benchmarks](https://charlotte.mintlify.site/benchmarks)** — Charlotte vs. Playwright MCP, measured: orientation cost, per-task cost, and where Charlotte still loses.
+- **[Changelog](https://charlotte.mintlify.site/changelog)** — release history and what's new.

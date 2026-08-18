@@ -27,6 +27,7 @@ jobs:
       # --ignore-scripts skips Puppeteer's Chromium download — not needed for static checks
       - run: npm ci --ignore-scripts
       - run: npm run lint
+      - run: npm run lint:docs
       - run: npm run format:check
       - run: npx tsc --noEmit
       - run: npm run build

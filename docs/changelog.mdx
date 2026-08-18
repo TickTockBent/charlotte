@@ -4,7 +4,7 @@ description: Weekly product updates, new features, and the full versioned releas
 icon: clock-rotate-left
 ---
 
-Charlotte's full release history is kept in one place, in the repo:
+Weekly summaries of what shipped live on this page. The complete, versioned history stays in the repo.
 
 <CardGroup cols={2}>
   <Card title="CHANGELOG.md" icon="file-lines" href="https://github.com/TickTockBent/charlotte/blob/main/CHANGELOG.md">
@@ -15,4 +15,18 @@ Charlotte's full release history is kept in one place, in the repo:
   </Card>
 </CardGroup>
 
-This page intentionally doesn't duplicate the changelog's content. `CHANGELOG.md` in the repo is the single source of truth, updated with every version bump.
+## Week of August 18, 2026
+
+### New features
+
+- **`max_height` on `charlotte_screenshot` clips long pages.** Full-page screenshots now stop at 2000 pixels by default, so a single call on a very tall page no longer returns a multi-megabyte image that exceeds the 256 KB inline artifact cap. Set `max_height` to raise or lower the cutoff, up to the Chromium limit of `16384` to effectively disable clipping. When clipping happens, the response includes a `clipped` block reporting the original page height and the height that was captured, so agents can decide whether to scroll and take a follow-up screenshot. Existing calls pick up the new `2000` default automatically.
+
+    ```json
+    {
+      "name": "charlotte_screenshot",
+      "arguments": {
+        "full_page": true,
+        "max_height": 4000
+      }
+    }
+    ```

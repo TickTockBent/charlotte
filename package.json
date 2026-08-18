@@ -48,6 +48,7 @@
     "report:remote": "tsx benchmarks/remote-report.ts",
     "lint": "eslint src/ tests/",
     "lint:docs": "tsx scripts/lint-docs.mts",
+    "audit:check": "tsx scripts/audit-check.mts",
     "lint:fix": "eslint src/ tests/ --fix",
     "format": "prettier --write 'src/**/*.ts' 'tests/**/*.ts'",
     "format:check": "prettier --check 'src/**/*.ts' 'tests/**/*.ts'"

@@ -1,6 +1,6 @@
 ---
-title: Docker
-description: Running Charlotte in Docker — image choices, sandbox posture, and production notes.
+title: Run Charlotte in Docker (HTTP and stdio images)
+description: Deploy Charlotte MCP server in Docker. Compares the Debian HTTP self-host image and Alpine stdio image, Chromium sandbox posture, and production notes.
 icon: docker
 ---
 
@@ -18,7 +18,7 @@ There are two images with two different jobs:
   **disabled**. See [Sandbox and security posture](#sandbox-and-security-posture)
   below for why these two images differ.
 
-## Quick Start
+## Quick start
 
 **Debian, HTTP mode (self-host):**
 
@@ -34,7 +34,7 @@ docker build -f Dockerfile.alpine -t charlotte:alpine .
 docker compose --profile local up charlotte-stdio
 ```
 
-## Running the Container
+## Running the container
 
 ### HTTP mode (Debian image, recommended for self-hosting)
 
@@ -88,9 +88,9 @@ To use the containerized Charlotte with Claude Desktop, you'll need a wrapper th
 
 (Claude Desktop drives Charlotte over stdio, so this uses the Alpine stdio image, not the HTTP image above.)
 
-## Important Notes
+## Important notes
 
-### Shared Memory (`shm_size`)
+### Shared memory (`shm_size`)
 
 Charlotte's BrowserManager passes `--disable-dev-shm-usage` to Chromium, which makes it use `/tmp` instead of `/dev/shm`. This means `--shm-size` is not strictly required. However, the docker-compose file and examples below include `--shm-size=2gb` as a safety net — if the flag is ever removed or overridden, the default Docker shm size (64MB) would cause Chromium crashes.
 
@@ -166,7 +166,7 @@ This is what the Alpine stdio image effectively assumes isn't needed by
 running with the sandbox off instead — prefer that over unconfining seccomp
 on a sandbox-enabled container.
 
-### Network Access
+### Network access
 
 Charlotte needs network access to browse websites. By default, Docker provides this. If using custom networks:
 
@@ -174,7 +174,7 @@ Charlotte needs network access to browse websites. By default, Docker provides t
 docker run -it --rm --shm-size=2gb --network=host charlotte:alpine
 ```
 
-## Image Comparison
+## Image comparison
 
 | Image | Base | Transport | Sandbox | Size | Chromium Source |
 |-------|------|-----------|---------|------|------------------|
@@ -183,7 +183,7 @@ docker run -it --rm --shm-size=2gb --network=host charlotte:alpine
 
 Alpine's system Chromium pulls in many transitive dependencies (mesa, ffmpeg, pipewire, llvm, etc.) that negate the base image size advantage over Debian. The Debian image uses Puppeteer's bundled Chromium for guaranteed compatibility, while Alpine may occasionally have version mismatches — and it's now also the only image with a verified sandbox-enabled path, so it's the one used for HTTP self-hosting.
 
-## Environment Variables
+## Environment variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -192,7 +192,7 @@ Alpine's system Chromium pulls in many transitive dependencies (mesa, ffmpeg, pi
 | `PUPPETEER_CACHE_DIR` | `~/.cache/puppeteer` | Where Puppeteer stores downloaded Chromium (set to `/app/.cache/puppeteer` in Debian image) |
 | `NODE_ENV` | `production` | Node environment |
 
-## Building for Production
+## Building for production
 
 For CI/CD, build with cache optimization:
 

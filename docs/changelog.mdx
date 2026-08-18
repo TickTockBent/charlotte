@@ -18,7 +18,7 @@ Week of 2026-08-18: a screenshot ergonomics improvement for very long pages, and
 
 ### Security
 
-- **Documented accepted risk: GHSA-jmr9-qjv8-65gv (`extract-zip` ≤ 2.0.1).** The advisory is transitive through `puppeteer` → `@puppeteer/browsers` and has no patched version upstream. Exposure is install-time only (extract-zip runs when `@puppeteer/browsers` unpacks the Chromium archive from Google's CDN); Charlotte never extracts archives at runtime. The entry, its clearing condition (the planned Puppeteer 25 upgrade, which drops extract-zip entirely), and other current exceptions are listed under **Known accepted risks** in [Security](/security). New high/critical advisories outside this allowlist still fail the release pipeline.
+- **Documented accepted risk: GHSA-jmr9-qjv8-65gv (`extract-zip` ≤ 2.0.1).** The advisory is transitive through `puppeteer` → `@puppeteer/browsers` and has no patched version upstream. Exposure is install-time only (extract-zip runs when `@puppeteer/browsers` unpacks the Chromium archive from Google's CDN); Charlotte never extracts archives at runtime. The entry, its clearing condition (the planned Puppeteer 25 upgrade, which drops extract-zip entirely), and other current exceptions are listed under **Known accepted risks** in [Security](https://charlotte.mintlify.site/security). New high/critical advisories outside this allowlist still fail the release pipeline.
 
 ## [0.8.0] - 2026-08-09
 

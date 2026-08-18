@@ -53,6 +53,20 @@ Chromium's own sandbox is a load-bearing part of this model — the Docker image
 
 ## Known accepted risks
 
+- **GHSA-jmr9-qjv8-65gv** (`extract-zip` ≤ 2.0.1, high): unvalidated symlink
+  path traversal when extracting a malicious zip archive. Present transitively
+  through `puppeteer@24` → `@puppeteer/browsers@2`; **no patched version
+  exists** — the package is unmaintained and upstream resolved it by dropping
+  the dependency. Exposure is install-time only: extract-zip runs solely when
+  `@puppeteer/browsers` unpacks the Chromium archive it downloads from
+  Google's CDN over HTTPS. Charlotte never extracts archives at runtime, and
+  no untrusted party controls a zip it opens — exploitation would require
+  compromising the Chromium download itself, the same trust already placed in
+  the Chromium binary. Accepted 2026-08-18; will clear with the Puppeteer 25
+  upgrade (`@puppeteer/browsers` 3.x replaced extract-zip with `modern-tar`),
+  which is planned as its own verified slice rather than a security drive-by.
+  CI's audit gate carries this ID in its reviewed allowlist
+  (`scripts/audit-check.mts`) so new advisories still fail the build.
 - **GHSA-frvp-7c67-39w9** (`@hono/node-server` < 2.0.5, moderate): path
   traversal in that package's `serve-static` handler on **Windows** hosts via
   an encoded backslash. Present transitively through

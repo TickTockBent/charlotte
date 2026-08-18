@@ -166,7 +166,12 @@ describe("Remote artifact delivery (D6/D19, I8)", () => {
     });
 
     it("full_page:true over-caps (proves the default was viewport, not full page)", async () => {
-      const result = await harness.callTool("charlotte_screenshot", { full_page: true });
+      // max_height: 16384 disables the default 2000px clip (screenshot-clip.test.ts)
+      // so this exercises the true full-page size, not a clipped one.
+      const result = await harness.callTool("charlotte_screenshot", {
+        full_page: true,
+        max_height: 16384,
+      });
       expect(result.isError).toBe(true);
       expect(imageBlock(result)).toBeUndefined();
     });
@@ -185,7 +190,12 @@ describe("Remote artifact delivery (D6/D19, I8)", () => {
     });
 
     it("full_page:true refuses with a sized, actionable error and no image/path", async () => {
-      const result = await harness.callTool("charlotte_screenshot", { full_page: true });
+      // max_height: 16384 disables the default 2000px clip (screenshot-clip.test.ts)
+      // so the capture is genuinely over-cap rather than shrunk by clipping.
+      const result = await harness.callTool("charlotte_screenshot", {
+        full_page: true,
+        max_height: 16384,
+      });
       expect(result.isError).toBe(true);
 
       // No bytes blown, no path leaked.
@@ -214,7 +224,12 @@ describe("Remote artifact delivery (D6/D19, I8)", () => {
     });
 
     it("full_page:true returns the (large) inline image, no refusal", async () => {
-      const result = await harness.callTool("charlotte_screenshot", { full_page: true });
+      // max_height: 16384 disables the default 2000px clip (screenshot-clip.test.ts)
+      // so the capture is genuinely the full page, not shrunk by clipping.
+      const result = await harness.callTool("charlotte_screenshot", {
+        full_page: true,
+        max_height: 16384,
+      });
       expect(result.isError).toBeFalsy();
       const image = imageBlock(result);
       expect(image).toBeDefined();
@@ -237,9 +252,12 @@ describe("Remote artifact delivery (D6/D19, I8)", () => {
     });
 
     it("webp full_page on a >16,383px page errors, not a success with empty image data", async () => {
+      // max_height: 16384 disables the default 2000px clip (screenshot-clip.test.ts)
+      // so this exercises the underlying webp encode cap rather than the clip path.
       const result = await harness.callTool("charlotte_screenshot", {
         format: "webp",
         full_page: true,
+        max_height: 16384,
       });
 
       expect(result.isError).toBe(true);

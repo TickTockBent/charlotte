@@ -2,6 +2,12 @@
 
 All notable changes to Charlotte will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- **`max_height` on `charlotte_screenshot`** — clips full-page screenshots from the top when the page exceeds this height (default 2000px), instead of paying Chromium's super-linear compositor cost on very long pages. When a clip fires, the response now carries a `clipped` text block (`captured_height`, `full_page_height`, and a steering message) alongside the image so callers can tell a complete short capture from the top slice of a taller page. Set `max_height: 16384` to disable clipping and always capture the full page.
+
 ## [0.8.0] - 2026-08-09
 
 This release introduces **Charlotte Remote** — an optional streamable-HTTP transport that lets Charlotte run as a self-hosted, network-reachable MCP server alongside its existing stdio transport. Read the **Security** section before exposing an instance to a network; several guards below are new and are mandatory whenever HTTP mode is enabled.
@@ -178,7 +184,7 @@ This release hardens Charlotte for untrusted pages, fixes a long tail of silent-
 
 ### Added
 
-- **Popup and target="_blank" tab capture** — Clicks on `target="_blank"` links and `window.open()` calls were silently lost because PageManager had no `popup` event handler. New tabs are now auto-captured via `page.on("popup")`, auto-cleaned when pages close themselves, and surfaced as `opened_tabs` in tool responses using single-consumption semantics. Fixes #103, #98.
+- **Popup and target="\_blank" tab capture** — Clicks on `target="_blank"` links and `window.open()` calls were silently lost because PageManager had no `popup` event handler. New tabs are now auto-captured via `page.on("popup")`, auto-cleaned when pages close themselves, and surfaced as `opened_tabs` in tool responses using single-consumption semantics. Fixes #103, #98.
 - **Contributor issue templates** — Bug report, feature request, and tool request templates added to the repository. Community links added to README. (#102)
 
 ### Changed

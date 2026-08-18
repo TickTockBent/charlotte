@@ -10,13 +10,15 @@ This is Charlotte's canonical changelog — every release from v0.1.0 through th
 
 ## [Unreleased]
 
+Week of 2026-08-18: a screenshot ergonomics improvement for very long pages, and a documented security exception for a transitive install-time advisory. No breaking changes.
+
 ### Added
 
 - **`max_height` on `charlotte_screenshot`** — clips full-page screenshots from the top when the page exceeds this height (default 2000px), instead of paying Chromium's super-linear compositor cost on very long pages. When a clip fires, the response now carries a `clipped` text block (`captured_height`, `full_page_height`, and a steering message) alongside the image so callers can tell a complete short capture from the top slice of a taller page. Set `max_height: 16384` to disable clipping and always capture the full page.
 
 ### Security
 
-- **Documented accepted risk: GHSA-jmr9-qjv8-65gv (`extract-zip` ≤ 2.0.1).** The advisory is transitive through `puppeteer` → `@puppeteer/browsers` and has no patched version upstream. Exposure is install-time only (extract-zip runs when `@puppeteer/browsers` unpacks the Chromium archive from Google's CDN); Charlotte never extracts archives at runtime. The entry, its clearing condition (the planned Puppeteer 25 upgrade, which drops extract-zip entirely), and other current exceptions are listed under **Known accepted risks** in [Security](/security). New high/critical advisories outside this allowlist still fail the release pipeline.
+- **Documented accepted risk: GHSA-jmr9-qjv8-65gv (`extract-zip` ≤ 2.0.1).** The advisory is transitive through `puppeteer` → `@puppeteer/browsers` and has no patched version upstream. Exposure is install-time only (extract-zip runs when `@puppeteer/browsers` unpacks the Chromium archive from Google's CDN); Charlotte never extracts archives at runtime. The entry, its clearing condition (the planned Puppeteer 25 upgrade, which drops extract-zip entirely), and other current exceptions are listed under **Known accepted risks** in [Security](https://charlotte.mintlify.site/security). New high/critical advisories outside this allowlist still fail the release pipeline.
 
 ## [0.8.0] - 2026-08-09
 

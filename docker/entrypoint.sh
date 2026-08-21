@@ -36,6 +36,15 @@ log() {
   printf '[charlotte-entrypoint] %s\n' "$*" >&2
 }
 
+# On the arm64 image Chromium comes from Debian's `chromium` package instead of
+# Puppeteer's bundled Chrome for Testing (which has no Linux arm64 build), so
+# point Puppeteer at it unless the operator already chose a binary. On amd64
+# /usr/bin/chromium does not exist and this is a no-op.
+if [[ -z "${PUPPETEER_EXECUTABLE_PATH:-}" && -x /usr/bin/chromium ]]; then
+  export PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+  log "Using system Chromium at ${PUPPETEER_EXECUTABLE_PATH} (arm64 image)."
+fi
+
 # ─── Mode 0: an explicit command overrides the whole ladder ───
 # Preserves `docker compose run --rm charlotte node dist/index.js doctor --http`
 # and friends, which SELF_HOSTING.md documents.

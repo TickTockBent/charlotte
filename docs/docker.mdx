@@ -174,11 +174,26 @@ Charlotte needs network access to browse websites. By default, Docker provides t
 docker run -it --rm --shm-size=2gb --network=host charlotte:alpine
 ```
 
+## Supported platforms
+
+Both images are published as multi-arch manifests for `linux/amd64` and `linux/arm64` (Apple Silicon Macs, Raspberry Pi, AWS Graviton, and similar). `docker pull` selects the right variant automatically. **amd64 is the tested platform; arm64 is published but untested — see the warning below.**
+
+The two architectures differ only in where Chromium comes from:
+
+- **`linux/amd64`** — the Debian image (`:latest`) uses Puppeteer's bundled Chrome for Testing; the Alpine image uses Alpine's `chromium` package. This is unchanged from earlier releases, and the sandbox/seccomp posture above was validated against it.
+- **`linux/arm64`** — Chrome for Testing has no Linux arm64 build, so the Debian image installs Debian's `chromium` package instead and the entrypoint sets `PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium` (unless you set it yourself). The Alpine image already uses the distro package on every architecture.
+
+<Warning>
+**`linux/arm64` is untested.** The arm64 variants are cross-built under QEMU in CI and have not been run on real ARM hardware by the maintainer — no Apple Silicon, Graviton, or Raspberry Pi machine has exercised them end to end. Only `linux/amd64` is smoke-tested in CI. If you run Charlotte on ARM, please report what you find — working or broken — in [issue #22](https://github.com/TickTockBent/charlotte/issues/22) or a [new issue](https://github.com/TickTockBent/charlotte/issues/new), including the image tag, host, and the first few lines of container output. That feedback is what will move arm64 from "published" to "supported".
+</Warning>
+
+Charlotte's code is identical on both architectures. The one expected difference on Debian arm64 is that the Chromium version follows Debian's package rather than the version pinned by the Puppeteer release, so it may lag or lead the bundled build by a few majors.
+
 ## Image comparison
 
 | Image | Base | Transport | Sandbox | Size | Chromium Source |
 |-------|------|-----------|---------|------|------------------|
-| `Dockerfile` | node:22-slim | HTTP (`--http`) | **Enabled** (surgical seccomp profile / D22) | ~1.2GB base, +seccomp profile | Puppeteer bundle |
+| `Dockerfile` | node:22-slim | HTTP (`--http`) | **Enabled** (surgical seccomp profile / D22) | ~1.2GB base, +seccomp profile | Puppeteer bundle (amd64) / Debian package (arm64) |
 | `Dockerfile.alpine` | node:22-alpine | stdio | Disabled (unverified with sandbox on) | ~1.2GB | System package |
 
 Alpine's system Chromium pulls in many transitive dependencies (mesa, ffmpeg, pipewire, llvm, etc.) that negate the base image size advantage over Debian. The Debian image uses Puppeteer's bundled Chromium for guaranteed compatibility, while Alpine may occasionally have version mismatches — and it's now also the only image with a verified sandbox-enabled path, so it's the one used for HTTP self-hosting.
@@ -187,8 +202,8 @@ Alpine's system Chromium pulls in many transitive dependencies (mesa, ffmpeg, pi
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PUPPETEER_EXECUTABLE_PATH` | (bundled) | Path to Chromium binary |
-| `PUPPETEER_SKIP_DOWNLOAD` | `false` | Skip bundled Chromium download (used in Alpine image) |
+| `PUPPETEER_EXECUTABLE_PATH` | (bundled) | Path to Chromium binary (the Debian arm64 entrypoint sets `/usr/bin/chromium` when unset) |
+| `PUPPETEER_SKIP_DOWNLOAD` | `false` | Skip bundled Chromium download (used in Alpine image and the Debian arm64 build) |
 | `PUPPETEER_CACHE_DIR` | `~/.cache/puppeteer` | Where Puppeteer stores downloaded Chromium (set to `/app/.cache/puppeteer` in Debian image) |
 | `NODE_ENV` | `production` | Node environment |
 

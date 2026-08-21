@@ -1,3 +1,4 @@
+import Link from "next/link";
 import Hero from "../components/Hero";
 import Benchmarks from "../components/Benchmarks";
 import OutputDemo from "../components/OutputDemo";
@@ -14,9 +15,9 @@ export default function Home() {
       <header>
       <nav aria-label="Primary navigation" className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b border-surface-border">
         <div className="max-w-5xl mx-auto px-6 sm:px-8 lg:px-12 h-14 flex items-center justify-between">
-          <a href="/" className="font-mono font-bold text-foreground">
+          <Link href="/" className="font-mono font-bold text-foreground">
             charlotte
-          </a>
+          </Link>
           <div className="hidden sm:flex items-center gap-6 text-sm text-muted">
             <a href="#benchmarks" className="hover:text-foreground transition-colors">
               Benchmarks
@@ -33,12 +34,12 @@ export default function Home() {
             <a href="#quickstart" className="hover:text-foreground transition-colors">
               Quick Start
             </a>
-            <a href="/vs-playwright" className="hover:text-foreground transition-colors">
+            <Link href="/vs-playwright" className="hover:text-foreground transition-colors">
               Compare
-            </a>
-            <a href="/changelog" className="hover:text-foreground transition-colors">
+            </Link>
+            <Link href="/changelog" className="hover:text-foreground transition-colors">
               Changelog
-            </a>
+            </Link>
           </div>
           <a
             href="https://github.com/TickTockBent/charlotte"

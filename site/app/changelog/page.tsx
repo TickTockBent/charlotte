@@ -310,7 +310,7 @@ export default function ChangelogPage() {
             <span className="text-surface-border">|</span>
             <a href="https://github.com/TickTockBent/charlotte/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">MIT License</a>
             <span className="text-surface-border">|</span>
-            <a href="/privacy" className="hover:text-foreground transition-colors">Privacy</a>
+            <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
           </div>
           <p className="text-sm text-muted">Built with Charlotte.</p>
         </div>

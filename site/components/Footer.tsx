@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Footer() {
   return (
     <footer className="py-12 px-6 sm:px-8 lg:px-12 border-t border-surface-border">
@@ -39,26 +41,26 @@ export default function Footer() {
             MIT License
           </a>
           <span className="text-surface-border">|</span>
-          <a
+          <Link
             href="/vs-playwright"
             className="hover:text-foreground transition-colors"
           >
             Charlotte vs Playwright
-          </a>
+          </Link>
           <span className="text-surface-border">|</span>
-          <a
+          <Link
             href="/changelog"
             className="hover:text-foreground transition-colors"
           >
             Changelog
-          </a>
+          </Link>
           <span className="text-surface-border">|</span>
-          <a
+          <Link
             href="/privacy"
             className="hover:text-foreground transition-colors"
           >
             Privacy
-          </a>
+          </Link>
         </div>
         <p className="text-sm text-muted">
           Built with Charlotte.

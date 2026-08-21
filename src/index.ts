@@ -48,6 +48,8 @@ async function buildSessionContext(resolved: ResolvedOptions): Promise<SessionCo
     config.limits.maxResponseBytes = resolved.maxResponseBytes;
   if (resolved.maxEvaluateBytes !== undefined)
     config.limits.maxEvaluateBytes = resolved.maxEvaluateBytes;
+  // Init scripts (issue #18) were already read from disk during resolution.
+  config.initScripts = resolved.initScripts;
   if (resolved.outputDir) {
     const resolvedOutputDir = path.resolve(resolved.outputDir);
     config.outputDir = resolvedOutputDir;

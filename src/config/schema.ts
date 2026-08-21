@@ -49,6 +49,14 @@ const BrowserConfigSchema = z
      * Must start with http://, https://, ws://, wss://, or channel:.
      */
     cdpEndpoint: z.string().nullable().optional(),
+    /**
+     * JavaScript files to run on every new document before any page script
+     * (issue #18). Relative paths resolve against the config file's
+     * directory. Each file must exist at startup; a missing file is a
+     * startup error. CLI: --init-script (repeatable), env:
+     * CHARLOTTE_INIT_SCRIPT (path.delimiter-separated).
+     */
+    initScripts: z.array(z.string().min(1)).optional(),
   })
   .strict();
 

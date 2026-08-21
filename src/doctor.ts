@@ -115,8 +115,17 @@ export function checkConfig(options: DoctorOptions): {
         ? `, publicOrigin ${resolved.httpConfig.publicOrigin}`
         : "")
     : "stdio mode";
+  const initScriptNote =
+    resolved.initScripts.length > 0
+      ? `; ${resolved.initScripts.length} init script(s): ${resolved.initScripts
+          .map((script) => script.source)
+          .join(", ")}`
+      : "";
   return {
-    result: pass("Config loads & validates", `Configuration is valid (${modeNote}).`),
+    result: pass(
+      "Config loads & validates",
+      `Configuration is valid (${modeNote}${initScriptNote}).`,
+    ),
     resolved,
   };
 }

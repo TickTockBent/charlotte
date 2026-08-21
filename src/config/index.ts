@@ -7,7 +7,8 @@
  */
 
 import { parseCliInputs } from "../cli.js";
-import { loadConfigFile, readEnvInputs } from "./load-config.js";
+import * as path from "node:path";
+import { loadConfigFileWithPath, readEnvInputs } from "./load-config.js";
 import { resolveOptions, type ResolvedOptions } from "./resolve.js";
 
 export { ConfigError, DEFAULT_CONFIG_FILENAME } from "./load-config.js";
@@ -29,6 +30,12 @@ export function loadStartupConfig(
 ): ResolvedOptions {
   const { cli, configPath } = parseCliInputs(argv);
   const envInputs = readEnvInputs(env);
-  const fileConfig = loadConfigFile(configPath, cwd);
-  return resolveOptions(cli, envInputs, fileConfig);
+  const { config: fileConfig, configPath: loadedConfigPath } = loadConfigFileWithPath(
+    configPath,
+    cwd,
+  );
+  // Relative `browser.initScripts` paths anchor to the config file's directory;
+  // CLI/env paths anchor to cwd.
+  const configDir = loadedConfigPath !== undefined ? path.dirname(loadedConfigPath) : undefined;
+  return resolveOptions(cli, envInputs, fileConfig, { cwd, configDir });
 }

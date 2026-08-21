@@ -99,6 +99,36 @@ const devServeTool = defineTool({
 });
 
 // ─── charlotte_dev_inject ───
+
+let persistentInjectionCounter = 0;
+
+/** Source label for a persisted injection, e.g. `dev_inject#3`. */
+function nextPersistentInjectionLabel(): string {
+  persistentInjectionCounter += 1;
+  return `dev_inject#${persistentInjectionCounter}`;
+}
+
+/**
+ * Wrap CSS in a script that appends a `<style>` element once `document.head`
+ * exists. Init scripts run before the document has a head, so the append is
+ * deferred to DOMContentLoaded unless parsing has already finished.
+ */
+function buildPersistentStyleScript(css: string): string {
+  return `(() => {
+  const css = ${JSON.stringify(css)};
+  const append = () => {
+    const style = document.createElement("style");
+    style.textContent = css;
+    (document.head ?? document.documentElement).appendChild(style);
+  };
+  if (document.readyState !== "loading") {
+    append();
+  } else {
+    document.addEventListener("DOMContentLoaded", append, { once: true });
+  }
+})();`;
+}
+
 const devInjectTool = defineTool({
   name: "charlotte_dev_inject",
   description:
@@ -106,8 +136,14 @@ const devInjectTool = defineTool({
   inputSchema: {
     css: z.string().optional().describe("CSS to inject into the page"),
     js: z.string().optional().describe("JavaScript to execute in the page context"),
+    persist: z
+      .boolean()
+      .default(false)
+      .describe(
+        "Also run this injection on every future page load in all tabs for the rest of the session (persistent scripts cannot be removed until the server restarts).",
+      ),
   },
-  async handler(deps, { css, js }) {
+  async handler(deps, { css, js, persist }) {
     try {
       await ensureReady(deps);
 
@@ -120,6 +156,18 @@ const devInjectTool = defineTool({
       }
 
       const page = deps.pageManager.getActivePage();
+
+      if (persist) {
+        if (css) {
+          await deps.pageManager.registerInitScript(
+            nextPersistentInjectionLabel(),
+            buildPersistentStyleScript(css),
+          );
+        }
+        if (js) {
+          await deps.pageManager.registerInitScript(nextPersistentInjectionLabel(), js);
+        }
+      }
 
       if (css) {
         await page.addStyleTag({ content: css });

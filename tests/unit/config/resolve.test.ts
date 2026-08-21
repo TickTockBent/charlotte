@@ -1,4 +1,7 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 import { resolveOptions } from "../../../src/config/resolve.js";
 import type { CliInputs, EnvInputs } from "../../../src/config/resolve.js";
 import type { CharlotteFileConfig } from "../../../src/config/schema.js";
@@ -318,5 +321,94 @@ describe("resolveOptions precedence (issue #19)", () => {
         );
       });
     });
+  });
+});
+
+describe("resolveOptions initScripts (issue #18)", () => {
+  let tmpDir: string;
+  let configDir: string;
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(path.join(os.tmpdir(), "charlotte-init-scripts-"));
+    configDir = path.join(tmpDir, "config-home");
+    mkdirSync(configDir);
+    writeFileSync(path.join(tmpDir, "cli.js"), "window.__fromCli = 1");
+    writeFileSync(path.join(tmpDir, "env.js"), "window.__fromEnv = 1");
+    writeFileSync(path.join(configDir, "file.js"), "window.__fromFile = 1");
+  });
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("defaults to an empty list", () => {
+    expect(resolveOptions(noCli, noEnv, noFile).initScripts).toEqual([]);
+  });
+
+  it("reads browser.initScripts relative to the config file directory", () => {
+    const result = resolveOptions(
+      noCli,
+      noEnv,
+      { browser: { initScripts: ["file.js"] } },
+      { cwd: tmpDir, configDir },
+    );
+    expect(result.initScripts).toEqual([
+      { source: path.join(configDir, "file.js"), content: "window.__fromFile = 1" },
+    ]);
+  });
+
+  it("falls back to cwd for config-file paths when the config dir is unknown", () => {
+    const result = resolveOptions(
+      noCli,
+      noEnv,
+      { browser: { initScripts: ["cli.js"] } },
+      { cwd: tmpDir },
+    );
+    expect(result.initScripts[0].source).toBe(path.join(tmpDir, "cli.js"));
+  });
+
+  it("resolves CLI and env paths against cwd and keeps order", () => {
+    const result = resolveOptions({ initScripts: ["cli.js", "env.js"] }, noEnv, noFile, {
+      cwd: tmpDir,
+      configDir,
+    });
+    expect(result.initScripts.map((script) => script.content)).toEqual([
+      "window.__fromCli = 1",
+      "window.__fromEnv = 1",
+    ]);
+  });
+
+  it("precedence: cli > env > file, whole list replaces (no merge)", () => {
+    const file = { browser: { initScripts: ["file.js"] } };
+    const context = { cwd: tmpDir, configDir };
+
+    const fromCli = resolveOptions(
+      { initScripts: ["cli.js"] },
+      { initScripts: ["env.js"] },
+      file,
+      context,
+    );
+    expect(fromCli.initScripts.map((script) => script.content)).toEqual(["window.__fromCli = 1"]);
+
+    const fromEnv = resolveOptions(noCli, { initScripts: ["env.js"] }, file, context);
+    expect(fromEnv.initScripts.map((script) => script.content)).toEqual(["window.__fromEnv = 1"]);
+
+    const fromFile = resolveOptions(noCli, noEnv, file, context);
+    expect(fromFile.initScripts.map((script) => script.content)).toEqual(["window.__fromFile = 1"]);
+  });
+
+  it("throws a startup error naming the path when a script file is missing", () => {
+    const missingPath = path.join(tmpDir, "does-not-exist.js");
+    expect(() =>
+      resolveOptions({ initScripts: ["does-not-exist.js"] }, noEnv, noFile, { cwd: tmpDir }),
+    ).toThrow(missingPath);
+    expect(() =>
+      resolveOptions(
+        noCli,
+        noEnv,
+        { browser: { initScripts: ["nope.js"] } },
+        { cwd: tmpDir, configDir },
+      ),
+    ).toThrow(path.join(configDir, "nope.js"));
   });
 });

@@ -75,6 +75,17 @@ describe("parseConfigContent (issue #19)", () => {
     ).toThrow(/Invalid config file/);
   });
 
+  it("parses browser.initScripts as a string array (issue #18)", () => {
+    const config = parseConfigContent(
+      JSON.stringify({ browser: { initScripts: ["a.js", "lib/b.js"] } }),
+      "test.json",
+    );
+    expect(config.browser?.initScripts).toEqual(["a.js", "lib/b.js"]);
+    expect(() =>
+      parseConfigContent(JSON.stringify({ browser: { initScripts: "a.js" } }), "test.json"),
+    ).toThrow(ConfigError);
+  });
+
   it("rejects unknown keys in the limits section (strict)", () => {
     expect(() =>
       parseConfigContent(JSON.stringify({ limits: { maxBytes: 1000 } }), "test.json"),
@@ -229,6 +240,21 @@ describe("readEnvInputs (issues #19, #184)", () => {
     });
     expect(result.outputDir).toBe("/tmp/out");
     expect(result.cdpEndpoint).toBe("http://localhost:9222");
+  });
+
+  it("splits CHARLOTTE_INIT_SCRIPT on the OS path delimiter (issue #18)", () => {
+    const result = readEnvInputs({
+      CHARLOTTE_INIT_SCRIPT: ["a.js", " b.js ", ""].join(path.delimiter),
+    });
+    expect(result.initScripts).toEqual(["a.js", "b.js"]);
+    expect(readEnvInputs({ CHARLOTTE_INIT_SCRIPT: "single.js" }).initScripts).toEqual([
+      "single.js",
+    ]);
+  });
+
+  it("treats an empty CHARLOTTE_INIT_SCRIPT as unset", () => {
+    expect(readEnvInputs({ CHARLOTTE_INIT_SCRIPT: "" }).initScripts).toBeUndefined();
+    expect(readEnvInputs({}).initScripts).toBeUndefined();
   });
 
   it("reads CHARLOTTE_AUTH_TOKEN", () => {

@@ -10,6 +10,7 @@ import * as path from "node:path";
 import { z } from "zod";
 import { CharlotteFileConfigSchema, type CharlotteFileConfig } from "./schema.js";
 import type { EnvInputs } from "./resolve.js";
+import type { InitScript } from "../types/config.js";
 
 /** Default config filename looked up in the working directory. */
 export const DEFAULT_CONFIG_FILENAME = "charlotte.config.json";
@@ -61,6 +62,19 @@ export function loadConfigFile(
   explicitPath: string | undefined,
   cwd: string = process.cwd(),
 ): CharlotteFileConfig {
+  return loadConfigFileWithPath(explicitPath, cwd).config;
+}
+
+/**
+ * Same as {@link loadConfigFile}, but also reports the absolute path of the
+ * file that was read (`undefined` when no file was found) so callers can
+ * anchor relative paths inside the config — e.g. `browser.initScripts` — to
+ * the config file's own directory.
+ */
+export function loadConfigFileWithPath(
+  explicitPath: string | undefined,
+  cwd: string = process.cwd(),
+): { config: CharlotteFileConfig; configPath?: string } {
   let targetPath: string | undefined;
 
   if (explicitPath !== undefined) {
@@ -76,7 +90,7 @@ export function loadConfigFile(
   }
 
   if (targetPath === undefined) {
-    return {};
+    return { config: {} };
   }
 
   let raw: string;
@@ -86,7 +100,31 @@ export function loadConfigFile(
     throw new ConfigError(`Failed to read config file ${targetPath}: ${(error as Error).message}`);
   }
 
-  return parseConfigContent(raw, targetPath);
+  return { config: parseConfigContent(raw, targetPath), configPath: targetPath };
+}
+
+/**
+ * Read init-script files (issue #18) into memory. Every path is resolved
+ * against `baseDir` and read as UTF-8; the first missing or unreadable file
+ * throws a `ConfigError` naming the path and the configuration source it
+ * came from. Fail-fast on purpose: an init script the operator asked for but
+ * that silently never runs is worse than a refused start.
+ */
+export function loadInitScripts(
+  scriptPaths: string[],
+  baseDir: string,
+  sourceLabel: string,
+): InitScript[] {
+  return scriptPaths.map((scriptPath) => {
+    const resolvedPath = path.resolve(baseDir, scriptPath);
+    try {
+      return { source: resolvedPath, content: readFileSync(resolvedPath, "utf-8") };
+    } catch (error) {
+      throw new ConfigError(
+        `Failed to read init script ${resolvedPath} (from ${sourceLabel}): ${(error as Error).message}`,
+      );
+    }
+  });
 }
 
 /** Booleans accepted as "true" for env flags. */
@@ -97,6 +135,7 @@ const EnvSchema = z.object({
   CHARLOTTE_NO_SANDBOX: z.string().optional(),
   CHARLOTTE_OUTPUT_DIR: z.string().optional(),
   CHARLOTTE_CDP_ENDPOINT: z.string().optional(),
+  CHARLOTTE_INIT_SCRIPT: z.string().optional(),
   CHARLOTTE_AUTH_TOKEN: z.string().optional(),
 });
 
@@ -124,9 +163,21 @@ export function readEnvInputs(env: NodeJS.ProcessEnv = process.env): EnvInputs {
 
   const outputDir = parsed.CHARLOTTE_OUTPUT_DIR?.trim() || undefined;
   const cdpEndpoint = parsed.CHARLOTTE_CDP_ENDPOINT?.trim() || undefined;
+  // One path, or several separated by the OS path delimiter (":" on POSIX,
+  // ";" on Windows) — the same convention as PATH itself. Empty segments are
+  // dropped so a trailing delimiter is harmless.
+  const initScripts = parsed.CHARLOTTE_INIT_SCRIPT?.split(path.delimiter)
+    .map((segment) => segment.trim())
+    .filter((segment) => segment.length > 0);
   // Not trimmed beyond surrounding whitespace, and an empty value counts as
   // unset so `CHARLOTTE_AUTH_TOKEN=` can't silently become a valid token.
   const authToken = parsed.CHARLOTTE_AUTH_TOKEN?.trim() || undefined;
 
-  return { noSandbox, outputDir, cdpEndpoint, authToken };
+  return {
+    noSandbox,
+    outputDir,
+    cdpEndpoint,
+    initScripts: initScripts !== undefined && initScripts.length > 0 ? initScripts : undefined,
+    authToken,
+  };
 }

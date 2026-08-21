@@ -57,6 +57,9 @@ Options:
                          untrusted pages. Env: CHARLOTTE_NO_SANDBOX=1
   --cdp-endpoint <url>   Connect to an existing Chrome via CDP endpoint
                          (http://..., ws://..., or channel:chrome)
+  --init-script <path>   JavaScript file to run on every new document before
+                         any page script (repeatable; relative to cwd).
+                         Env: CHARLOTTE_INIT_SCRIPT=a.js:b.js (path delimiter)
   --http                 Serve streamable HTTP instead of stdio. Requires a
                          bearer token (env CHARLOTTE_AUTH_TOKEN or config
                          http.authToken); binds http.host (default 127.0.0.1)
@@ -74,6 +77,7 @@ interface RawCliValues {
   "no-headless"?: boolean;
   "no-sandbox"?: boolean;
   "cdp-endpoint"?: string;
+  "init-script"?: string[];
   http?: boolean;
   port?: string;
   help?: boolean;
@@ -90,6 +94,7 @@ function rawParse(argv: string[]): RawCliValues {
       "no-headless": { type: "boolean" },
       "no-sandbox": { type: "boolean" },
       "cdp-endpoint": { type: "string" },
+      "init-script": { type: "string", multiple: true },
       http: { type: "boolean" },
       port: { type: "string" },
       help: { type: "boolean" },
@@ -211,6 +216,10 @@ export function parseCliInputs(argv: string[] = process.argv.slice(2)): {
   if (values["no-headless"] === true) cli.headless = false;
   if (values["no-sandbox"] === true) cli.noSandbox = true;
   if (cdpEndpoint !== undefined) cli.cdpEndpoint = cdpEndpoint;
+  const initScriptPaths = values["init-script"];
+  if (initScriptPaths !== undefined && initScriptPaths.length > 0) {
+    cli.initScripts = initScriptPaths;
+  }
   if (http !== undefined) cli.http = http;
   if (port !== undefined) cli.port = port;
 

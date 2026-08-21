@@ -12,13 +12,6 @@ This is Charlotte's canonical changelog — every release from v0.1.0 through th
 
 Week of 2026-08-21: a privacy page and cookieless analytics on the marketing site, plus faster in-site navigation, and a server fix for selector-mode (`dom-`) element IDs in `charlotte_toggle` and the `charlotte_find` spatial filters.
 
-### Fixed
-
-- **Selector-mode `dom-` IDs in `charlotte_toggle` and `charlotte_find` filters** ([#220](https://github.com/TickTockBent/charlotte/issues/220)). IDs returned by `charlotte_find` in selector mode live outside the accessibility-derived `interactive` list, and three code paths assumed they did not:
-  - `charlotte_toggle` skipped its toggleable-control guard for `dom-` IDs and fired an unvalidated click on whatever the ID pointed at (a link would be followed). It now classifies `dom-` targets live via CDP and rejects non-checkbox/radio/switch elements with `INVALID_ARGUMENT`, matching the behavior for observe-derived IDs.
-  - The `near` and `within` filters on `charlotte_find` reported a misleading "has no bounds" error for a `dom-` reference. They now read the reference's live box model, so a `dom-` anchor works; an unknown anchor now reports `ELEMENT_NOT_FOUND` (with a similar-ID suggestion) rather than the misleading "has no bounds" error.
-  - `charlotte_find` recorded a `dom-` element's match index as the count of successfully described matches rather than its raw `querySelectorAll` position, so any earlier undescribable match (e.g. a pseudo-element) shifted every later ID onto the wrong node on re-resolution. The stored index is now the raw position.
-
 ### Added
 
 - **Privacy page and cookieless analytics** on the [Charlotte site](https://charlotte.mintlify.site/). Vercel Web Analytics is enabled at the site root and collects aggregate, cookieless traffic data only. No personal data is collected and no third-party trackers are loaded. A new **Privacy** link now appears in the shared footer, the changelog's inline footer, and the sitemap.
@@ -26,6 +19,13 @@ Week of 2026-08-21: a privacy page and cookieless analytics on the marketing sit
 ### Changed
 
 - **Client-side navigation on the marketing site.** Internal links in the homepage nav and shared footer now route through Next.js client-side navigation instead of full page reloads. Moving between the homepage, [changelog](https://charlotte.mintlify.site/changelog), [benchmarks](https://charlotte.mintlify.site/benchmarks), and privacy pages is instant. Hash anchors and external links are unchanged.
+
+### Fixed
+
+- **Selector-mode `dom-` IDs in `charlotte_toggle` and `charlotte_find` filters** ([#220](https://github.com/TickTockBent/charlotte/issues/220)). IDs returned by `charlotte_find` in selector mode live outside the accessibility-derived `interactive` list, and three code paths assumed they did not:
+  - `charlotte_toggle` skipped its toggleable-control guard for `dom-` IDs and fired an unvalidated click on whatever the ID pointed at (a link would be followed). It now classifies `dom-` targets live via CDP and rejects non-checkbox/radio/switch elements with `INVALID_ARGUMENT`, matching the behavior for observe-derived IDs.
+  - The `near` and `within` filters on `charlotte_find` reported a misleading "has no bounds" error for a `dom-` reference. They now read the reference's live box model, so a `dom-` anchor works; an unknown anchor now reports `ELEMENT_NOT_FOUND` (with a similar-ID suggestion) rather than the misleading "has no bounds" error.
+  - `charlotte_find` recorded a `dom-` element's match index as the count of successfully described matches rather than its raw `querySelectorAll` position, so any earlier undescribable match (e.g. a pseudo-element) shifted every later ID onto the wrong node on re-resolution. The stored index is now the raw position.
 
 Week of 2026-08-18: a screenshot ergonomics improvement for very long pages, and a documented security exception for a transitive install-time advisory. No breaking changes.
 

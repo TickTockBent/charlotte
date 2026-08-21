@@ -4,8 +4,6 @@ description: Reference for Charlotte's config file schema, environment variables
 icon: gear
 ---
 
-# Configuration
-
 Charlotte resolves its settings from four sources. When the same setting is
 provided by more than one source, the **higher-precedence** source wins:
 

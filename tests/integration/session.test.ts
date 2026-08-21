@@ -252,6 +252,74 @@ describe("session-group handlers", () => {
       expect(parsed.viewport.width).toBe(1024);
       expect(parsed.viewport.height).toBe(768);
     });
+
+    describe("named device emulation (#24)", () => {
+      type ViewportResponse = {
+        viewport: { width: number; height: number };
+        emulation?: {
+          device: string;
+          user_agent: string;
+          device_scale_factor: number;
+          has_touch: boolean;
+          is_mobile: boolean;
+        };
+      };
+
+      async function evaluateInPage<T>(expression: string): Promise<T> {
+        return parseToolJson<{ value: T }>(
+          await harness.callTool("charlotte_evaluate", { expression }),
+        ).value;
+      }
+
+      it("applies a KnownDevices name: viewport, DPR, touch, and user agent", async () => {
+        const parsed = parseToolJson<ViewportResponse>(
+          await harness.callTool("charlotte_viewport", { device: "iPhone 15" }),
+        );
+        expect(parsed.viewport.width).toBe(393);
+        expect(parsed.emulation?.device).toBe("iPhone 15");
+        expect(parsed.emulation?.device_scale_factor).toBe(3);
+        expect(parsed.emulation?.has_touch).toBe(true);
+        expect(parsed.emulation?.is_mobile).toBe(true);
+
+        expect(await evaluateInPage<string>("navigator.userAgent")).toContain("iPhone");
+        expect(await evaluateInPage<number>("window.devicePixelRatio")).toBe(3);
+        expect(await evaluateInPage<number>("navigator.maxTouchPoints")).toBeGreaterThan(0);
+      });
+
+      it("a generic preset afterwards resets DPR, touch, and user agent", async () => {
+        await harness.callTool("charlotte_viewport", { device: "iPhone 15" });
+        const parsed = parseToolJson<ViewportResponse>(
+          await harness.callTool("charlotte_viewport", { device: "desktop" }),
+        );
+        expect(parsed.viewport.width).toBe(1440);
+        expect(parsed.emulation).toBeUndefined();
+
+        expect(await evaluateInPage<string>("navigator.userAgent")).not.toContain("iPhone");
+        expect(await evaluateInPage<number>("window.devicePixelRatio")).toBe(1);
+        expect(await evaluateInPage<number>("navigator.maxTouchPoints")).toBe(0);
+      });
+
+      it("matches device names case-insensitively", async () => {
+        const parsed = parseToolJson<ViewportResponse>(
+          await harness.callTool("charlotte_viewport", { device: "iphone 15" }),
+        );
+        expect(parsed.viewport.width).toBe(393);
+        expect(parsed.emulation?.device).toBe("iPhone 15");
+        // Leave the shared page un-emulated for later tests.
+        await harness.callTool("charlotte_viewport", { device: "desktop" });
+      });
+
+      it("rejects an unknown device with INVALID_ARGUMENT and substring suggestions", async () => {
+        const result = await harness.callTool("charlotte_viewport", { device: "Nokia 3310" });
+        expect(result.isError).toBe(true);
+        const parsed = parseToolJson<{
+          error: { code: string; message: string; suggestion?: string };
+        }>(result);
+        expect(parsed.error.code).toBe("INVALID_ARGUMENT");
+        expect(parsed.error.message).toContain("Nokia 3310");
+        expect(parsed.error.suggestion).toContain("Nokia");
+      });
+    });
   });
 
   describe("tabs", () => {

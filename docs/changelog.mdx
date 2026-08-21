@@ -9,10 +9,11 @@ This is Charlotte's canonical changelog — every release from v0.1.0 through th
 
 ## [Unreleased]
 
-Week of 2026-08-21: a privacy page and cookieless analytics on the marketing site, plus faster in-site navigation, and a server fix for selector-mode (`dom-`) element IDs in `charlotte_toggle` and the `charlotte_find` spatial filters.
+Week of 2026-08-21: named device emulation in `charlotte_viewport`, a privacy page and cookieless analytics on the marketing site, plus faster in-site navigation, and a server fix for selector-mode (`dom-`) element IDs in `charlotte_toggle` and the `charlotte_find` spatial filters.
 
 ### Added
 
+- **Named device emulation in `charlotte_viewport`** ([#24](https://github.com/TickTockBent/charlotte/issues/24)). `device` now accepts any Puppeteer `KnownDevices` name (e.g. `"iPhone 15"`, `"iPhone 15 landscape"`, `"Pixel 5"`, `"iPad Pro"`), matched case-insensitively, alongside the generic `mobile`/`tablet`/`desktop` presets. A named device applies the full descriptor via `page.emulate()`: viewport, device pixel ratio, touch support, mobile mode, and user agent. The response then carries an `emulation` object (`device`, `user_agent`, `device_scale_factor`, `has_touch`, `is_mobile`). Switching back to a generic preset or custom `width`/`height` resets DPR, touch, and mobile mode and restores the browser's default user agent, so emulation does not leak between calls. Unknown names fail with `INVALID_ARGUMENT` and up to five close `KnownDevices` suggestions.
 - **Privacy page and cookieless analytics** on the [Charlotte site](https://charlotte.mintlify.site/). Vercel Web Analytics is enabled at the site root and collects aggregate, cookieless traffic data only. No personal data is collected and no third-party trackers are loaded. A new **Privacy** link now appears in the shared footer, the changelog's inline footer, and the sitemap.
 
 ### Changed
@@ -205,7 +206,7 @@ This release hardens Charlotte for untrusted pages, fixes a long tail of silent-
 
 ### Added
 
-- **Popup and target="_blank" tab capture** — Clicks on `target="_blank"` links and `window.open()` calls were silently lost because PageManager had no `popup` event handler. New tabs are now auto-captured via `page.on("popup")`, auto-cleaned when pages close themselves, and surfaced as `opened_tabs` in tool responses using single-consumption semantics. Fixes #103, #98.
+- **Popup and target="\_blank" tab capture** — Clicks on `target="_blank"` links and `window.open()` calls were silently lost because PageManager had no `popup` event handler. New tabs are now auto-captured via `page.on("popup")`, auto-cleaned when pages close themselves, and surfaced as `opened_tabs` in tool responses using single-consumption semantics. Fixes #103, #98.
 - **Contributor issue templates** — Bug report, feature request, and tool request templates added to the repository. Community links added to README. (#102)
 
 ### Changed

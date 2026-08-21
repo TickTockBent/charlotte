@@ -78,7 +78,7 @@ Agents receive landmarks, headings, interactive elements with typed metadata, bo
 
 **Monitoring** — `console` (all severity levels, filtering, timestamps), `requests` (full HTTP history, method/status/resource type filtering)
 
-**Session Management** — `tabs`, `tab_open`, `tab_switch`, `tab_close`, `viewport` (device presets), `network` (throttling, URL blocking), `set_cookies`, `get_cookies`, `clear_cookies`, `set_headers`, `configure`
+**Session Management** — `tabs`, `tab_open`, `tab_switch`, `tab_close`, `viewport` (generic presets or named devices such as "iPhone 15" with DPR, touch, and user agent emulation), `network` (throttling, URL blocking), `set_cookies`, `get_cookies`, `clear_cookies`, `set_headers`, `configure`
 
 **Development Mode** — `dev_serve` (static server + file watching with auto-reload), `dev_inject` (CSS/JS injection), `dev_audit` (a11y, performance, SEO, contrast, broken links)
 
@@ -525,8 +525,6 @@ Five pages cover navigation, forms, interactive elements, popups, delayed conten
 ### Session & Configuration
 
 **Persistent Init Scripts** — Add a `--init-script` CLI argument to inject JavaScript on every page load via `page.evaluateOnNewDocument()`. Charlotte's `dev_inject` currently applies CSS/JS once and does not persist across navigations.
-
-**Full Device Emulation** — Extend `charlotte_viewport` to accept named devices (e.g., "iPhone 15") and configure user agent, touch support, and device pixel ratio via CDP, not just viewport dimensions.
 
 ### Feature Roadmap
 

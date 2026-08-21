@@ -23,7 +23,9 @@ import {
   writeBinaryOutputFile,
   stripEmptyFields,
   waitForCompositorFrame,
+  getSessionForElement,
 } from "./tool-helpers.js";
+import { boundsFromContentQuad, getLiveBounds } from "./interaction-helpers.js";
 
 /** Lightweight result from CSS selector queries. */
 interface DOMElementResult {
@@ -36,8 +38,10 @@ interface DOMElementResult {
 /**
  * Query the DOM by CSS selector and register matched elements with
  * the ElementIdGenerator so their IDs work with interaction tools.
+ *
+ * Exported for unit testing of the match-index bookkeeping (#220).
  */
-async function findBySelector(
+export async function findBySelector(
   page: Page,
   deps: SessionContext,
   selector: string,
@@ -54,9 +58,13 @@ async function findBySelector(
     });
 
     const results: DOMElementResult[] = [];
-    let matchIndex = 0;
 
-    for (const nodeId of nodeIds) {
+    // The raw querySelectorAll position is the index that reResolveDomQueryId
+    // later uses to re-query this element, so it must be recorded as-is —
+    // including positions occupied by nodes that fail describeNode below.
+    // A separate "successful matches" counter would skew every later ID by
+    // one per skipped node (#220).
+    for (const [rawMatchIndex, nodeId] of nodeIds.entries()) {
       try {
         // Get node details including backendNodeId
         const { node } = await cdpSession.send("DOM.describeNode", { nodeId });
@@ -80,12 +88,7 @@ async function findBySelector(
         try {
           const { model } = await cdpSession.send("DOM.getBoxModel", { backendNodeId });
           if (model) {
-            const contentQuad = model.content;
-            const minX = Math.min(contentQuad[0], contentQuad[2], contentQuad[4], contentQuad[6]);
-            const minY = Math.min(contentQuad[1], contentQuad[3], contentQuad[5], contentQuad[7]);
-            const maxX = Math.max(contentQuad[0], contentQuad[2], contentQuad[4], contentQuad[6]);
-            const maxY = Math.max(contentQuad[1], contentQuad[3], contentQuad[5], contentQuad[7]);
-            bounds = { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+            bounds = boundsFromContentQuad(model.content);
           }
         } catch {
           // Element may be hidden or zero-sized — leave bounds as null
@@ -103,7 +106,7 @@ async function findBySelector(
             nearestLandmarkRole: null,
             nearestLandmarkLabel: null,
             nearestLabelledContainer: null,
-            siblingIndex: matchIndex,
+            siblingIndex: rawMatchIndex,
           },
           backendNodeId,
         );
@@ -112,7 +115,7 @@ async function findBySelector(
           backendDOMNodeId: backendNodeId,
           frameId: null,
           selector,
-          matchIndex,
+          matchIndex: rawMatchIndex,
         });
 
         results.push({
@@ -121,7 +124,6 @@ async function findBySelector(
           text: textContent,
           bounds,
         });
-        matchIndex++;
       } catch {
         // Skip nodes that can't be described (e.g. pseudo-elements)
         continue;
@@ -132,6 +134,51 @@ async function findBySelector(
   } finally {
     await cdpSession.detach();
   }
+}
+
+/**
+ * Resolve the bounds of a spatial-filter reference element (`near` / `within`).
+ *
+ * AX-tree elements carry bounds in `representation.interactive`. Selector-mode
+ * (`dom-`) IDs never appear there, so for those we resolve the live node via
+ * `resolveElement` and read its box model directly (#220). Unknown IDs throw
+ * the standard ELEMENT_NOT_FOUND (with a similar-ID suggestion) from
+ * `resolveElement`; a known element with no layout throws INVALID_ARGUMENT.
+ */
+async function resolveReferenceBounds(
+  deps: SessionContext,
+  representation: { interactive: Array<{ id: string; bounds: Bounds | null }> },
+  referenceElementId: string,
+  filterName: "near" | "within",
+): Promise<Bounds> {
+  const interactiveReference = representation.interactive.find(
+    (element) => element.id === referenceElementId,
+  );
+
+  let referenceBounds: Bounds | null = null;
+  if (interactiveReference) {
+    referenceBounds = interactiveReference.bounds;
+  } else {
+    // Throws ELEMENT_NOT_FOUND (with a "Did you mean" suggestion) for unknown
+    // IDs; returns the re-resolved live node for registered dom- IDs.
+    const resolvedReference = await resolveElement(deps, referenceElementId);
+    const session = await getSessionForElement(deps, resolvedReference);
+    referenceBounds = await getLiveBounds(session, resolvedReference.backendNodeId);
+  }
+
+  // A reference with no bounds can't anchor a spatial filter. Silently
+  // skipping it would return the UNFILTERED set with no indication —
+  // reject so the caller knows the filter didn't apply (#204).
+  if (!referenceBounds) {
+    const elementNoun = filterName === "within" ? "container" : "reference";
+    throw new CharlotteError(
+      CharlotteErrorCode.INVALID_ARGUMENT,
+      `Reference element '${referenceElementId}' has no bounds; cannot apply spatial filter.`,
+      `Pick a ${elementNoun} element that is laid out on the page (has bounds), or drop the '${filterName}' filter.`,
+    );
+  }
+
+  return referenceBounds;
 }
 
 /**
@@ -354,22 +401,7 @@ const findTool = defineTool({
 
       // Spatial filter: near
       if (near) {
-        await resolveElement(deps, near);
-        // Find the reference element in the interactive list
-        const referenceElement = representation.interactive.find((element) => element.id === near);
-
-        // A reference with no bounds can't anchor a spatial filter. Silently
-        // skipping it would return the UNFILTERED set with no indication —
-        // reject so the caller knows the filter didn't apply (#204).
-        if (!referenceElement?.bounds) {
-          throw new CharlotteError(
-            CharlotteErrorCode.INVALID_ARGUMENT,
-            `Reference element '${near}' has no bounds; cannot apply spatial filter.`,
-            "Pick a reference element that is laid out on the page (has bounds), or drop the 'near' filter.",
-          );
-        }
-
-        const referenceBounds = referenceElement.bounds;
+        const referenceBounds = await resolveReferenceBounds(deps, representation, near, "near");
         matchingElements = matchingElements
           .filter((element) => {
             if (!element.bounds || element.id === near) return false;
@@ -385,22 +417,7 @@ const findTool = defineTool({
 
       // Spatial filter: within
       if (within) {
-        await resolveElement(deps, within);
-        const containerElement = representation.interactive.find(
-          (element) => element.id === within,
-        );
-
-        // Same rationale as 'near': a boundsless container can't contain
-        // anything, so reject instead of silently returning everything (#204).
-        if (!containerElement?.bounds) {
-          throw new CharlotteError(
-            CharlotteErrorCode.INVALID_ARGUMENT,
-            `Reference element '${within}' has no bounds; cannot apply spatial filter.`,
-            "Pick a container element that is laid out on the page (has bounds), or drop the 'within' filter.",
-          );
-        }
-
-        const containerBounds = containerElement.bounds;
+        const containerBounds = await resolveReferenceBounds(deps, representation, within, "within");
         matchingElements = matchingElements.filter((element) => {
           if (!element.bounds || element.id === within) return false;
           return isContainedWithin(element.bounds, containerBounds);

@@ -417,7 +417,12 @@ const findTool = defineTool({
 
       // Spatial filter: within
       if (within) {
-        const containerBounds = await resolveReferenceBounds(deps, representation, within, "within");
+        const containerBounds = await resolveReferenceBounds(
+          deps,
+          representation,
+          within,
+          "within",
+        );
         matchingElements = matchingElements.filter((element) => {
           if (!element.bounds || element.id === within) return false;
           return isContainedWithin(element.bounds, containerBounds);

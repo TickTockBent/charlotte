@@ -528,8 +528,6 @@ Five pages cover navigation, forms, interactive elements, popups, delayed conten
 
 **Video Recording** — Record interactions as video, capturing the full sequence of agent-driven navigation and manipulation for debugging, documentation, and review.
 
-**ARM64 Docker Images** — Add `linux/arm64` platform support to the Docker publish workflow for native performance on Apple Silicon Macs and ARM servers.
-
 See [docs-internal/playwright-mcp-gap-analysis.md](docs-internal/playwright-mcp-gap-analysis.md) for the full gap analysis against Playwright MCP, including lower-priority items (vision tools, testing/verification, tracing, transport, security) and areas where Charlotte has advantages.
 
 ## Full Specification

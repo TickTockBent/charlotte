@@ -9,6 +9,16 @@
 
 FROM node:22-slim
 
+# TARGETARCH is supplied by BuildKit (amd64 / arm64). It picks the cloudflared
+# asset below and decides where Chromium comes from:
+#   amd64 -> Puppeteer's bundled Chrome for Testing (downloaded by `npm ci`).
+#            This is the configuration the seccomp/sandbox posture in
+#            docs/docker.mdx was validated against; it does not change.
+#   arm64 -> Debian's `chromium` package. Chrome for Testing has no Linux
+#            arm64 build, so `npm ci` skips the download and
+#            docker/entrypoint.sh points Puppeteer at /usr/bin/chromium.
+ARG TARGETARCH
+
 # Install dependencies for Puppeteer/Chromium
 RUN apt-get update && apt-get install -y \
     # Chromium dependencies
@@ -34,14 +44,17 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     dumb-init \
     --no-install-recommends \
+    # arm64 only: Debian's Chromium (pulls its own runtime deps) — see header.
+    && if [ "$TARGETARCH" = "arm64" ]; then \
+         apt-get install -y --no-install-recommends chromium; \
+       fi \
     && rm -rf /var/lib/apt/lists/*
 
 # cloudflared — powers the zero-config demo tunnel in docker/entrypoint.sh (D27).
 # Pinned to a specific release and fetched at build time so the image is
 # reproducible and needs no network fetch at container start. Downloaded with
 # Node's fetch (already in the base image) rather than adding curl/wget.
-# TARGETARCH is supplied by BuildKit: amd64 / arm64 match the asset names.
-ARG TARGETARCH
+# TARGETARCH (declared above) is the asset-name suffix: amd64 / arm64.
 ARG CLOUDFLARED_VERSION=2026.7.3
 RUN node -e "\
 const [, version, arch, outputPath] = process.argv; \
@@ -68,7 +81,10 @@ COPY package*.json ./
 # Install dependencies — cache Puppeteer's Chromium inside /app so
 # the non-root charlotte user can access it after chown
 ENV PUPPETEER_CACHE_DIR=/app/.cache/puppeteer
-RUN npm ci
+# On arm64 there is no Chrome for Testing to download (see header), so skip
+# it and rely on the apt `chromium` installed above. amd64 is unchanged.
+RUN if [ "$TARGETARCH" = "arm64" ]; then export PUPPETEER_SKIP_DOWNLOAD=true; fi \
+    && npm ci
 
 # Copy source and build
 COPY tsconfig*.json ./

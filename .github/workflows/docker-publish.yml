@@ -15,7 +15,9 @@ jobs:
     # publishing it would also repoint :latest at a pre-remote image.
     if: github.ref_name != 'v0.7.0'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Raised from 30: the linux/arm64 halves of both images are cross-built
+    # under QEMU emulation (npm ci + tsc + apt run several times slower).
+    timeout-minutes: 60
     permissions:
       contents: read
       packages: write
@@ -24,6 +26,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # QEMU lets Buildx emulate linux/arm64 on the amd64 runner (slow, but
+      # the only way to cross-build without a native arm64 runner).
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -31,6 +38,9 @@ jobs:
         id: version
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
+      # amd64 only: `load: true` imports into the local daemon, which cannot
+      # take a multi-arch manifest. arm64 is build-verified by the push steps
+      # below, not smoke-tested, in CI.
       - name: Build Alpine image (local, for smoke test)
         uses: docker/build-push-action@v6
         with:
@@ -81,7 +91,7 @@ jobs:
         with:
           context: .
           file: Dockerfile.alpine
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             ${{ env.GHCR_IMAGE }}:alpine
@@ -96,7 +106,7 @@ jobs:
         with:
           context: .
           file: Dockerfile
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           push: true
           # :latest is the Debian image: it carries the D27 demo-mode entrypoint
           # (cloudflared quick tunnel) that the README's one-command docker run

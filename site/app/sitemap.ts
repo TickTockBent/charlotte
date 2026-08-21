@@ -24,6 +24,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "weekly",
       priority: 0.7,
     },
+    {
+      url: `${baseUrl}/privacy/`,
+      lastModified: new Date("2026-08-21"),
+      changeFrequency: "yearly",
+      priority: 0.2,
+    },
     // TODO: Add standalone pages for more search entry points:
     // - /setup/ (getting started guide — maps to docs/mcp-setup.md)
     // - /spec/ (full specification reference — maps to docs/CHARLOTTE_SPEC.md)

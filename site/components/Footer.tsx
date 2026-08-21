@@ -52,6 +52,13 @@ export default function Footer() {
           >
             Changelog
           </a>
+          <span className="text-surface-border">|</span>
+          <a
+            href="/privacy"
+            className="hover:text-foreground transition-colors"
+          >
+            Privacy
+          </a>
         </div>
         <p className="text-sm text-muted">
           Built with Charlotte.

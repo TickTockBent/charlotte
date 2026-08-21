@@ -14,7 +14,11 @@ export interface DomQueryRegistration {
   frameId: string | null;
   /** CSS selector that produced this element. */
   selector: string;
-  /** Index of this element within the selector's match list (querySelectorAll order). */
+  /**
+   * Raw position of this element in `DOM.querySelectorAll`'s result list —
+   * including positions held by nodes that failed `DOM.describeNode` and were
+   * skipped. Re-resolution indexes the raw list, so the two must agree (#220).
+   */
   matchIndex: number;
 }
 

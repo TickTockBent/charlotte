@@ -326,15 +326,26 @@ const toggleTool = defineTool({
       // with no error. Restrict to checkbox/radio/switch roles (#204).
       const preToggleRepresentation = await renderActivePage(deps, { detail: "minimal" });
       const targetElement = preToggleRepresentation.interactive.find((el) => el.id === element_id);
-      if (targetElement && !TOGGLEABLE_TYPES.has(targetElement.type)) {
+      let targetElementType: string | null = targetElement?.type ?? null;
+
+      const resolved = await resolveElement(deps, element_id);
+
+      // Selector-mode (dom-) IDs never appear in representation.interactive,
+      // so the AX-derived type check above can't see them. Classify those
+      // live via CDP instead so a dom- ID pointing at a link/button is
+      // rejected rather than clicked (#220).
+      if (!targetElement && deps.elementIdGenerator.getDomQueryRegistration(element_id)) {
+        const liveClassification = await classifyFillableNode(deps, resolved);
+        targetElementType = liveClassification?.type ?? "non-form element";
+      }
+
+      if (targetElementType !== null && !TOGGLEABLE_TYPES.has(targetElementType)) {
         throw new CharlotteError(
           CharlotteErrorCode.INVALID_ARGUMENT,
-          `Element '${element_id}' is a ${targetElement.type}, not a checkbox/radio/switch — charlotte_toggle only operates on toggleable controls.`,
+          `Element '${element_id}' is a ${targetElementType}, not a checkbox/radio/switch — charlotte_toggle only operates on toggleable controls.`,
           "Use charlotte_click for buttons, links, and other elements.",
         );
       }
-
-      const resolved = await resolveElement(deps, element_id);
       const session = await getSessionForElement(deps, resolved);
 
       logger.info("Toggling element", { element_id });

@@ -1,6 +1,7 @@
 import type { Page, KeyInput, CDPSession } from "puppeteer";
 import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 import { logger } from "../utils/logger.js";
+import type { Bounds } from "../types/page-representation.js";
 
 /**
  * Shape of the `exceptionDetails` carried by a CDP `Runtime.callFunctionOn` /
@@ -65,6 +66,35 @@ export async function scrollAndGetCenter(
   }
 
   return centerOfQuad(model.content);
+}
+
+/**
+ * Convert a CDP box-model content quad ([x1,y1,...,x4,y4]) into an axis-aligned
+ * {@link Bounds} rectangle.
+ */
+export function boundsFromContentQuad(contentQuad: number[]): Bounds {
+  const minX = Math.min(contentQuad[0], contentQuad[2], contentQuad[4], contentQuad[6]);
+  const minY = Math.min(contentQuad[1], contentQuad[3], contentQuad[5], contentQuad[7]);
+  const maxX = Math.max(contentQuad[0], contentQuad[2], contentQuad[4], contentQuad[6]);
+  const maxY = Math.max(contentQuad[1], contentQuad[3], contentQuad[5], contentQuad[7]);
+  return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+}
+
+/**
+ * Fetch an element's live layout bounds via `DOM.getBoxModel`. Returns null
+ * when the element has no box model (hidden, `display: contents`, zero-sized)
+ * instead of throwing, so callers can treat "boundsless" as a normal state.
+ */
+export async function getLiveBounds(
+  session: CDPSession,
+  backendNodeId: number,
+): Promise<Bounds | null> {
+  try {
+    const { model } = await session.send("DOM.getBoxModel", { backendNodeId });
+    return model ? boundsFromContentQuad(model.content) : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Compute the centroid of a CDP box-model content quad ([x1,y1,...,x4,y4]). */

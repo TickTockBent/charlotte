@@ -10,6 +10,16 @@ This is Charlotte's canonical changelog — every release from v0.1.0 through th
 
 ## [Unreleased]
 
+Week of 2026-08-21: a privacy page and cookieless analytics on the marketing site, plus faster in-site navigation. No product/server changes this week.
+
+### Added
+
+- **Privacy page and cookieless analytics** on the [Charlotte site](https://charlotte.mintlify.site/). Vercel Web Analytics is enabled at the site root and collects aggregate, cookieless traffic data only — no personal data, no third-party trackers. A new **Privacy** link now appears in the shared footer, the changelog's inline footer, and the sitemap.
+
+### Changed
+
+- **Client-side navigation on the marketing site.** Internal links in the homepage nav and shared footer now route through Next.js client-side navigation instead of full page reloads, so moving between the homepage, [changelog](https://charlotte.mintlify.site/changelog), [benchmarks](https://charlotte.mintlify.site/benchmarks), and privacy pages is instant. Hash anchors and external links are unchanged.
+
 Week of 2026-08-18: a screenshot ergonomics improvement for very long pages, and a documented security exception for a transitive install-time advisory. No breaking changes.
 
 ### Added

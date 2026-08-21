@@ -19,6 +19,7 @@ import {
   writeBinaryOutputFile,
   stripEmptyFields,
 } from "../../src/core/tool-helpers.js";
+import { pollUntil } from "../helpers/poll.js";
 
 const SIMPLE_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/simple.html")}`;
 
@@ -159,8 +160,10 @@ describe("File output integration", () => {
         console.warn("test-warn-message");
       });
 
-      // Small delay for message capture
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // Console events arrive asynchronously over CDP; wait until both are captured
+      await pollUntil(() => pageManager.getConsoleMessages("all").length >= 2, {
+        message: "console messages were not captured",
+      });
 
       const messages = pageManager.getConsoleMessages("all");
       const consoleResult = {

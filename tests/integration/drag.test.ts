@@ -16,6 +16,7 @@ import type { ToolDependencies } from "../../src/core/tool-helpers.js";
 import { renderActivePage, renderAfterAction } from "../../src/core/tool-helpers.js";
 import { setupMcpHarness, parseToolJson, type McpHarness } from "../helpers/mcp-harness.js";
 import type { InteractiveElement } from "../../src/types/page-representation.js";
+import { pollUntil } from "../helpers/poll.js";
 
 const DRAG_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/drag.html")}`;
 const FIXTURES_DIR = path.resolve(import.meta.dirname, "../fixtures/pages");
@@ -71,6 +72,12 @@ describe("Drag and drop integration", () => {
     });
   }
 
+  /** The fixture sets body[data-drag-state] to "released" on the document-level mouseup. */
+  async function getDragState(): Promise<string> {
+    const page = pageManager.getActivePage();
+    return page.evaluate(() => document.body.dataset.dragState ?? "");
+  }
+
   async function getZoneChildren(zoneId: string): Promise<string[]> {
     const page = pageManager.getActivePage();
     return page.evaluate((id) => {
@@ -111,7 +118,11 @@ describe("Drag and drop integration", () => {
     }
   }
 
-  /** Perform a drag from source to target by backend node IDs. */
+  /**
+   * Perform a drag from source to target by backend node IDs. Returns as soon as
+   * the mouse is released; callers poll the observable outcome (zone children,
+   * result text, drag state) rather than sleeping.
+   */
   async function performDrag(sourceNodeId: number, targetNodeId: number) {
     const page = pageManager.getActivePage();
     const sourceCenter = await getCenter(sourceNodeId);
@@ -125,11 +136,13 @@ describe("Drag and drop integration", () => {
       sourceCenter.y + (targetCenter.y - sourceCenter.y) * 0.25,
       { steps: 5 },
     );
+    // Intentional gesture pacing, not a race: gives the page a frame between move
+    // batches so mouseenter/mouseleave fire on zones like a real drag would.
     await new Promise((resolve) => setTimeout(resolve, 50));
     await page.mouse.move(targetCenter.x, targetCenter.y, { steps: 10 });
+    // Intentional gesture pacing (see above) before releasing over the target.
     await new Promise((resolve) => setTimeout(resolve, 50));
     await page.mouse.up();
-    await new Promise((resolve) => setTimeout(resolve, 100));
   }
 
   describe("basic drag operations", () => {
@@ -148,7 +161,13 @@ describe("Drag and drop integration", () => {
       await performDrag(sourceNodeId!, targetNodeId!);
 
       // Verify item moved to zone B
-      const zoneBChildren = await getZoneChildren("zone-b");
+      const zoneBChildren = await pollUntil(
+        async () => {
+          const children = await getZoneChildren("zone-b");
+          return children.includes("item-1") ? children : null;
+        },
+        { message: "item-1 never appeared in zone-b after drop" },
+      );
       expect(zoneBChildren).toContain("item-1");
 
       const resultText = await getResultText();
@@ -177,11 +196,17 @@ describe("Drag and drop integration", () => {
       await page.mouse.move(sourceCenter.x, sourceCenter.y);
       await page.mouse.down();
       await page.mouse.move(sourceCenter.x + 10, sourceCenter.y + 10, { steps: 3 });
+      // Intentional gesture pacing, not a race: a frame between move batches so the
+      // page observes a real drag motion before the release.
       await new Promise((resolve) => setTimeout(resolve, 50));
       await page.mouse.move(600, 400, { steps: 5 }); // empty area
       await page.mouse.up();
 
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // Wait for the positive signal that the gesture finished (document mouseup
+      // handler ran) before asserting the negative: nothing moved.
+      await pollUntil(async () => (await getDragState()) === "released", {
+        message: "drag fixture never reported the release",
+      });
 
       // Items should still be in zone A
       const zoneAChildrenAfter = await getZoneChildren("zone-a");
@@ -203,7 +228,13 @@ describe("Drag and drop integration", () => {
         elementIdGenerator.resolveId(zoneB!.id)!,
       );
 
-      let zoneBChildren = await getZoneChildren("zone-b");
+      let zoneBChildren = await pollUntil(
+        async () => {
+          const children = await getZoneChildren("zone-b");
+          return children.includes("item-1") ? children : null;
+        },
+        { message: "item-1 never appeared in zone-b after first drop" },
+      );
       expect(zoneBChildren).toContain("item-1");
 
       // Re-render to get updated element positions and IDs
@@ -219,7 +250,13 @@ describe("Drag and drop integration", () => {
         elementIdGenerator.resolveId(freshZoneB!.id)!,
       );
 
-      zoneBChildren = await getZoneChildren("zone-b");
+      zoneBChildren = await pollUntil(
+        async () => {
+          const children = await getZoneChildren("zone-b");
+          return children.includes("item-2") ? children : null;
+        },
+        { message: "item-2 never appeared in zone-b after second drop" },
+      );
       expect(zoneBChildren).toContain("item-1");
       expect(zoneBChildren).toContain("item-2");
 
@@ -241,6 +278,9 @@ describe("Drag and drop integration", () => {
         elementIdGenerator.resolveId(item1!.id)!,
         elementIdGenerator.resolveId(zoneB!.id)!,
       );
+      await pollUntil(async () => (await getZoneChildren("zone-b")).includes("item-1"), {
+        message: "item-1 never appeared in zone-b after drop",
+      });
 
       const afterDrag = await renderAfterAction(deps);
 

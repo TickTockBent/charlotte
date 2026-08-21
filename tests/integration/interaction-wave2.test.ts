@@ -30,6 +30,7 @@ async function callOrTimeout(
   promise: Promise<unknown>,
   ms = 5000,
 ): Promise<"completed" | "timeout"> {
+  // Not a race: this is the race-helper's own timeout bound, not a wait for state.
   const timeout = new Promise<"timeout">((resolve) => setTimeout(() => resolve("timeout"), ms));
   return Promise.race([promise.then(() => "completed" as const), timeout]);
 }

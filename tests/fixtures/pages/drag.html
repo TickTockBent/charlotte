@@ -59,6 +59,7 @@
       item.addEventListener('mousedown', (e) => {
         e.preventDefault(); // Prevent text selection drag from capturing the mouse
         draggedElement = item;
+        document.body.dataset.dragState = 'dragging';
         result.textContent = `drag-start: ${item.id}`;
       });
     });
@@ -86,6 +87,8 @@
     document.addEventListener('mouseup', () => {
       draggedElement = null;
       zones.forEach(z => z.classList.remove('over'));
+      // Positive signal that the gesture finished, even when no zone received the drop
+      document.body.dataset.dragState = 'released';
     });
   </script>
 </body>

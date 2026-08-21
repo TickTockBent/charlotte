@@ -15,6 +15,7 @@ import { DevModeState } from "../../src/dev/dev-mode-state.js";
 import { Auditor } from "../../src/dev/auditor.js";
 import type { ToolDependencies } from "../../src/core/tool-helpers.js";
 import { renderActivePage, renderAfterAction } from "../../src/core/tool-helpers.js";
+import { pollUntil } from "../helpers/poll.js";
 
 let TEMP_FIXTURES_DIR: string;
 let FIXTURES_DIR = path.resolve(import.meta.dirname, "../fixtures/pages");
@@ -163,7 +164,11 @@ describe("Dev mode integration", () => {
         content: "body { background-color: rgb(255, 0, 0) !important; }",
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await pollUntil(
+        () =>
+          page.evaluate(() => getComputedStyle(document.body).backgroundColor === "rgb(255, 0, 0)"),
+        { message: "injected CSS never applied to body" },
+      );
 
       const representation = await renderAfterAction(deps);
 
@@ -372,8 +377,24 @@ describe("Dev mode integration", () => {
           "<html><head><title>Reload Test Updated</title></head><body><p>Updated</p></body></html>",
         );
 
-        // Wait for the file watcher to detect the change, debounce, and reload
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        // Wait for the file watcher to detect the change, debounce, and reload.
+        // DevModeState records the pending reload event before it triggers the
+        // page reload, so the new title is proof the event is already buffered.
+        // page.title() evaluates in-page and throws transiently while the reload
+        // navigation is in flight; treat that as "not yet".
+        await pollUntil(
+          async () => {
+            try {
+              return (await page.title()) === "Reload Test Updated";
+            } catch {
+              return false;
+            }
+          },
+          {
+            timeout: 10000,
+            message: "page never reloaded with updated title after file change",
+          },
+        );
 
         // The render should include the reload event
         const representation = await renderActivePage(deps, {

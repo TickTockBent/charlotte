@@ -144,7 +144,8 @@ describe("charlotte_wait_for integration", () => {
     // Initial observe with the element NOT yet present
     await renderActivePage(deps, { source: "observe" });
 
-    // Inject the element after a short delay
+    // Inject the element after a short delay. Not a race: this in-page timer is the
+    // delayed appearance that wait_for is being tested against.
     await page.evaluate(() => {
       setTimeout(() => {
         const container = document.getElementById("dynamic-container")!;

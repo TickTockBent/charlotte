@@ -156,6 +156,7 @@ describe("Screenshot artifacts integration", () => {
       title: "Page 1",
     });
 
+    // Not a race: 10ms guarantees the next artifact gets a strictly later timestamp for ordering.
     await new Promise((r) => setTimeout(r, 10));
 
     const a2 = await deps.artifactStore.save(Buffer.from(s2, "base64"), {

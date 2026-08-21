@@ -234,6 +234,7 @@ describe("Keyboard integration", () => {
       for (let i = 0; i < keysToPress.length; i++) {
         await page.keyboard.press(keysToPress[i] as KeyInput);
         if (i < keysToPress.length - 1) {
+          // Not a race: this is the test-controlled inter-key delay under test, not a wait for state.
           await new Promise((resolve) => setTimeout(resolve, delayMs));
         }
       }

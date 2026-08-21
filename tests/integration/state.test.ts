@@ -14,6 +14,7 @@ import { createDefaultConfig } from "../../src/types/config.js";
 import type { ToolDependencies } from "../../src/core/tool-helpers.js";
 import { renderActivePage, renderAfterAction } from "../../src/core/tool-helpers.js";
 import { diffRepresentations } from "../../src/state/differ.js";
+import { pollUntil } from "../helpers/poll.js";
 
 const INTERACTION_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/interaction.html")}`;
 const DYNAMIC_FIXTURE = `file://${path.resolve(import.meta.dirname, "../fixtures/pages/dynamic.html")}`;
@@ -146,7 +147,14 @@ describe("State management integration", () => {
         const toggleButton = document.getElementById("toggle-section-btn");
         if (toggleButton) toggleButton.click();
       });
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await pollUntil(
+        () =>
+          page.evaluate(() => {
+            const toggledSection = document.getElementById("toggle-section");
+            return toggledSection !== null && toggledSection.offsetParent === null;
+          }),
+        { message: "toggle-section never became hidden after click" },
+      );
 
       // Take a snapshot of the mutated state
       const afterRepresentation = await renderActivePage(deps, {
@@ -212,7 +220,11 @@ describe("State management integration", () => {
         const button = document.getElementById("click-btn");
         if (button) button.click();
       });
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await pollUntil(
+        () =>
+          page.evaluate(() => document.getElementById("result")?.textContent === "Button clicked"),
+        { message: "click-btn result text never updated" },
+      );
 
       // renderAfterAction should produce a representation with a delta
       const representationWithDelta = await renderAfterAction(deps);

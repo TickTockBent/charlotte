@@ -2,7 +2,12 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
 import { logger } from "../utils/logger.js";
-import type { AutoSnapshotMode, DeviceType, DialogAutoDismiss } from "../types/config.js";
+import type { AutoSnapshotMode, DialogAutoDismiss } from "../types/config.js";
+import {
+  resolveDeviceEmulation,
+  applyNamedDevice,
+  applyPlainViewport,
+} from "./device-emulation.js";
 import { defineTool, DEFAULT_SESSION_ID, type ToolDefinition } from "./types.js";
 import {
   ensureReady,
@@ -474,15 +479,15 @@ const tabCloseTool = defineTool({
 const viewportTool = defineTool({
   name: "charlotte_viewport",
   description:
-    "Change the browser viewport dimensions. Use a device preset or specify custom width/height. Returns page representation at the new viewport size.",
+    'Change the browser viewport. Use custom width/height, a generic preset (dimensions only), or a named device like "iPhone 15" (any Puppeteer KnownDevices name), which also emulates device pixel ratio, touch, mobile mode, and user agent. Returns page representation at the new viewport size.',
   inputSchema: {
     width: z.number().min(1).optional().describe("Viewport width in pixels"),
     height: z.number().min(1).optional().describe("Viewport height in pixels"),
     device: z
-      .enum(["mobile", "tablet", "desktop"])
+      .string()
       .optional()
       .describe(
-        'Device preset (overrides width/height). "mobile" = 393×852, "tablet" = 768×1024, "desktop" = 1440×900',
+        'Device preset (overrides width/height). Generic: "mobile" = 393×852, "tablet" = 768×1024, "desktop" = 1440×900. Or any Puppeteer KnownDevices name (e.g. "iPhone 15", "Pixel 5", "iPad Pro"), matched case-insensitively.',
       ),
   },
   async handler(deps, { width, height, device }) {
@@ -491,37 +496,42 @@ const viewportTool = defineTool({
       const page = deps.pageManager.getActivePage();
       const { defaultViewport, deviceViewportPresets } = deps.config;
 
-      let viewportWidth: number;
-      let viewportHeight: number;
+      let appliedEmulation: Record<string, unknown> | undefined;
 
       if (device) {
-        const preset = deviceViewportPresets[device as DeviceType];
-        viewportWidth = preset.width;
-        viewportHeight = preset.height;
-      } else if (width !== undefined && height !== undefined) {
-        viewportWidth = width;
-        viewportHeight = height;
+        const resolution = resolveDeviceEmulation(device, deviceViewportPresets);
+        if (resolution.kind === "named") {
+          logger.info("Emulating named device", { device: resolution.name });
+          await applyNamedDevice(page, resolution.name, resolution.descriptor);
+          const { descriptor } = resolution;
+          appliedEmulation = {
+            device: resolution.name,
+            user_agent: descriptor.userAgent,
+            device_scale_factor: descriptor.viewport.deviceScaleFactor,
+            has_touch: descriptor.viewport.hasTouch,
+            is_mobile: descriptor.viewport.isMobile,
+          };
+        } else {
+          logger.info("Setting viewport", {
+            width: resolution.width,
+            height: resolution.height,
+            device: resolution.preset,
+          });
+          await applyPlainViewport(page, resolution.width, resolution.height);
+        }
       } else {
-        viewportWidth = width ?? defaultViewport.width;
-        viewportHeight = height ?? defaultViewport.height;
+        const viewportWidth = width ?? defaultViewport.width;
+        const viewportHeight = height ?? defaultViewport.height;
+        logger.info("Setting viewport", { width: viewportWidth, height: viewportHeight });
+        await applyPlainViewport(page, viewportWidth, viewportHeight);
       }
-
-      logger.info("Setting viewport", {
-        width: viewportWidth,
-        height: viewportHeight,
-        device,
-      });
-
-      await page.setViewport({
-        width: viewportWidth,
-        height: viewportHeight,
-      });
 
       const representation = await renderActivePage(deps, {
         source: "action",
       });
 
       return formatPageResponse(representation, {
+        ...(appliedEmulation ? { extra: { emulation: appliedEmulation } } : {}),
         maxResponseBytes: deps.config.limits.maxResponseBytes,
       });
     } catch (error: unknown) {

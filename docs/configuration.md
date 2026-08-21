@@ -1,6 +1,6 @@
 ---
-title: Configuration
-description: Every Charlotte config key, environment variable, and precedence rule.
+title: Charlotte configuration keys, env vars, and CLI flags
+description: Reference for Charlotte's config file schema, environment variables, CLI arguments, precedence rules, init scripts, and browser and HTTP settings.
 icon: gear
 ---
 

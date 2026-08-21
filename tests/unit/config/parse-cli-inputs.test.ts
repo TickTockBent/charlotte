@@ -53,6 +53,15 @@ describe("parseCliInputs (issues #19, #184)", () => {
     expect(cli.cdpEndpoint).toBe("http://localhost:9222");
   });
 
+  it("captures repeatable --init-script paths in order (issue #18)", () => {
+    const { cli } = parseCliInputs(["--init-script", "a.js", "--init-script=b.js"]);
+    expect(cli.initScripts).toEqual(["a.js", "b.js"]);
+  });
+
+  it("leaves initScripts unset when --init-script is absent", () => {
+    expect(parseCliInputs([]).cli.initScripts).toBeUndefined();
+  });
+
   describe("--http / --port (slice 1 step 2)", () => {
     it("leaves http unset by default (stdio is the default mode)", () => {
       expect(parseCliInputs([]).cli.http).toBeUndefined();

@@ -315,7 +315,7 @@ charlotte --config charlotte.config.json
 }
 ```
 
-Every section is optional; an empty `{}` is valid. The file is validated with zod — unknown keys, wrong types, or invalid enum values produce a clear startup error on stderr and Charlotte exits non-zero. Three settings also have environment variables: `CHARLOTTE_NO_SANDBOX`, `CHARLOTTE_OUTPUT_DIR`, and `CHARLOTTE_CDP_ENDPOINT`.
+Every section is optional; an empty `{}` is valid. The file is validated with zod — unknown keys, wrong types, or invalid enum values produce a clear startup error on stderr and Charlotte exits non-zero. Four settings also have environment variables: `CHARLOTTE_NO_SANDBOX`, `CHARLOTTE_OUTPUT_DIR`, `CHARLOTTE_CDP_ENDPOINT`, and `CHARLOTTE_INIT_SCRIPT`. Scripts that should run on every new document before page JS go in `browser.initScripts` or `--init-script <path>` (repeatable); see [Init scripts](docs/configuration.md#init-scripts).
 
 ### The Chromium sandbox is on by default
 
@@ -523,8 +523,6 @@ Five pages cover navigation, forms, interactive elements, popups, delayed conten
 ## Roadmap
 
 ### Session & Configuration
-
-**Persistent Init Scripts** — Add a `--init-script` CLI argument to inject JavaScript on every page load via `page.evaluateOnNewDocument()`. Charlotte's `dev_inject` currently applies CSS/JS once and does not persist across navigations.
 
 ### Feature Roadmap
 

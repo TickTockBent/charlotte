@@ -34,6 +34,22 @@ export interface OutputLimits {
   maxEvaluateBytes: number;
 }
 
+/**
+ * A script registered to run on every new document before any page JS
+ * (issue #18) — Charlotte's equivalent of Playwright's `--init-script`.
+ * Applied per page via Puppeteer's `page.evaluateOnNewDocument()`.
+ */
+export interface InitScript {
+  /**
+   * Where the script came from, for logs: the resolved absolute file path for
+   * startup-configured scripts, or a label like `dev_inject#1` for scripts
+   * registered at runtime via `charlotte_dev_inject { persist: true }`.
+   */
+  source: string;
+  /** The JavaScript source text to evaluate. */
+  content: string;
+}
+
 /** How screenshot artifacts are delivered to a remote client ⟨D6⟩. */
 export type ArtifactDelivery = "inline" | "resource";
 
@@ -138,6 +154,12 @@ export interface CharlotteConfig {
   /** Output-size caps that bound tool response size (issue #188). */
   limits: OutputLimits;
   /**
+   * Operator-configured init scripts (issue #18), already read from disk at
+   * startup. PageManager applies each to every page it manages, so they run
+   * on every new document before page JS. Default: none.
+   */
+  initScripts: InitScript[];
+  /**
    * Outbound SSRF / navigation guard (slice 2, decision D14). OFF by default so
    * stdio mode is entirely unaffected; the HTTP transport turns it on at
    * startup. When enabled, `PageManager.wirePageListeners` installs a CDP
@@ -195,6 +217,7 @@ export function createDefaultConfig(): CharlotteConfig {
       tablet: { ...DEVICE_VIEWPORT_PRESETS.tablet },
     },
     limits: { ...DEFAULT_OUTPUT_LIMITS },
+    initScripts: [],
     // Guard off by default: stdio mode never denies navigation. The HTTP
     // transport flips `enabled` on at startup (deny-private-by-default, D14).
     navigationGuard: { enabled: false, allowPrivateNetworks: [] },

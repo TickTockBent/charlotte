@@ -51,6 +51,10 @@ A screenshot or similar artifact up to 256 KB is returned inline in the tool res
 
 Chromium's own sandbox is a load-bearing part of this model — the Docker image ships with it enabled, not disabled, so a hostile page a session navigates to is exploiting the renderer inside the sandbox, not your server. See [Docker: Sandbox and security posture](https://charlotte.mintlify.site/docker#sandbox-and-security-posture) for the full mechanics and troubleshooting.
 
+## Init scripts run with full page privileges
+
+`browser.initScripts` / `--init-script` / `CHARLOTTE_INIT_SCRIPT` are operator-configured at startup and run on every document Charlotte loads, on every origin, before the page's own code — they are trusted code by construction, so treat the files like any other part of your deployment. `charlotte_dev_inject { persist: true }` lets the agent register the same kind of script at runtime for the rest of the session. That is the same trust level `dev_inject` and `charlotte_evaluate` already grant (both run arbitrary JS in the page), not a new one; over HTTP the default `browse` profile excludes those tools. See [Init scripts](https://charlotte.mintlify.site/configuration#init-scripts).
+
 ## Known accepted risks
 
 - **GHSA-jmr9-qjv8-65gv** (`extract-zip` ≤ 2.0.1, high): unvalidated symlink

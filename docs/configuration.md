@@ -39,7 +39,8 @@ Every section is optional. An empty `{}` is valid.
   "browser": {
     "headless": true,
     "noSandbox": false,
-    "cdpEndpoint": null
+    "cdpEndpoint": null,
+    "initScripts": ["./init/stub-analytics.js"]
   },
   "tools": {
     "profile": "browse",
@@ -87,6 +88,7 @@ Every section is optional. An empty `{}` is valid.
 | `browser.headless` | boolean | Run Chromium headless. Default `true`. |
 | `browser.noSandbox` | boolean | Disable the Chromium sandbox. Default `false` (sandbox **ON**). See below. |
 | `browser.cdpEndpoint` | string \| null | Connect to an existing Chrome (`http://`, `https://`, `ws://`, `wss://`, `channel:`). `null` = launch a fresh browser. |
+| `browser.initScripts` | string[] | JavaScript files to run on **every new document** in every tab, before any page script (Puppeteer `evaluateOnNewDocument`; the equivalent of Playwright's `--init-script`). Relative paths resolve against the **config file's directory**. Files are read once at startup; a missing or unreadable file is a startup error. Default `[]`. CLI: `--init-script <path>` (repeatable, relative to cwd). See [Init scripts](#init-scripts). |
 | `tools.profile` | enum | One of `core`, `browse`, `interact`, `develop`, `audit`, `full`. Takes precedence over `groups`. |
 | `tools.groups` | string[] | Explicit tool groups. Ignored when `profile` is set. |
 | `snapshot.depth` | int > 0 | Snapshot ring-buffer depth. |
@@ -173,8 +175,36 @@ marker so agents can tell the output was clipped.
 | `CHARLOTTE_NO_SANDBOX` | `browser.noSandbox` | `1`/`true`/`yes`/`on` enable; `0`/`false`/`no`/`off` disable. |
 | `CHARLOTTE_OUTPUT_DIR` | `output.dir` | |
 | `CHARLOTTE_CDP_ENDPOINT` | `browser.cdpEndpoint` | |
+| `CHARLOTTE_INIT_SCRIPT` | `browser.initScripts` | One path, or several separated by the OS path delimiter (`:` on Linux/macOS, `;` on Windows). Relative paths resolve against the working directory. Replaces (does not merge with) the config-file list. |
 | `CHARLOTTE_AUTH_TOKEN` | `http.authToken` | HTTP-mode bearer token. Wins over the config file. Empty value = unset. |
 | `CHARLOTTE_DEBUG_HTTP` | `http.debugRequests` | `1`/`true`/`yes`/`on` turn request logging on; anything else is off. Read directly by the HTTP transport, so it enables observation even when the config file says `false`. Diagnostics only. |
+
+## Init scripts
+
+`browser.initScripts`, `--init-script`, and `CHARLOTTE_INIT_SCRIPT` register
+JavaScript that runs on every new document — every navigation, reload, and
+new tab — before any of the page's own scripts. Typical uses: stub an
+analytics SDK, pre-seed `localStorage`, or polyfill an API a site expects.
+Precedence is the usual CLI > env > config file, and the winning source's
+list replaces the others outright rather than merging.
+
+```bash
+charlotte --init-script ./init/stub-analytics.js --init-script ./init/seed-storage.js
+CHARLOTTE_INIT_SCRIPT=./a.js:./b.js charlotte
+```
+
+Each file is read once at startup; editing it later has no effect until
+Charlotte restarts. A path that cannot be read fails startup with the path in
+the error (`charlotte doctor` reports the resolved sources). Init scripts
+run with full page privileges on every origin Charlotte visits, so treat the
+files as trusted code. Agents can register the same kind of script at
+runtime with `charlotte_dev_inject { persist: true }`; those last until the
+process exits.
+
+One limitation: a popup the page opens itself (`target="_blank"`,
+`window.open`) is a new browser target, and its very first document has
+usually started running by the time Charlotte can attach the scripts. Every
+document the popup loads after that is covered.
 
 ## The Chromium sandbox (`--no-sandbox`)
 

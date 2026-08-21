@@ -16,9 +16,15 @@
  */
 
 import type { ToolProfile, ToolGroupName } from "../tools/tool-groups.js";
-import type { AutoSnapshotMode, DialogAutoDismiss, HttpTransportConfig } from "../types/config.js";
+import type {
+  AutoSnapshotMode,
+  DialogAutoDismiss,
+  HttpTransportConfig,
+  InitScript,
+} from "../types/config.js";
 import { DEFAULT_HTTP_CONFIG } from "../types/config.js";
 import type { CharlotteFileConfig } from "./schema.js";
+import { loadInitScripts } from "./load-config.js";
 
 /**
  * Fully resolved Charlotte options after merging all sources. These feed
@@ -33,6 +39,11 @@ export interface ResolvedOptions {
   /** When true, Chromium launches with the sandbox DISABLED (issue #184). */
   noSandbox: boolean;
   cdpEndpoint?: string;
+  /**
+   * Init scripts (issue #18), read from disk during resolution so a missing
+   * or unreadable file fails startup. `source` is the absolute path.
+   */
+  initScripts: InitScript[];
   snapshotDepth?: number;
   autoSnapshot?: AutoSnapshotMode;
   includeIframes?: boolean;
@@ -69,6 +80,8 @@ export interface CliInputs {
   headless?: boolean;
   noSandbox?: boolean;
   cdpEndpoint?: string;
+  /** `--init-script <path>` (repeatable). Relative paths resolve against cwd. */
+  initScripts?: string[];
   /** `--http`: serve streamable HTTP instead of stdio. */
   http?: boolean;
   /** `--port <n>`: only meaningful together with `--http`. */
@@ -82,6 +95,8 @@ export interface EnvInputs {
   noSandbox?: boolean;
   outputDir?: string;
   cdpEndpoint?: string;
+  /** `CHARLOTTE_INIT_SCRIPT` — paths split on `path.delimiter`. Relative paths resolve against cwd. */
+  initScripts?: string[];
   /** `CHARLOTTE_AUTH_TOKEN` — the HTTP mode bearer token. */
   authToken?: string;
 }
@@ -97,14 +112,34 @@ function validateCdpEndpoint(endpoint: string): void {
 }
 
 /**
- * Pure merge of CLI args, env vars, and config-file values into a single
- * resolved options object. Precedence: cli > env > file > defaults.
+ * Where relative paths in each configuration source are anchored. CLI and env
+ * paths are relative to the process working directory; config-file paths are
+ * relative to the config file itself (when its location is known), so a
+ * config checked into a project keeps working from any cwd.
+ */
+export interface ResolveContext {
+  /** Working directory for CLI/env relative paths. Default `process.cwd()`. */
+  cwd?: string;
+  /** Directory containing the loaded config file; falls back to `cwd`. */
+  configDir?: string;
+}
+
+/**
+ * Merge of CLI args, env vars, and config-file values into a single resolved
+ * options object. Precedence: cli > env > file > defaults.
+ *
+ * Pure except for init scripts, whose files are read here so a bad path is a
+ * startup error rather than a silently skipped script.
  */
 export function resolveOptions(
   cli: CliInputs,
   env: EnvInputs,
   file: CharlotteFileConfig,
+  context: ResolveContext = {},
 ): ResolvedOptions {
+  const cwd = context.cwd ?? process.cwd();
+  const configDir = context.configDir ?? cwd;
+
   // ── Tools: profile vs groups ──
   // A higher-precedence source that specifies *either* profile or groups
   // wins outright and clears the other, so file-level groups don't bleed
@@ -130,6 +165,17 @@ export function resolveOptions(
   const cdpEndpoint = cli.cdpEndpoint ?? env.cdpEndpoint ?? fileCdp ?? undefined;
   if (cdpEndpoint !== undefined) {
     validateCdpEndpoint(cdpEndpoint);
+  }
+
+  // ── initScripts: cli > env > file (whole list wins, no merging) ──
+  // Each file is read now; a missing path fails startup with the path named.
+  let initScripts: InitScript[] = [];
+  if (cli.initScripts !== undefined && cli.initScripts.length > 0) {
+    initScripts = loadInitScripts(cli.initScripts, cwd, "--init-script");
+  } else if (env.initScripts !== undefined && env.initScripts.length > 0) {
+    initScripts = loadInitScripts(env.initScripts, cwd, "CHARLOTTE_INIT_SCRIPT");
+  } else if (file.browser?.initScripts !== undefined && file.browser.initScripts.length > 0) {
+    initScripts = loadInitScripts(file.browser.initScripts, configDir, "browser.initScripts");
   }
 
   // ── outputDir: cli > env > file ──
@@ -179,6 +225,7 @@ export function resolveOptions(
     headless,
     noSandbox,
     cdpEndpoint,
+    initScripts,
     snapshotDepth: file.snapshot?.depth,
     autoSnapshot: file.snapshot?.autoSnapshot,
     includeIframes: file.rendering?.includeIframes,

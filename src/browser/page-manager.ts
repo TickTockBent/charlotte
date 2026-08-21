@@ -3,7 +3,7 @@ import type { BrowserManager } from "./browser-manager.js";
 import type { CDPSessionManager } from "./cdp-session.js";
 import type { PendingDialog } from "../types/page-representation.js";
 import { createDefaultConfig } from "../types/config.js";
-import type { CharlotteConfig } from "../types/config.js";
+import type { CharlotteConfig, InitScript } from "../types/config.js";
 import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 import { logger } from "../utils/logger.js";
 import type { NavigationDenyInfo } from "./navigation-guard.js";
@@ -58,6 +58,14 @@ export class PageManager {
   private cdpSessionManager?: CDPSessionManager;
 
   /**
+   * Scripts applied to every managed page via `evaluateOnNewDocument` so they
+   * run on each new document before page JS (issue #18). Seeded from
+   * `config.initScripts` at construction; extended at runtime by
+   * {@link registerInitScript}. Entries live for the process lifetime.
+   */
+  private initScripts: InitScript[] = [];
+
+  /**
    * The most recent navigation refusal recorded by the SSRF filtering proxy
    * (D15), or null. The proxy fronts every target, so this is a single
    * session-level field (not per-tab): it is cleared at the start of each
@@ -72,6 +80,50 @@ export class PageManager {
     // Accept optional config; callers without config get a permissive default
     this.config = config ?? createDefaultConfig();
     this.cdpSessionManager = cdpSessionManager;
+    this.initScripts = [...(this.config.initScripts ?? [])];
+  }
+
+  /**
+   * Register a script to run on every new document in every tab for the rest
+   * of the session. Applied immediately to all currently managed pages (it
+   * takes effect on their next navigation) and to every page opened later.
+   */
+  async registerInitScript(source: string, content: string): Promise<void> {
+    const script: InitScript = { source, content };
+    this.initScripts.push(script);
+    await Promise.all(
+      [...this.pages.values()].map(async (managedPage) => {
+        try {
+          await managedPage.page.evaluateOnNewDocument(content);
+        } catch (error) {
+          logger.warn(`Failed to apply init script ${source} to ${managedPage.id}`, {
+            error: (error as Error).message,
+          });
+        }
+      }),
+    );
+    logger.info(`Registered init script ${source}`, { total: this.initScripts.length });
+  }
+
+  /** Read-only view of the registered init scripts (for tests/diagnostics). */
+  getInitScripts(): readonly InitScript[] {
+    return this.initScripts;
+  }
+
+  /**
+   * Apply every registered init script to a page. Called once per page when
+   * it enters management (openTab, popup capture, CDP adoption). Popups are
+   * new targets and do not inherit the opener's scripts, so they need this
+   * too (see the caveat in {@link registerPopupPage}).
+   */
+  private async applyInitScripts(page: Page): Promise<void> {
+    if (this.initScripts.length === 0) return;
+    for (const script of this.initScripts) {
+      await page.evaluateOnNewDocument(script.content);
+    }
+    logger.info(`Applied ${this.initScripts.length} init scripts`, {
+      sources: this.initScripts.map((script) => script.source),
+    });
   }
 
   /**
@@ -202,6 +254,16 @@ export class PageManager {
     };
 
     this.wirePageListeners(managedPopup);
+    // The popup handler is synchronous; apply scripts best-effort in the
+    // background. Known limitation: Puppeteer resumes a new popup target
+    // (Runtime.runIfWaitingForDebugger) before it emits `popup`, so the
+    // popup's *initial* document has usually already started by now and
+    // misses the scripts; every document after it is covered.
+    void this.applyInitScripts(popupPage).catch((error: unknown) => {
+      logger.warn(`Failed to apply init scripts to popup ${popupTabId}`, {
+        error: (error as Error).message,
+      });
+    });
     // No per-page guard install: the SSRF guard is the network-layer filtering
     // proxy (D15), which already fronts every target including this popup's
     // initial request. See src/browser/filtering-proxy.ts.
@@ -224,6 +286,7 @@ export class PageManager {
 
   async openTab(browserManager: BrowserManager, url?: string): Promise<string> {
     const page = await browserManager.newPage();
+    await this.applyInitScripts(page);
     const tabId = generateTabId();
 
     const managedPage: ManagedPage = {
@@ -260,6 +323,7 @@ export class PageManager {
     }
 
     for (const page of existingPages) {
+      await this.applyInitScripts(page);
       const tabId = generateTabId();
       const managedPage: ManagedPage = {
         id: tabId,

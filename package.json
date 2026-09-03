@@ -57,7 +57,7 @@
     "@modelcontextprotocol/node": "^2.0.0",
     "@modelcontextprotocol/server": "^2.0.0",
     "chokidar": "^4.0.0",
-    "express": "^4.21.0",
+    "express": "^5.2.1",
     "ipaddr.js": "^2.4.0",
     "puppeteer": "^24.0.0",
     "zod": "^4.2.0"

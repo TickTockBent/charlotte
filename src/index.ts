@@ -168,12 +168,23 @@ async function main(): Promise<void> {
     toolGroups: resolved.toolGroups,
   });
 
+  const shutdown = installShutdownHandlers(ctx, () => mcpServer.close(), { stdio: true });
+  // A stdout error closes the transport and pauses stdin, so EOF may never fire.
+  // Log the cause first: without it a client that went away and a client that
+  // sent a malformed frame both look like a silent exit 0.
+  mcpServer.server.onerror = (error) => {
+    // Error.message is non-enumerable, so the JSON logger would drop it.
+    const { code } = error as NodeJS.ErrnoException;
+    logger.error("Stdio transport error", { message: error.message, code });
+  };
+  mcpServer.server.onclose = () => {
+    void shutdown();
+  };
+
   const transport = new StdioServerTransport();
   await mcpServer.connect(transport);
 
   logger.info("Charlotte MCP server running on stdio");
-
-  installShutdownHandlers(ctx, () => mcpServer.close(), { stdio: true });
 }
 
 main().catch((error) => {

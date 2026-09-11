@@ -9,6 +9,15 @@ This is Charlotte's canonical changelog — every release from v0.1.0 through th
 
 ## [Unreleased]
 
+Week of 2026-09-11: dependency maintenance. The test runner moves to vitest 4.1.11 (with its coverage provider in lockstep) to clear a moderate advisory, transitive `js-yaml`, `hono`, and `@humanfs/node` advisories are cleared through lockfile bumps, the marketing site takes the Next.js 16.3.5 patch, and a second advisory ID for the already-accepted `extract-zip` risk is documented. No behavior changes.
+
+### Security
+
+- **Cleared: GHSA-2883-xcg3-v3hh (`js-yaml` 4.3.1).** CPU exhaustion in merge-key handling, transitive through `puppeteer` → `cosmiconfig`. Lockfile bump to 4.3.2; no source change.
+- **Cleared: GHSA-82fw-gwwq-j7x9 (`@vitest/mocker` < 4.1.11).** Dev-only. `vitest` and `@vitest/coverage-v8` move together to 4.1.11 (the coverage provider pins its vitest peer exactly, so the pair cannot move independently). Vitest 5 is deferred to its own verified slice.
+- **Cleared: moderate `hono` and `@humanfs/node` advisories** via lockfile bumps to 4.13.7 and 0.16.8 in both the server and the site.
+- **Documented accepted risk: GHSA-7pqw-9j4j-h8q3 (`extract-zip` ≤ 2.0.1).** A second advisory ID for the same symlink archive-entry write already accepted as GHSA-jmr9-qjv8-65gv: same package, same version, same install-time-only exposure, still no patched release. Added to the audit allowlist under the existing rationale and listed under **Known accepted risks** in [Security](https://charlotte.mintlify.site/security); clears with the same Puppeteer 25 upgrade.
+
 Week of 2026-08-21: persistent init scripts, named device emulation in `charlotte_viewport`, `linux/arm64` Docker images, a privacy page and cookieless analytics on the marketing site, plus faster in-site navigation, and a server fix for selector-mode (`dom-`) element IDs in `charlotte_toggle` and the `charlotte_find` spatial filters.
 
 ### Added

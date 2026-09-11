@@ -17,6 +17,9 @@ const ACCEPTED_ADVISORIES = new Set([
   // Install-time only (Chromium download from Google's CDN); no patch exists.
   // Accepted 2026-08-18; clears with the Puppeteer 25 upgrade.
   "GHSA-jmr9-qjv8-65gv",
+  // Second advisory ID for the same extract-zip symlink write, same package
+  // and version, same install-time-only exposure. Accepted 2026-09-11.
+  "GHSA-7pqw-9j4j-h8q3",
 ]);
 
 const FAILING_SEVERITIES = new Set(["high", "critical"]);

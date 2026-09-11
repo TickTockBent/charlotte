@@ -19,6 +19,7 @@ import { loadStartupConfig } from "./config/index.js";
 import type { ResolvedOptions } from "./config/resolve.js";
 import { isDoctorInvocation } from "./cli.js";
 import { runDoctorCli } from "./doctor.js";
+import { installShutdownHandlers } from "./shutdown.js";
 
 /**
  * Build the process's single {@link SessionContext} — the browser, page, and
@@ -109,25 +110,6 @@ async function buildSessionContext(resolved: ResolvedOptions): Promise<SessionCo
   };
 }
 
-/**
- * Register SIGINT/SIGTERM handlers that stop the transport, then the session.
- *
- * The session (browser, dev servers) is owned by this process, not by the
- * transport — the transport handle only stops accepting requests.
- */
-function installShutdownHandlers(ctx: SessionContext, closeTransport: () => Promise<void>): void {
-  const shutdown = async () => {
-    logger.info("Shutting down");
-    await ctx.devModeState?.stopAll();
-    await closeTransport();
-    await ctx.browserManager.close();
-    process.exit(0);
-  };
-
-  process.on("SIGINT", shutdown);
-  process.on("SIGTERM", shutdown);
-}
-
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
 
@@ -191,7 +173,7 @@ async function main(): Promise<void> {
 
   logger.info("Charlotte MCP server running on stdio");
 
-  installShutdownHandlers(ctx, () => mcpServer.close());
+  installShutdownHandlers(ctx, () => mcpServer.close(), { stdio: true });
 }
 
 main().catch((error) => {

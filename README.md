@@ -550,6 +550,10 @@ See [docs-internal/CHARLOTTE_SPEC.md](docs-internal/CHARLOTTE_SPEC.md) for the c
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
+## Contributors
+
+Thanks to everyone who has contributed to Charlotte! See [CONTRIBUTORS.md](CONTRIBUTORS.md).
+
 ---
 
 *Part of a growing suite of literary-named MCP servers. See more at [github.com/TickTockBent](https://github.com/TickTockBent).*

@@ -176,18 +176,32 @@ docker run -it --rm --shm-size=2gb --network=host charlotte:alpine
 
 ## Supported platforms
 
-Both images are published as multi-arch manifests for `linux/amd64` and `linux/arm64` (Apple Silicon Macs, Raspberry Pi, AWS Graviton, and similar). `docker pull` selects the right variant automatically. **amd64 is the tested platform; arm64 is published but untested — see the warning below.**
+Both Dockerfiles build for `linux/amd64` and `linux/arm64` (Apple Silicon Macs, Raspberry Pi, AWS Graviton, and similar). Starting with the next release, both images will be published as multi-arch manifests and `docker pull` will select the right variant automatically.
+
+<Warning>
+**The currently published images are `linux/amd64` only.** arm64 support landed on `main` after the v0.8.0 release, so every tag on Docker Hub and GHCR today (`:latest`, `:alpine`, `:0.8.0`, …) carries an amd64 image only. On an ARM host, pulling one either runs under emulation (Docker Desktop on Apple Silicon) or fails to start. Until the next release, build the image on the ARM host itself — a plain `docker build` (see [Quick start](#quick-start)) produces a native arm64 image there.
+</Warning>
 
 The two architectures differ only in where Chromium comes from:
 
 - **`linux/amd64`** — the Debian image (`:latest`) uses Puppeteer's bundled Chrome for Testing; the Alpine image uses Alpine's `chromium` package. This is unchanged from earlier releases, and the sandbox/seccomp posture above was validated against it.
 - **`linux/arm64`** — Chrome for Testing has no Linux arm64 build, so the Debian image installs Debian's `chromium` package instead and the entrypoint sets `PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium` (unless you set it yourself). The Alpine image already uses the distro package on every architecture.
 
-<Warning>
-**`linux/arm64` is untested.** The arm64 variants are cross-built under QEMU in CI and have not been run on real ARM hardware by the maintainer — no Apple Silicon, Graviton, or Raspberry Pi machine has exercised them end to end. Only `linux/amd64` is smoke-tested in CI. If you run Charlotte on ARM, please report what you find — working or broken — in [issue #22](https://github.com/TickTockBent/charlotte/issues/22) or a [new issue](https://github.com/TickTockBent/charlotte/issues/new), including the image tag, host, and the first few lines of container output. That feedback is what will move arm64 from "published" to "supported".
-</Warning>
+### What has been verified on ARM
 
-Charlotte's code is identical on both architectures. The one expected difference on Debian arm64 is that the Chromium version follows Debian's package rather than the version pinned by the Puppeteer release, so it may lag or lead the bundled build by a few majors.
+One community report so far ([issue #22](https://github.com/TickTockBent/charlotte/issues/22), 2026-10-10). Both images, built natively from `main` after the arm64 change, passed `charlotte doctor` and a real `navigate` + `observe` round-trip on:
+
+- **Raspberry Pi 4** (4 GB, Debian 12, Docker 29.9.0). Debian/HTTP image with the sandbox **on** via the seccomp profile (posture 1); Alpine/stdio image as shipped.
+- **Apple Silicon M4 Pro** (macOS, Docker Desktop 29.8.1). Debian/HTTP image with the sandbox **on** via the `SYS_ADMIN` fallback (posture 2); Alpine/stdio image as shipped.
+
+Not yet verified:
+
+- **The images CI will publish.** CI cross-builds arm64 under QEMU; the report above used images built natively on the ARM hosts.
+- **The seccomp profile (posture 1) on Docker Desktop for Mac.** Plain `docker run` with no security flags fails with `No usable sandbox!` there, as it does on Ubuntu hosts (see [Troubleshooting](#troubleshooting)). The `SYS_ADMIN` fallback is the confirmed working posture on Docker Desktop.
+
+If you run Charlotte on ARM, please report what you find — working or broken — in [issue #22](https://github.com/TickTockBent/charlotte/issues/22) or a [new issue](https://github.com/TickTockBent/charlotte/issues/new), including the image tag (or the commit you built), host, Docker version, and the first few lines of container output.
+
+Charlotte's code is identical on both architectures. The one expected difference on Debian arm64 is that the Chromium version follows Debian's package rather than the version pinned by the Puppeteer release, so it can lag or lead the bundled build by several majors. In the report above, Debian's Chromium 154 and Alpine's Chromium 152 both drove cleanly with Puppeteer 24.37, which pins Chrome 145.
 
 ## Image comparison
 

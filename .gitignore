@@ -31,6 +31,7 @@ agents.md
 *CLAUDE.md
 .claude/
 .mcp.json
+.nodeterm/
 
 # MCP Registry tokens
 .mcpregistry_*

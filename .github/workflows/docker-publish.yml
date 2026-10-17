@@ -4,54 +4,105 @@ on:
   push:
     tags:
       - 'v*'
+  # PRs that touch the images build and smoke-test both architectures
+  # natively, then stop — nothing is pushed outside a tag.
+  pull_request:
+    branches: [main]
+    paths:
+      - Dockerfile
+      - Dockerfile.alpine
+      - docker/**
+      - tests/docker-smoke-test.mjs
+      - .github/workflows/docker-publish.yml
+  # Manual dry run: same build + smoke tests as a PR, no push.
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # Never cancel a release mid-publish; superseded PR runs can go.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   GHCR_IMAGE: ghcr.io/ticktockbent/charlotte
   DOCKERHUB_IMAGE: docker.io/ticktockbent/charlotte
 
 jobs:
-  publish:
+  # One leg per architecture, each on a native runner (no QEMU): build both
+  # images, smoke-test them on that architecture, and — on a tag only — push
+  # them by digest. The publish job below stitches the per-arch digests into
+  # the multi-arch tags, so every published image is one that was tested.
+  build:
     # v0.7.0 is a reference-only tag (never published standalone; see CHANGELOG) —
     # publishing it would also repoint :latest at a pre-remote image.
     if: github.ref_name != 'v0.7.0'
-    runs-on: ubuntu-latest
-    # Raised from 30: the linux/arm64 halves of both images are cross-built
-    # under QEMU emulation (npm ci + tsc + apt run several times slower).
-    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            arch: amd64
+            runner: ubuntu-24.04
+          - platform: linux/arm64
+            arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
     permissions:
       contents: read
       packages: write
+    env:
+      IS_RELEASE: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # QEMU lets Buildx emulate linux/arm64 on the amd64 runner (slow, but
-      # the only way to cross-build without a native arm64 runner).
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Extract version from tag
-        id: version
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-
-      # amd64 only: `load: true` imports into the local daemon, which cannot
-      # take a multi-arch manifest. arm64 is build-verified by the push steps
-      # below, not smoke-tested, in CI.
+      # `load: true` imports into the local daemon for the smoke tests below.
+      # The push steps further down rebuild from this builder's cache, so they
+      # publish the same layers that were tested.
       - name: Build Alpine image (local, for smoke test)
         uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile.alpine
-          platforms: linux/amd64
+          platforms: ${{ matrix.platform }}
           push: false
           load: true
-          tags: charlotte:smoke-test
-          cache-from: type=gha,scope=alpine
-          cache-to: type=gha,mode=max,scope=alpine
+          tags: charlotte:smoke-alpine
+          cache-from: type=gha,scope=alpine-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=alpine-${{ matrix.arch }}
+
+      - name: Build Debian image (local, for smoke test)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          platforms: ${{ matrix.platform }}
+          push: false
+          load: true
+          tags: charlotte:smoke-debian
+          cache-from: type=gha,scope=debian-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=debian-${{ matrix.arch }}
+
+      # Guard against a runner-label mixup quietly testing the wrong arch.
+      - name: Confirm image architecture
+        run: |
+          for image in charlotte:smoke-alpine charlotte:smoke-debian; do
+            image_arch="$(docker image inspect "$image" --format '{{.Architecture}}')"
+            echo "$image -> $image_arch (runner: $(uname -m))"
+            if [ "$image_arch" != "${{ matrix.arch }}" ]; then
+              echo "FATAL: expected ${{ matrix.arch }}"
+              exit 1
+            fi
+          done
 
       - name: Start sandbox static server (port 9876)
         run: |
@@ -62,8 +113,10 @@ jobs:
             curl -sf http://localhost:9876/index.html && break || sleep 1
           done
 
-      - name: Run Docker smoke test
-        run: node tests/docker-smoke-test.mjs charlotte:smoke-test
+      # Full stdio tool suite. Alpine only: the script speaks stdio JSON-RPC,
+      # and the Debian image defaults to HTTP mode (see docs/docker.mdx).
+      - name: Smoke test Alpine image
+        run: node tests/docker-smoke-test.mjs charlotte:smoke-alpine
 
       - name: Stop sandbox static server
         if: always()
@@ -71,6 +124,107 @@ jobs:
           if [ -n "$SANDBOX_PID" ]; then
             kill "$SANDBOX_PID" || true
           fi
+
+      # The Debian/HTTP image gets `doctor --http` under the shipped seccomp
+      # profile (posture 1): config, token, port, and a real Chromium launch +
+      # render. Asserting `sandbox: ON` keeps a silent fall-back to an
+      # unsandboxed launch from passing. On arm64 this is the check that
+      # Debian's system Chromium (not Chrome for Testing) is wired up.
+      - name: Smoke test Debian image (doctor --http, sandbox on)
+        run: |
+          set -o pipefail
+          docker run --rm --shm-size=2gb \
+            --security-opt seccomp=docker/chrome-seccomp.json \
+            -e CHARLOTTE_AUTH_TOKEN=ci-doctor-token \
+            charlotte:smoke-debian node dist/index.js doctor --http | tee doctor-report.txt
+          grep -q 'overall PASS' doctor-report.txt
+          grep -q 'sandbox: ON' doctor-report.txt
+
+      - name: Log in to GitHub Container Registry
+        if: env.IS_RELEASE == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Docker Hub
+        if: env.IS_RELEASE == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Push Alpine image by digest
+        id: push-alpine
+        if: env.IS_RELEASE == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.alpine
+          platforms: ${{ matrix.platform }}
+          outputs: type=image,"name=${{ env.GHCR_IMAGE }},${{ env.DOCKERHUB_IMAGE }}",push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=alpine-${{ matrix.arch }}
+
+      - name: Push Debian image by digest
+        id: push-debian
+        if: env.IS_RELEASE == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          platforms: ${{ matrix.platform }}
+          outputs: type=image,"name=${{ env.GHCR_IMAGE }},${{ env.DOCKERHUB_IMAGE }}",push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=debian-${{ matrix.arch }}
+
+      - name: Export digests
+        if: env.IS_RELEASE == 'true'
+        env:
+          ALPINE_DIGEST: ${{ steps.push-alpine.outputs.digest }}
+          DEBIAN_DIGEST: ${{ steps.push-debian.outputs.digest }}
+        run: |
+          mkdir -p digests/alpine digests/debian
+          touch "digests/alpine/${ALPINE_DIGEST#sha256:}"
+          touch "digests/debian/${DEBIAN_DIGEST#sha256:}"
+
+      - name: Upload digests
+        if: env.IS_RELEASE == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ matrix.arch }}
+          path: digests/
+          if-no-files-found: error
+          retention-days: 1
+
+  # Tag only: combine the tested per-arch digests into the published tags.
+  publish:
+    needs: build
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.ref_name != 'v0.7.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      # README.md is what the Docker Hub description step publishes.
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -86,56 +240,50 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push Alpine image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: Dockerfile.alpine
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            ${{ env.GHCR_IMAGE }}:alpine
-            ${{ env.GHCR_IMAGE }}:${{ steps.version.outputs.version }}-alpine
-            ${{ env.DOCKERHUB_IMAGE }}:alpine
-            ${{ env.DOCKERHUB_IMAGE }}:${{ steps.version.outputs.version }}-alpine
-          cache-from: type=gha,scope=alpine
-          cache-to: type=gha,mode=max,scope=alpine
-
-      - name: Build and push Debian image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          # :latest is the Debian image: it carries the D27 demo-mode entrypoint
-          # (cloudflared quick tunnel) that the README's one-command docker run
-          # depends on. The Alpine image stays available as :alpine.
-          tags: |
-            ${{ env.GHCR_IMAGE }}:latest
-            ${{ env.GHCR_IMAGE }}:debian
-            ${{ env.GHCR_IMAGE }}:${{ steps.version.outputs.version }}
-            ${{ env.GHCR_IMAGE }}:${{ steps.version.outputs.version }}-debian
-            ${{ env.DOCKERHUB_IMAGE }}:latest
-            ${{ env.DOCKERHUB_IMAGE }}:debian
-            ${{ env.DOCKERHUB_IMAGE }}:${{ steps.version.outputs.version }}
-            ${{ env.DOCKERHUB_IMAGE }}:${{ steps.version.outputs.version }}-debian
-          cache-from: type=gha,scope=debian
-          cache-to: type=gha,mode=max,scope=debian
+      # :latest is the Debian image: it carries the D27 demo-mode entrypoint
+      # (cloudflared quick tunnel) that the README's one-command docker run
+      # depends on. The Alpine image stays available as :alpine.
+      - name: Create multi-arch tags
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # create_tags <digest-dir> <tag>... — one manifest list per registry,
+          # built from that registry's own copies of the per-arch digests.
+          create_tags() {
+            local digest_dir="$1"; shift
+            for image in "$GHCR_IMAGE" "$DOCKERHUB_IMAGE"; do
+              local tag_args=()
+              for tag in "$@"; do tag_args+=(-t "$image:$tag"); done
+              local sources=()
+              for digest_file in "digests/$digest_dir"/*; do
+                sources+=("$image@sha256:$(basename "$digest_file")")
+              done
+              docker buildx imagetools create "${tag_args[@]}" "${sources[@]}"
+            done
+          }
+          create_tags alpine alpine "$VERSION-alpine"
+          create_tags debian latest debian "$VERSION" "$VERSION-debian"
 
       - name: Verify published images
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          echo "Verifying Alpine image..."
-          docker pull ${{ env.GHCR_IMAGE }}:${{ steps.version.outputs.version }}-alpine
-          docker inspect ${{ env.GHCR_IMAGE }}:${{ steps.version.outputs.version }}-alpine --format '{{.Os}}/{{.Architecture}} {{.Size}}'
-
-          echo "Verifying Debian image..."
-          docker pull ${{ env.GHCR_IMAGE }}:${{ steps.version.outputs.version }}-debian
-          docker inspect ${{ env.GHCR_IMAGE }}:${{ steps.version.outputs.version }}-debian --format '{{.Os}}/{{.Architecture}} {{.Size}}'
+          for ref in \
+            "$GHCR_IMAGE:$VERSION-alpine" "$DOCKERHUB_IMAGE:$VERSION-alpine" \
+            "$GHCR_IMAGE:$VERSION-debian" "$DOCKERHUB_IMAGE:$VERSION-debian" \
+            "$GHCR_IMAGE:latest" "$DOCKERHUB_IMAGE:latest"; do
+            platforms="$(docker buildx imagetools inspect "$ref" --format '{{json .Manifest}}' \
+              | jq -r '[.manifests[].platform | select(.os != "unknown") | "\(.os)/\(.architecture)"] | sort | join(",")')"
+            echo "$ref -> $platforms"
+            if [ "$platforms" != "linux/amd64,linux/arm64" ]; then
+              echo "FATAL: $ref is not a linux/amd64 + linux/arm64 manifest"
+              exit 1
+            fi
+          done
 
           echo "Verifying :latest carries the demo-mode entrypoint (D27)..."
-          docker pull ${{ env.GHCR_IMAGE }}:latest
-          latest_entrypoint="$(docker inspect ${{ env.GHCR_IMAGE }}:latest --format '{{json .Config.Entrypoint}}')"
+          docker pull "$GHCR_IMAGE:latest"
+          latest_entrypoint="$(docker inspect "$GHCR_IMAGE:latest" --format '{{json .Config.Entrypoint}}')"
           echo ":latest entrypoint: $latest_entrypoint"
           case "$latest_entrypoint" in
             *docker/entrypoint.sh*) echo ":latest is the demo image — OK" ;;

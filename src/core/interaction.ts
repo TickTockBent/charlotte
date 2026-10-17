@@ -811,15 +811,7 @@ const fillFormTool = defineTool({
       const representation = await renderActivePage(deps, { detail: "minimal" });
 
       // Validate all fields up front before performing any actions
-      const resolvedFields: Array<{
-        backendNodeId: number;
-        frameId: string | null;
-        type: string;
-        value: string;
-        /** Current checked state for checkbox/radio/toggle, captured at validation time. */
-        currentlyChecked: boolean;
-        page: import("puppeteer").Page;
-      }> = [];
+      const resolvedFields: ResolvedFillField[] = [];
 
       for (const field of fields) {
         // Selector-mode (dom-) IDs never appear in representation.interactive
@@ -848,6 +840,7 @@ const fillFormTool = defineTool({
             );
           }
           resolvedFields.push({
+            elementId: field.element_id,
             backendNodeId: resolved.backendNodeId,
             frameId: resolved.frameId,
             type: classified.type,
@@ -885,6 +878,7 @@ const fillFormTool = defineTool({
 
         const resolved = await resolveElement(deps, field.element_id);
         resolvedFields.push({
+          elementId: field.element_id,
           backendNodeId: resolved.backendNodeId,
           frameId: resolved.frameId,
           type: element.type,
@@ -907,58 +901,21 @@ const fillFormTool = defineTool({
         // would queue behind the blocked execution context.
         if (deps.pageManager.getPendingDialogInfo()) break;
 
-        const fieldSession = await getSessionForElement(deps, {
-          page: field.page,
-          backendNodeId: field.backendNodeId,
-          frameId: field.frameId,
-        });
-        switch (field.type) {
-          case "text_input":
-          case "textarea":
-          case "date_input":
-          case "color_input":
-            await waitForPossibleNavigation(field.page, () =>
-              typeIntoElement(
-                field.page,
-                field.backendNodeId,
-                field.value,
-                true,
-                false,
-                undefined,
-                fieldSession,
-              ),
+        try {
+          await fillOneField(deps, field);
+        } catch (error: unknown) {
+          // Name the failing field: earlier fields are already applied, so the
+          // caller needs to know where the fill stopped (#293).
+          if (error instanceof CharlotteError) {
+            throw new CharlotteError(
+              error.code,
+              `Field '${field.elementId}': ${error.message}`,
+              [error.suggestion, "Fields listed before it were already filled."]
+                .filter(Boolean)
+                .join(" "),
             );
-            break;
-          case "select":
-            await waitForPossibleNavigation(field.page, () =>
-              selectOptionByBackendNodeId(
-                field.page,
-                field.backendNodeId,
-                field.value,
-                fieldSession,
-              ),
-            );
-            break;
-          case "checkbox":
-          case "radio":
-          case "toggle": {
-            // Set-semantics, not toggle: the value expresses the DESIRED state.
-            // Only click when the current state differs, so value: "true" on an
-            // already-checked box is a no-op instead of unchecking it (#204).
-            const desiredChecked = field.value.toLowerCase() !== "false";
-            if (desiredChecked !== field.currentlyChecked) {
-              await waitForPossibleNavigation(field.page, () =>
-                clickElementByBackendNodeId(
-                  field.page,
-                  field.backendNodeId,
-                  "left",
-                  [],
-                  fieldSession,
-                ),
-              );
-            }
-            break;
           }
+          throw error;
         }
       }
 
@@ -970,6 +927,64 @@ const fillFormTool = defineTool({
     }
   },
 });
+
+/** A fill_form field after up-front validation, ready to apply. */
+interface ResolvedFillField {
+  elementId: string;
+  backendNodeId: number;
+  frameId: string | null;
+  type: string;
+  value: string;
+  /** Current checked state for checkbox/radio/toggle, captured at validation time. */
+  currentlyChecked: boolean;
+  page: import("puppeteer").Page;
+}
+
+/** Apply one validated fill_form field with the action its type calls for. */
+async function fillOneField(deps: SessionContext, field: ResolvedFillField): Promise<void> {
+  const fieldSession = await getSessionForElement(deps, {
+    page: field.page,
+    backendNodeId: field.backendNodeId,
+    frameId: field.frameId,
+  });
+  switch (field.type) {
+    case "text_input":
+    case "textarea":
+    case "date_input":
+    case "color_input":
+      await waitForPossibleNavigation(field.page, () =>
+        typeIntoElement(
+          field.page,
+          field.backendNodeId,
+          field.value,
+          true,
+          false,
+          undefined,
+          fieldSession,
+        ),
+      );
+      break;
+    case "select":
+      await waitForPossibleNavigation(field.page, () =>
+        selectOptionByBackendNodeId(field.page, field.backendNodeId, field.value, fieldSession),
+      );
+      break;
+    case "checkbox":
+    case "radio":
+    case "toggle": {
+      // Set-semantics, not toggle: the value expresses the DESIRED state.
+      // Only click when the current state differs, so value: "true" on an
+      // already-checked box is a no-op instead of unchecking it (#204).
+      const desiredChecked = field.value.toLowerCase() !== "false";
+      if (desiredChecked !== field.currentlyChecked) {
+        await waitForPossibleNavigation(field.page, () =>
+          clickElementByBackendNodeId(field.page, field.backendNodeId, "left", [], fieldSession),
+        );
+      }
+      break;
+    }
+  }
+}
 
 export const interactionTools: ToolDefinition[] = [
   clickTool,

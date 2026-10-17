@@ -903,6 +903,130 @@ describe("Interaction integration", () => {
       expect(values.newsletter).toBe(true);
     });
 
+    describe("#293: lost keystrokes are an error, never a truncated success", () => {
+      // The CI failure on #292 left "J" in First Name after fill_form reported
+      // success for "Jane". These guards force that end state on purpose: the
+      // page swallows or reroutes every keystroke after the first, so they fail
+      // deterministically if the post-typing check regresses.
+
+      /** Swallow every key after the first character lands in First Name. */
+      async function dropKeysAfterFirstCharacter(): Promise<void> {
+        await harness.pageManager.getActivePage().evaluate(() => {
+          const firstNameInput = document.getElementById("first-name") as HTMLInputElement;
+          firstNameInput.addEventListener("keydown", (event) => {
+            if (firstNameInput.value.length >= 1) event.preventDefault();
+          });
+        });
+      }
+
+      function readFieldValues() {
+        return harness.pageManager.getActivePage().evaluate(() => ({
+          firstName: (document.getElementById("first-name") as HTMLInputElement).value,
+          lastName: (document.getElementById("last-name") as HTMLInputElement).value,
+          email: (document.getElementById("email") as HTMLInputElement).value,
+        }));
+      }
+
+      function errorText(result: Awaited<ReturnType<McpHarness["callTool"]>>): string {
+        return (result.content as Array<{ type: string; text: string }>)[0].text;
+      }
+
+      it("fill_form errors on the truncated field and stops there", async () => {
+        await dropKeysAfterFirstCharacter();
+        const representation = await renderActivePage(harness.deps, { detail: "minimal" });
+        const firstName = findElementByLabel(representation, "First Name")!;
+        const lastName = findElementByLabel(representation, "Last Name")!;
+
+        const result = await harness.callTool("charlotte_fill_form", {
+          fields: [
+            { element_id: firstName.id, value: "Jane" },
+            { element_id: lastName.id, value: "Doe" },
+          ],
+        });
+
+        expect(result.isError).toBe(true);
+        const text = errorText(result);
+        expect(text).toContain("ELEMENT_NOT_INTERACTIVE");
+        expect(text).toContain(`Field '${firstName.id}'`);
+        expect(text).toContain("first 1 of 4 typed characters");
+        expect(await readFieldValues()).toMatchObject({ firstName: "J", lastName: "" });
+      });
+
+      it("fill_form errors when the page pulls focus to the next field mid-typing", async () => {
+        // Reproduces the exact end state from CI: the stray keystrokes land in
+        // Last Name, whose own clear + type then erases them.
+        await harness.pageManager.getActivePage().evaluate(() => {
+          const firstNameInput = document.getElementById("first-name") as HTMLInputElement;
+          firstNameInput.addEventListener("input", () => {
+            if (firstNameInput.value.length === 1) {
+              document.getElementById("last-name")!.focus();
+            }
+          });
+        });
+        const representation = await renderActivePage(harness.deps, { detail: "minimal" });
+        const firstName = findElementByLabel(representation, "First Name")!;
+        const lastName = findElementByLabel(representation, "Last Name")!;
+        const email = findElementByLabel(representation, "Email")!;
+
+        const result = await harness.callTool("charlotte_fill_form", {
+          fields: [
+            { element_id: firstName.id, value: "Jane" },
+            { element_id: lastName.id, value: "Doe" },
+            { element_id: email.id, value: "jane@example.com" },
+          ],
+        });
+
+        expect(result.isError).toBe(true);
+        const text = errorText(result);
+        expect(text).toContain(`Field '${firstName.id}'`);
+        expect(text).toContain("focus left the field");
+        expect((await readFieldValues()).firstName).toBe("J");
+      });
+
+      it("charlotte_type errors instead of reporting a truncated value", async () => {
+        await dropKeysAfterFirstCharacter();
+        const representation = await renderActivePage(harness.deps, { detail: "minimal" });
+        const firstName = findElementByLabel(representation, "First Name")!;
+
+        const result = await harness.callTool("charlotte_type", {
+          element_id: firstName.id,
+          text: "Jane",
+        });
+
+        expect(result.isError).toBe(true);
+        expect(errorText(result)).toContain("first 1 of 4 typed characters");
+      });
+
+      it("accepts values the page legitimately reshaped", async () => {
+        await harness.pageManager.getActivePage().evaluate(() => {
+          (document.getElementById("first-name") as HTMLInputElement).maxLength = 3;
+          const lastNameInput = document.getElementById("last-name") as HTMLInputElement;
+          lastNameInput.addEventListener("input", () => {
+            lastNameInput.value = lastNameInput.value.toUpperCase();
+          });
+        });
+        const representation = await renderActivePage(harness.deps, { detail: "minimal" });
+        const firstName = findElementByLabel(representation, "First Name")!;
+        const lastName = findElementByLabel(representation, "Last Name")!;
+        const email = findElementByLabel(representation, "Email")!;
+
+        const result = await harness.callTool("charlotte_fill_form", {
+          fields: [
+            { element_id: firstName.id, value: "Jonathan" },
+            { element_id: lastName.id, value: "Doe" },
+            { element_id: email.id, value: "jane@example.com " },
+          ],
+        });
+
+        expect(result.isError).toBeFalsy();
+        expect(await readFieldValues()).toEqual({
+          firstName: "Jon",
+          lastName: "DOE",
+          email: "jane@example.com",
+        });
+      });
+    });
+
     it("#191: fills a text field via a dom- ID obtained from charlotte_find(selector)", async () => {
       // charlotte_find with a CSS selector returns a durable dom- ID that never
       // appears in representation.interactive (that array comes from the AX

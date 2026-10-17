@@ -425,8 +425,103 @@ export async function selectAllContentByBackendNodeId(
 }
 
 /**
+ * Strip what native fields drop or sanitize on their own (line breaks never
+ * enter an `<input>`; `type=email`/`url` trim surrounding whitespace) so the
+ * comparison in {@link isTruncatedEntry} only reacts to lost keystrokes.
+ */
+function normalizeForTypedComparison(text: string): string {
+  return text.replace(/[\r\n]/g, "").trim();
+}
+
+/**
+ * True when a field's value after typing is a strict prefix of the typed text,
+ * i.e. the tail keystrokes never landed (#293).
+ *
+ * Deliberately narrow: values the page reshaped (input masks, case transforms,
+ * typeahead completions, filters that drop characters mid-string) are not
+ * prefixes and pass. A value cut short by the field's own `maxlength` also
+ * passes — the browser enforced a constraint the page declared.
+ */
+export function isTruncatedEntry(
+  typedText: string,
+  fieldValue: string,
+  maxLength: number,
+): boolean {
+  if (maxLength >= 0 && fieldValue.length >= maxLength) return false;
+  const expected = normalizeForTypedComparison(typedText);
+  const actual = normalizeForTypedComparison(fieldValue);
+  return actual.length < expected.length && expected.startsWith(actual);
+}
+
+/**
+ * Verify that text typed into a cleared field actually landed there (#293).
+ *
+ * `Input.dispatchKeyEvent` resolves once the renderer has handled each key, but
+ * an event Chromium drops (or one the page reroutes) still resolves as success
+ * — so without this check fill_form/type could report success while the field
+ * held a truncated value. Only native text-entry fields are checked: their
+ * `value` is the literal typed text. Date/time/color pickers and
+ * contenteditable hosts reshape what is typed, so a comparison there would
+ * misfire. Values are never echoed in the error (password fields).
+ */
+async function assertTypedTextLanded(
+  backendNodeId: number,
+  typedText: string,
+  session: CDPSession,
+): Promise<void> {
+  const { object } = await session.send("DOM.resolveNode", { backendNodeId });
+  if (!object?.objectId) {
+    throw new CharlotteError(
+      CharlotteErrorCode.ELEMENT_NOT_FOUND,
+      "Could not resolve element to verify typed text.",
+    );
+  }
+
+  const callResult = await session.send("Runtime.callFunctionOn", {
+    objectId: object.objectId,
+    returnByValue: true,
+    functionDeclaration: `function() {
+      const textEntryTypes = ['text', 'search', 'email', 'url', 'tel', 'password', 'number'];
+      const isTextEntry = this.tagName === 'TEXTAREA' ||
+        (this.tagName === 'INPUT' && textEntryTypes.includes((this.type || 'text').toLowerCase()));
+      if (!isTextEntry) return { checkable: false };
+      const root = this.getRootNode();
+      return {
+        checkable: true,
+        value: this.value,
+        maxLength: this.maxLength,
+        focused: !!root && root.activeElement === this,
+      };
+    }`,
+  });
+  assertNoInPageException(callResult, { code: CharlotteErrorCode.SESSION_ERROR });
+
+  const fieldState = callResult.result?.value as
+    | { checkable: false }
+    | { checkable: true; value: string; maxLength: number; focused: boolean }
+    | undefined;
+  if (!fieldState?.checkable) return;
+  if (!isTruncatedEntry(typedText, fieldState.value, fieldState.maxLength)) return;
+
+  const typedLength = [...normalizeForTypedComparison(typedText)].length;
+  const landedLength = [...normalizeForTypedComparison(fieldState.value)].length;
+  throw new CharlotteError(
+    CharlotteErrorCode.ELEMENT_NOT_INTERACTIVE,
+    `Typing did not complete: the field holds only the first ${landedLength} of ${typedLength} typed characters` +
+      (fieldState.focused
+        ? "; the remaining keystrokes were lost."
+        : "; focus left the field while typing, so the remaining keystrokes went elsewhere."),
+    fieldState.focused
+      ? "Retry the call. Check the field with charlotte_observe first if the page may have reacted to the partial value."
+      : "The page may move focus as you type (e.g. auto-advancing code inputs). Type into each field separately, or retry the call.",
+  );
+}
+
+/**
  * Type text into an input element. Uses CDP to focus, optionally clears, then types via keyboard.
- * The caller supplies the cached {@link CDPSession} used for the focus step (#202).
+ * With `clearFirst`, verifies the text landed before pressing Enter and throws
+ * instead of reporting a truncated value as success (#293).
+ * The caller supplies the cached {@link CDPSession} used for the focus and verify steps (#202).
  */
 export async function typeIntoElement(
   page: Page,
@@ -460,6 +555,12 @@ export async function typeIntoElement(
   // Type the text — with optional per-character delay for sites with
   // key-by-key event handlers (autocomplete, search-as-you-type, etc.)
   await page.keyboard.type(text, characterDelay ? { delay: characterDelay } : undefined);
+
+  // Only a cleared field has a known expected value. Checked before Enter,
+  // which may legitimately submit the form or clear the field.
+  if (clearFirst) {
+    await assertTypedTextLanded(backendNodeId, text, session);
+  }
 
   if (pressEnter) {
     await page.keyboard.press("Enter");

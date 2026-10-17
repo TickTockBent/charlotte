@@ -9,7 +9,7 @@ This is Charlotte's canonical changelog — every release from v0.1.0 through th
 
 ## [Unreleased]
 
-Week of 2026-10-17: dependency maintenance and Docker work for ARM users. A transitive `basic-ftp` advisory is cleared with an npm override, the Docker images are now built and smoke-tested natively on arm64 as well as amd64, and the Docker docs stop claiming arm64 images are already published. No behavior changes to Charlotte itself.
+Week of 2026-10-17: dependency maintenance and Docker work for ARM users. A transitive `basic-ftp` advisory is cleared with an npm override, the Docker images are now built and smoke-tested natively on arm64 as well as amd64, and the Docker docs stop claiming arm64 images are already published. One behavior fix: `charlotte_fill_form` and `charlotte_type` now report an error instead of success when a typed value doesn't fully land in the field.
 
 ### Changed
 
@@ -17,6 +17,7 @@ Week of 2026-10-17: dependency maintenance and Docker work for ARM users. A tran
 
 ### Fixed
 
+- **`charlotte_fill_form` and `charlotte_type` no longer report success for a truncated text field** ([#293](https://github.com/TickTockBent/charlotte/issues/293)). A CI run caught `fill_form` reporting success while First Name held `"J"` instead of `"Jane"`. After typing into a cleared text field, Charlotte now reads the field back. If it holds only the start of the typed text, the call fails with `ELEMENT_NOT_INTERACTIVE`, and the error says how many characters landed and whether focus left the field. `fill_form` names the failing field; fields listed before it stay filled. Values the page reshapes (input masks, case changes, autocomplete) and values cut short by the field's own `maxlength` still succeed. The check covers native text inputs and textareas only, not date, time, or color inputs or `contenteditable` elements. Field values are never echoed in the error.
 - **Docker docs no longer claim arm64 images are published** ([#22](https://github.com/TickTockBent/charlotte/issues/22)). The `linux/arm64` build landed after v0.8.0 was tagged, so every published tag is still amd64-only; the arm64 images ship with the next release. [Supported platforms](https://charlotte.mintlify.site/docker#supported-platforms) now says so, explains how to build natively on an ARM host in the meantime, and records the first hardware report (Raspberry Pi 4 and Apple Silicon M4 Pro, both images passing `doctor` and a `navigate` + `observe` round-trip) along with what it did not cover.
 
 ### Security

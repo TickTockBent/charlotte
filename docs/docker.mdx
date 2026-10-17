@@ -194,9 +194,10 @@ One community report so far ([issue #22](https://github.com/TickTockBent/charlot
 - **Raspberry Pi 4** (4 GB, Debian 12, Docker 29.9.0). Debian/HTTP image with the sandbox **on** via the seccomp profile (posture 1); Alpine/stdio image as shipped.
 - **Apple Silicon M4 Pro** (macOS, Docker Desktop 29.8.1). Debian/HTTP image with the sandbox **on** via the `SYS_ADMIN` fallback (posture 2); Alpine/stdio image as shipped.
 
+CI covers arm64 too: the image workflow builds each architecture natively (amd64 and arm64 GitHub runners, no emulation) and smoke-tests both images on both before anything is pushed. Releases publish exactly those per-arch builds. See [Testing](#testing).
+
 Not yet verified:
 
-- **The images CI will publish.** CI cross-builds arm64 under QEMU; the report above used images built natively on the ARM hosts.
 - **The seccomp profile (posture 1) on Docker Desktop for Mac.** Plain `docker run` with no security flags fails with `No usable sandbox!` there, as it does on Ubuntu hosts (see [Troubleshooting](#troubleshooting)). The `SYS_ADMIN` fallback is the confirmed working posture on Docker Desktop.
 
 If you run Charlotte on ARM, please report what you find — working or broken — in [issue #22](https://github.com/TickTockBent/charlotte/issues/22) or a [new issue](https://github.com/TickTockBent/charlotte/issues/new), including the image tag (or the commit you built), host, Docker version, and the first few lines of container output.
@@ -244,10 +245,19 @@ A smoke test script exercises the full MCP tool suite against a running containe
   stdin/stdout — that only works against an image whose `CMD` runs the stdio
   transport. Since the Debian `Dockerfile` now defaults to HTTP mode
   (`--http`, decision D22), this script no longer applies to it; run it only
-  against `charlotte:alpine`. The Debian/HTTP image's smoke coverage is the
-  manual `/healthz` + real MCP-call-over-HTTP check in the "HTTP mode"
-  section above (and the eventual I9 suite for Charlotte Remote).
+  against `charlotte:alpine`. The Debian/HTTP image is covered by
+  `charlotte doctor --http` in CI (see below) and by the manual `/healthz` +
+  real MCP-call-over-HTTP check in the "HTTP mode" section above.
 </Warning>
+
+### In CI
+
+`.github/workflows/docker-publish.yml` runs on every release tag and on any PR that touches the Dockerfiles, `docker/`, the smoke test, or the workflow itself. It runs one job per architecture, each on a native GitHub runner (`ubuntu-24.04` for amd64, `ubuntu-24.04-arm` for arm64). Each job builds both images for that architecture and then runs:
+
+- this smoke test against the Alpine image, and
+- `node dist/index.js doctor --http` against the Debian image under the shipped seccomp profile. The job fails unless doctor reports overall PASS **and** `sandbox: ON`. On arm64 this is what checks the Debian `chromium` package path.
+
+PR runs stop there. On a release tag, each job pushes the images it just tested by digest. A final job then combines the two architectures into the published multi-arch tags and fails the release if any tag is missing `linux/amd64` or `linux/arm64`.
 
 ### Prerequisites
 

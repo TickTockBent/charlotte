@@ -9,7 +9,11 @@ This is Charlotte's canonical changelog — every release from v0.1.0 through th
 
 ## [Unreleased]
 
-Week of 2026-10-17: dependency maintenance. A transitive `basic-ftp` advisory is cleared with an npm override. No behavior changes.
+Week of 2026-10-17: dependency maintenance and a Docker docs correction for ARM users. A transitive `basic-ftp` advisory is cleared with an npm override, and the Docker docs stop claiming arm64 images are already published. No behavior changes.
+
+### Fixed
+
+- **Docker docs no longer claim arm64 images are published** ([#22](https://github.com/TickTockBent/charlotte/issues/22)). The `linux/arm64` build landed after v0.8.0 was tagged, so every published tag is still amd64-only; the arm64 images ship with the next release. [Supported platforms](https://charlotte.mintlify.site/docker#supported-platforms) now says so, explains how to build natively on an ARM host in the meantime, and records the first hardware report (Raspberry Pi 4 and Apple Silicon M4 Pro, both images passing `doctor` and a `navigate` + `observe` round-trip) along with what it did not cover.
 
 ### Security
 

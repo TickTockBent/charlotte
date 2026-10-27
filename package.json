@@ -60,6 +60,7 @@
     "express": "^5.2.1",
     "ipaddr.js": "^2.4.0",
     "puppeteer": "^25.16.0",
+    "yauzl": "^3.4.0",
     "zod": "^4.2.0"
   },
   "devDependencies": {

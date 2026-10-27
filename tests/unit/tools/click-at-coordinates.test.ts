@@ -51,10 +51,10 @@ describe("clickAtCoordinates (#204f shared helper)", () => {
     expect(log).toEqual([{ kind: "mouse.click", args: [5, 6, { button: "right" }] }]);
   });
 
-  it("uses clickCount:2 for a double click", async () => {
+  it("uses count:2 for a double click", async () => {
     const { page, log } = makeRecordingPage();
     await clickAtCoordinates(page, 7, 8, "double");
-    expect(log).toEqual([{ kind: "mouse.click", args: [7, 8, { clickCount: 2 }] }]);
+    expect(log).toEqual([{ kind: "mouse.click", args: [7, 8, { count: 2 }] }]);
   });
 
   it("holds modifiers before the click and releases them in reverse order after", async () => {

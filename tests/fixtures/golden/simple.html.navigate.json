@@ -42,6 +42,28 @@
           "w": 1160,
           "h": 622
         }
+      },
+      {
+        "id": "rgn-6b8675",
+        "role": "form",
+        "label": "form",
+        "bounds": {
+          "x": 260,
+          "y": 148,
+          "w": 1160,
+          "h": 35
+        }
+      },
+      {
+        "id": "rgn-6df82c",
+        "role": "form",
+        "label": "form",
+        "bounds": {
+          "x": 260,
+          "y": 648,
+          "w": 1160,
+          "h": 92
+        }
       }
     ],
     "headings": [
@@ -86,7 +108,7 @@
         "id": "hdg-d2c259"
       }
     ],
-    "content_summary": "banner: 1 headings; Main navigation: 5 links, 1 lists; Dashboard content: 7 headings, 5 paragraphs, 3 buttons, 3 inputs, 1 lists",
+    "content_summary": "banner: 1 headings; Main navigation: 5 links, 1 lists; Dashboard content: 7 headings, 5 paragraphs, 2 buttons, 1 lists; form: 1 inputs; form: 1 buttons, 2 inputs",
     "full_content": "Test Dashboard\nDashboard\nProjects\nTasks\nReports\nSettings\nSearch\nCreate New Project\nExport Data\nRecent Activity\nHere is some recent activity on your dashboard.\nProject Alpha updated\nNew task assigned\nReport generated\nMetrics\nActive Projects\n12\nOpen Tasks\n47\nTeam Members\n8\nCompletion Rate\n78%\nSettings\nTheme\nSave Settings"
   },
   "interactive": [
@@ -151,7 +173,7 @@
       "state": {}
     },
     {
-      "id": "inp-2dc200",
+      "id": "inp-bfa7a7",
       "type": "text_input",
       "label": "Search",
       "bounds": {
@@ -190,7 +212,7 @@
       }
     },
     {
-      "id": "sel-e45971",
+      "id": "sel-b42ad0",
       "type": "select",
       "label": "Theme",
       "bounds": {
@@ -210,9 +232,9 @@
       ]
     },
     {
-      "id": "chk-cfb922",
+      "id": "chk-74de31",
       "type": "checkbox",
-      "label": " Enable notifications",
+      "label": "Enable notifications",
       "bounds": {
         "x": 260,
         "y": 686,
@@ -222,7 +244,7 @@
       "state": {}
     },
     {
-      "id": "btn-05f592",
+      "id": "btn-6c6999",
       "type": "button",
       "label": "Save Settings",
       "bounds": {
@@ -232,6 +254,24 @@
         "h": 15
       },
       "state": {}
+    }
+  ],
+  "forms": [
+    {
+      "id": "frm-8527ad",
+      "fields": [
+        "inp-bfa7a7"
+      ],
+      "submit": null
+    },
+    {
+      "id": "frm-41e524",
+      "fields": [
+        "sel-b42ad0",
+        "chk-74de31",
+        "btn-6c6999"
+      ],
+      "submit": null
     }
   ],
   "errors": {

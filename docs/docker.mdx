@@ -202,7 +202,7 @@ Not yet verified:
 
 If you run Charlotte on ARM, please report what you find — working or broken — in [issue #22](https://github.com/TickTockBent/charlotte/issues/22) or a [new issue](https://github.com/TickTockBent/charlotte/issues/new), including the image tag (or the commit you built), host, Docker version, and the first few lines of container output.
 
-Charlotte's code is identical on both architectures. The one expected difference on Debian arm64 is that the Chromium version follows Debian's package rather than the version pinned by the Puppeteer release, so it can lag or lead the bundled build by several majors. In the report above, Debian's Chromium 154 and Alpine's Chromium 152 both drove cleanly with Puppeteer 24.37, which pins Chrome 145.
+Charlotte's code is identical on both architectures. The one expected difference on Debian arm64 is that the Chromium version follows Debian's package rather than the version pinned by the Puppeteer release, so it can lag or lead the bundled build by several majors. In the report above, taken on Puppeteer 24.37 (which pins Chrome 145), Debian's Chromium 154 and Alpine's Chromium 152 both drove cleanly. Charlotte now uses Puppeteer 25.16, which pins Chrome for Testing 156. That pin only reaches the Debian image on amd64: on arm64 the Debian image still uses Debian's `chromium` package, so its version still follows Debian. No ARM report covers Puppeteer 25 yet.
 
 ## Image comparison
 

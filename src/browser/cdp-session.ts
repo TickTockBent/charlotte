@@ -4,16 +4,17 @@ import { logger } from "../utils/logger.js";
 /**
  * Read the CDP session associated with a Puppeteer Frame.
  *
- * NOTE (#84): As of puppeteer 24.x the public abstract `Frame` class does NOT
- * expose `client` — only its internal `CdpFrame` subclass does, and that
- * subclass is not part of the published type surface. We therefore still reach
- * into the (untyped at the `Frame` level) `client` getter via a narrow cast
+ * NOTE (#84): As of puppeteer 25.16.0 the public abstract `Frame` class still
+ * does NOT expose `client` — only its internal `CdpFrame` subclass does, and
+ * that subclass is not part of the published type surface. We therefore still
+ * reach into the (untyped at the `Frame` level) `client` getter via a narrow cast
  * rather than `as any`. For same-process (same-origin) frames this returns the
  * parent page's client; for out-of-process (cross-origin) frames it returns the
  * frame's own session. Centralized here so there is a single internal-access
  * site to update if Puppeteer promotes `client` to the public `Frame` type.
  *
- * Tested against puppeteer-core 24.x.
+ * Verified against puppeteer-core 25.16.0, where `Frame.client` is still
+ * marked `@internal`.
  */
 export function frameClient(frame: Frame): CDPSession | undefined {
   return (frame as unknown as { client?: CDPSession }).client;
@@ -122,8 +123,8 @@ export class CDPSessionManager {
   /**
    * Extract the CDP frame ID from a Puppeteer Frame.
    *
-   * NOTE (#84): Puppeteer 24.x does NOT expose a public accessor for the CDP
-   * frame ID. The public `Frame` API only surfaces a Promise-returning
+   * NOTE (#84): Puppeteer 25.16.0 still does NOT expose a public accessor for
+   * the CDP frame ID. The public `Frame` API only surfaces a Promise-returning
    * `frameElement()` and (experimental) `client` getter — neither gives the
    * `Page.frameId` string that CDP commands like `Accessibility.getFullAXTree`
    * and `DOM.getFrameOwner` require. We therefore still read the internal `_id`
@@ -131,9 +132,10 @@ export class CDPSessionManager {
    * the `client` migration (also #84); if a future Puppeteer release adds a
    * public frame-id getter, switch to it here.
    *
-   * Tested against puppeteer-core 24.x. The smoke test in
-   * tests/integration/iframe.test.ts asserts this field still exists so an
-   * upgrade that removes it fails loudly rather than silently.
+   * Verified against puppeteer-core 25.16.0 (`Frame._id` and `Frame.client` are
+   * still `@internal`). The smoke test in tests/integration/iframe.test.ts
+   * asserts this field still exists so an upgrade that removes it fails loudly
+   * rather than silently.
    */
   getFrameId(frame: Frame): string {
     const id = (frame as unknown as { _id?: unknown })._id;

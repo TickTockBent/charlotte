@@ -210,7 +210,9 @@ export async function clickAtCoordinates(
     if (clickType === "right") {
       await page.mouse.click(x, y, { button: "right" });
     } else if (clickType === "double") {
-      await page.mouse.click(x, y, { clickCount: 2 });
+      // Puppeteer 25 removed `clickCount`; `count: 2` replays the first click before the
+      // double-click, so pages see one extra `click` event (accepted, D33).
+      await page.mouse.click(x, y, { count: 2 });
     } else {
       await page.mouse.click(x, y);
     }

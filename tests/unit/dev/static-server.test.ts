@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach } from "vitest";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
+import * as net from "node:net";
 import { StaticServer } from "../../../src/dev/static-server.js";
 
 const FIXTURES_DIR = path.resolve(import.meta.dirname, "../../fixtures/pages");
@@ -44,6 +45,45 @@ describe("StaticServer", () => {
 
     const response = await fetch(`${info.url}/does-not-exist.html`);
     expect(response.status).toBe(404);
+  });
+
+  it("stop() does not wait on idle speculative sockets (#301)", async () => {
+    server = new StaticServer();
+    const info = await server.start({ directoryPath: FIXTURES_DIR });
+
+    // Mimic Chrome's speculative connection: connect, then send nothing.
+    const idleSocket = net.createConnection({ host: "127.0.0.1", port: info.port });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        idleSocket.once("connect", resolve);
+        idleSocket.once("error", reject);
+      });
+      const socketClosed = new Promise<"closed">((resolve) => {
+        idleSocket.once("close", () => resolve("closed"));
+      });
+
+      let raceTimer: NodeJS.Timeout | undefined;
+      const outcome = await Promise.race([
+        server.stop().then(() => "stopped" as const),
+        new Promise<"timed-out">((resolve) => {
+          raceTimer = setTimeout(() => resolve("timed-out"), 3000);
+        }),
+      ]);
+      clearTimeout(raceTimer);
+      expect(outcome).toBe("stopped");
+
+      let closeTimer: NodeJS.Timeout | undefined;
+      const socketOutcome = await Promise.race([
+        socketClosed,
+        new Promise<"still-open">((resolve) => {
+          closeTimer = setTimeout(() => resolve("still-open"), 1000);
+        }),
+      ]);
+      clearTimeout(closeTimer);
+      expect(socketOutcome).toBe("closed");
+    } finally {
+      idleSocket.destroy();
+    }
   });
 
   it("stops the server", async () => {

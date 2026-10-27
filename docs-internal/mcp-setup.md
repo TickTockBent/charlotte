@@ -4,7 +4,7 @@ Charlotte is an MCP server that communicates over stdio. It reads JSON-RPC reque
 
 ## Prerequisites
 
-- Node.js >= 22
+- Node.js >= 22.12
 - npm
 
 ```bash
@@ -128,7 +128,7 @@ See [Sandbox Guide](sandbox.md) for the full walkthrough.
 ## Troubleshooting
 
 **Charlotte doesn't start:**
-- Verify Node.js >= 22: `node --version`
+- Verify Node.js >= 22.12: `node --version`
 - Verify the build completed: `ls dist/index.js`
 - Check stderr output for Puppeteer/Chromium launch errors
 

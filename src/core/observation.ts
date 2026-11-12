@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { Page } from "puppeteer";
+import type { Page, ElementHandle } from "puppeteer";
 import { logger } from "../utils/logger.js";
 import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 import { diffRepresentations } from "../state/differ.js";
@@ -444,7 +444,7 @@ const findTool = defineTool({
 const screenshotTool = defineTool({
   name: "charlotte_screenshot",
   description:
-    "Capture a visual screenshot. Fallback for when structured representation isn't sufficient (complex visualizations, canvas elements, images). Use save: true to persist as a file artifact that can be referenced later.",
+    "Capture a visual screenshot. Fallback for when structured representation isn't sufficient (complex visualizations, canvas elements, images). Inline captures are taken at one image pixel per CSS pixel, so image pixels match page coordinates even on high-DPR displays. Use save: true to persist as a file artifact that can be referenced later.",
   inputSchema: {
     selector: z
       .string()
@@ -479,8 +479,17 @@ const screenshotTool = defineTool({
       .describe(
         `Maximum screenshot height in pixels (default: ${DEFAULT_SCREENSHOT_HEIGHT}). When full_page is true and the page exceeds this height, the screenshot is clipped from the top and the response carries a 'clipped' text block alongside the image. Prevents multi-minute waits on very long pages (e.g. Wikipedia articles 28000+px tall). Set to ${MAX_SCREENSHOT_HEIGHT} to disable clipping.`,
       ),
+    native_resolution: z
+      .boolean()
+      .optional()
+      .describe(
+        "Keep the capture at the browser's native device resolution (default: false). By default, inline captures from displays rendering above one image pixel per CSS pixel (Retina, emulated devices with deviceScaleFactor > 1) are captured at CSS pixels so the image matches page coordinates and stays small for the model. Set true to keep native resolution, e.g. to inspect how a page renders on a high-density screen. Ignored for save/output_file captures, which are never downscaled.",
+      ),
   },
-  async handler(deps, { selector, format, quality, save, output_file, full_page, max_height }) {
+  async handler(
+    deps,
+    { selector, format, quality, save, output_file, full_page, max_height, native_resolution },
+  ) {
     try {
       if (save && output_file) {
         throw new CharlotteError(
@@ -519,32 +528,101 @@ const screenshotTool = defineTool({
       // a 28000px Wikipedia article takes 60+ seconds, while a 4000px clip
       // takes ~3 seconds. We cap the height to keep screenshots responsive.
       const maxScreenshotHeight = max_height ?? DEFAULT_SCREENSHOT_HEIGHT;
-      let clipRegion: { x: number; y: number; width: number; height: number } | undefined;
+      // Inline captures (not save/output_file) are downscaled to CSS pixels
+      // on high-DPR displays unless the caller opts out with
+      // native_resolution: true. Files on disk are not consumed by a vision
+      // model, so they always keep the native capture.
+      const downscaleEnabled = !save && !output_file && !native_resolution;
+      let clipRegion:
+        | { x: number; y: number; width: number; height: number; scale?: number }
+        | undefined;
       let clipInfo: { fullPageHeight: number; capturedHeight: number } | undefined;
-      if (!selector && effectiveFullPage && maxScreenshotHeight < MAX_SCREENSHOT_HEIGHT) {
+
+      // Measure the true capture scale (image pixels per CSS pixel) with a
+      // cheap probe capture instead of trusting window.devicePixelRatio:
+      // a page can redefine that value (one that sets it to 400 would see
+      // its captures shrunk to a few pixels wide), and under mobile
+      // emulation it is not the image-to-CSS ratio anyway (the emulated
+      // deviceScaleFactor composes with the visual viewport's page scale:
+      // an iPhone 15 emulating a page without a viewport meta tag renders
+      // a 980px layout at 1179 capture pixels). A 1000x1 CSS px probe
+      // returns round(1000 * captureScale) physical pixels, pinning the
+      // scale to ~0.05% while staying nearly free to encode. Applied as
+      // clip.scale = 1/captureScale, the capture comes back at exactly one
+      // image pixel per CSS pixel: the payload stops doubling, vision
+      // models lose nothing they could have seen (they downsample
+      // internally), and image pixels line up with the page coordinates
+      // charlotte_click_at takes.
+      let downscaleScale: number | undefined;
+      let fullPageMeasureFailed = false;
+      // Set when an inline capture that should have come back at CSS pixels
+      // is delivered at native resolution instead (probe failure or a clip
+      // fallback), so the response can say so: at native resolution the
+      // image is no longer 1 px per CSS px and charlotte_click_at
+      // coordinates no longer match it.
+      let nativeFallbackReason: string | undefined;
+      if (downscaleEnabled) {
         try {
+          const probeBuffer = (await page.screenshot({
+            type: "png",
+            clip: { x: 0, y: 0, width: 1000, height: 1 },
+          })) as Buffer;
+          // PNG IHDR: the width sits at a fixed offset (byte 16).
+          const probeScale = probeBuffer.readUInt32BE(16) / 1000;
+          if (Number.isFinite(probeScale) && probeScale > 1.001) {
+            downscaleScale = 1 / probeScale;
+            logger.info("Probed screenshot capture scale", { captureScale: probeScale });
+          }
+        } catch (error: unknown) {
+          // Never fail the screenshot over the downscale; capture native.
+          logger.debug("Screenshot scale probe failed, capturing native", {
+            error: error instanceof Error ? error.message : String(error),
+          });
+          nativeFallbackReason = "capture scale could not be probed";
+        }
+      }
+
+      if (!selector && effectiveFullPage) {
+        try {
+          // Measure the scroll dimensions for the clip; with a downscale
+          // active the full-page capture always goes through an explicit
+          // clip so the scale can be applied.
           const { scrollHeight, scrollWidth } = await page.evaluate(() => ({
             scrollHeight: document.documentElement.scrollHeight,
             scrollWidth: document.documentElement.scrollWidth,
           }));
-          if (scrollHeight > maxScreenshotHeight) {
-            clipRegion = {
-              x: 0,
-              y: 0,
-              width: scrollWidth,
-              height: maxScreenshotHeight,
-            };
+          // Clipping is disabled at the MAX height; only a strictly smaller
+          // cap produces the clipped signal.
+          const clipping = maxScreenshotHeight < MAX_SCREENSHOT_HEIGHT;
+          if (clipping && scrollHeight > maxScreenshotHeight) {
             clipInfo = { fullPageHeight: scrollHeight, capturedHeight: maxScreenshotHeight };
             logger.info("Clipping full-page screenshot", {
               scrollHeight,
               clipHeight: maxScreenshotHeight,
             });
           }
+          if (downscaleScale || (clipping && scrollHeight > maxScreenshotHeight)) {
+            clipRegion = {
+              x: 0,
+              y: 0,
+              width: scrollWidth,
+              // Clipping disabled at MAX means no cap at all: silently
+              // truncating at MAX here would lose the bottom of a tall page
+              // without the clipped signal.
+              height: clipping ? Math.min(scrollHeight, maxScreenshotHeight) : scrollHeight,
+              ...(downscaleScale ? { scale: downscaleScale } : {}),
+            };
+          }
         } catch (error: unknown) {
-          // If we can't read the scroll height, proceed with fullPage.
-          logger.debug("Failed to read page height for clipping, falling back to fullPage", {
+          // If we can't read the scroll dimensions, proceed with fullPage
+          // (native resolution when a downscale was planned).
+          logger.debug("Failed to read page dimensions for clipping, falling back to fullPage", {
             error: error instanceof Error ? error.message : String(error),
           });
+          fullPageMeasureFailed = true;
+          if (downscaleScale) {
+            nativeFallbackReason = "page dimensions could not be read";
+          }
         }
       }
 
@@ -560,11 +638,55 @@ const screenshotTool = defineTool({
           );
         }
 
-        screenshotBase64 = (await element.screenshot({
-          type: screenshotFormat,
-          quality: screenshotFormat !== "png" ? quality : undefined,
-          encoding: "base64",
-        })) as string;
+        if (downscaleScale) {
+          // ElementHandle.screenshot drops clip.scale, so build the element
+          // clip here the same way Puppeteer does internally (bounding box
+          // plus the visual viewport's page offset) and pass the scale.
+          try {
+            // scrollIntoViewIfNeeded is protected in Puppeteer's types but
+            // is exactly what element.screenshot calls internally.
+            await (
+              element as ElementHandle<Element> & { scrollIntoViewIfNeeded(): Promise<void> }
+            ).scrollIntoViewIfNeeded();
+            const box = await element.boundingBox();
+            if (!box || box.width === 0 || box.height === 0) {
+              throw new Error("element has an empty bounding box");
+            }
+            const [pageLeft, pageTop] = await element.evaluate(() =>
+              window.visualViewport
+                ? [window.visualViewport.pageLeft, window.visualViewport.pageTop]
+                : [0, 0],
+            );
+            screenshotBase64 = (await page.screenshot({
+              type: screenshotFormat,
+              quality: screenshotFormat !== "png" ? quality : undefined,
+              encoding: "base64",
+              clip: {
+                x: box.x + pageLeft,
+                y: box.y + pageTop,
+                width: box.width,
+                height: box.height,
+                scale: downscaleScale,
+              },
+            })) as string;
+          } catch (error: unknown) {
+            logger.debug("Element clip capture failed, falling back to native element capture", {
+              error: error instanceof Error ? error.message : String(error),
+            });
+            nativeFallbackReason = "element clip capture failed";
+            screenshotBase64 = (await element.screenshot({
+              type: screenshotFormat,
+              quality: screenshotFormat !== "png" ? quality : undefined,
+              encoding: "base64",
+            })) as string;
+          }
+        } else {
+          screenshotBase64 = (await element.screenshot({
+            type: screenshotFormat,
+            quality: screenshotFormat !== "png" ? quality : undefined,
+            encoding: "base64",
+          })) as string;
+        }
       } else if (clipRegion) {
         // Use clip instead of fullPage to avoid super-linear compositor cost
         screenshotBase64 = (await page.screenshot({
@@ -573,6 +695,47 @@ const screenshotTool = defineTool({
           encoding: "base64",
           clip: clipRegion,
         })) as string;
+      } else if (downscaleScale && !fullPageMeasureFailed) {
+        // Viewport capture with a downscale active: the scale can only ride
+        // on a clip, so capture the visual viewport explicitly (page offset
+        // included, so a pinch-zoomed or scrolled page is captured where it
+        // actually is).
+        try {
+          const cdp = await page.createCDPSession();
+          let viewportClip;
+          try {
+            const { cssVisualViewport } = await cdp.send("Page.getLayoutMetrics");
+            if (cssVisualViewport) {
+              viewportClip = {
+                x: cssVisualViewport.pageX,
+                y: cssVisualViewport.pageY,
+                width: cssVisualViewport.clientWidth,
+                height: cssVisualViewport.clientHeight,
+                scale: downscaleScale,
+              };
+            }
+          } finally {
+            await cdp.detach().catch(() => {});
+          }
+          if (!viewportClip) throw new Error("no visual viewport metrics");
+          screenshotBase64 = (await page.screenshot({
+            type: screenshotFormat,
+            quality: screenshotFormat !== "png" ? quality : undefined,
+            encoding: "base64",
+            clip: viewportClip,
+          })) as string;
+        } catch (error: unknown) {
+          logger.debug("Viewport clip capture failed, falling back to native viewport capture", {
+            error: error instanceof Error ? error.message : String(error),
+          });
+          nativeFallbackReason = "visual viewport metrics unavailable";
+          screenshotBase64 = (await page.screenshot({
+            type: screenshotFormat,
+            quality: screenshotFormat !== "png" ? quality : undefined,
+            encoding: "base64",
+            fullPage: false,
+          })) as string;
+        }
       } else {
         screenshotBase64 = (await page.screenshot({
           type: screenshotFormat,
@@ -645,6 +808,23 @@ const screenshotTool = defineTool({
             captured_height: clipInfo.capturedHeight,
             full_page_height: clipInfo.fullPageHeight,
             message: `Page is ${clipInfo.fullPageHeight}px tall; captured the top ${clipInfo.capturedHeight}px. Re-capture with a larger max_height, a 'selector', or full_page: false after scrolling to see more.`,
+          }),
+        });
+      }
+
+      // Announce a capture that is NOT 1 image px per CSS px even though the
+      // caller did not opt out: the fallback paths above (probe failure,
+      // unreadable page dimensions, a failed element or viewport clip)
+      // deliver native resolution, where charlotte_click_at coordinates no
+      // longer match the image. The caller needs to know before it clicks.
+      if (nativeFallbackReason) {
+        content.push({
+          type: "text" as const,
+          text: JSON.stringify({
+            native_resolution: true,
+            reason: nativeFallbackReason,
+            message:
+              "This capture is at the browser's native device resolution, so image pixels do not match page (CSS) pixels. Divide charlotte_click_at coordinates by the device pixel ratio before clicking, or retry the capture.",
           }),
         });
       }

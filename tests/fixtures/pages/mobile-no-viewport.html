@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <!-- Deliberately NO viewport meta: mobile emulation falls back to a 980px
+       layout viewport and zooms out to fit it (visual viewport page scale
+       393/980), which composes with the device scale factor in captures. -->
+  <title>No Viewport Meta</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: sans-serif; }
+    main { padding: 20px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Legacy Desktop Layout</h1>
+    <p>This page has no viewport meta tag, so a mobile browser lays it out at 980 CSS px and scales it down to fit the 393px screen.</p>
+  </main>
+</body>
+</html>

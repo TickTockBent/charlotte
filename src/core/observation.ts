@@ -444,7 +444,7 @@ const findTool = defineTool({
 const screenshotTool = defineTool({
   name: "charlotte_screenshot",
   description:
-    "Capture a visual screenshot. Fallback for when structured representation isn't sufficient (complex visualizations, canvas elements, images). Use save: true to persist as a file artifact that can be referenced later.",
+    "Capture a visual screenshot. Fallback for when structured representation isn't sufficient (complex visualizations, canvas elements, images). Inline captures from high-DPR displays (devicePixelRatio > 1) are downscaled to CSS pixels so image pixels match page coordinates. Use save: true to persist as a file artifact that can be referenced later.",
   inputSchema: {
     selector: z
       .string()
@@ -479,8 +479,17 @@ const screenshotTool = defineTool({
       .describe(
         `Maximum screenshot height in pixels (default: ${DEFAULT_SCREENSHOT_HEIGHT}). When full_page is true and the page exceeds this height, the screenshot is clipped from the top and the response carries a 'clipped' text block alongside the image. Prevents multi-minute waits on very long pages (e.g. Wikipedia articles 28000+px tall). Set to ${MAX_SCREENSHOT_HEIGHT} to disable clipping.`,
       ),
+    native_resolution: z
+      .boolean()
+      .optional()
+      .describe(
+        "Keep the capture at the browser's native device resolution (default: false). By default, inline captures from displays rendering at devicePixelRatio > 1 (Retina, emulated devices with deviceScaleFactor > 1) are downscaled to CSS pixels so the image matches page coordinates and stays small for the model. Set true to keep native resolution, e.g. to inspect how a page renders on a high-density screen. Ignored for save/output_file captures, which are never downscaled.",
+      ),
   },
-  async handler(deps, { selector, format, quality, save, output_file, full_page, max_height }) {
+  async handler(
+    deps,
+    { selector, format, quality, save, output_file, full_page, max_height, native_resolution },
+  ) {
     try {
       if (save && output_file) {
         throw new CharlotteError(
@@ -519,14 +528,28 @@ const screenshotTool = defineTool({
       // a 28000px Wikipedia article takes 60+ seconds, while a 4000px clip
       // takes ~3 seconds. We cap the height to keep screenshots responsive.
       const maxScreenshotHeight = max_height ?? DEFAULT_SCREENSHOT_HEIGHT;
+      // Inline captures (not save/output_file) are downscaled to CSS pixels
+      // on high-DPR displays unless the caller opts out with
+      // native_resolution: true. Files on disk are not consumed by a vision
+      // model, so they always keep the native capture.
+      const downscaleEnabled = !save && !output_file && !native_resolution;
+      let devicePixelRatio = 1;
       let clipRegion: { x: number; y: number; width: number; height: number } | undefined;
       let clipInfo: { fullPageHeight: number; capturedHeight: number } | undefined;
       if (!selector && effectiveFullPage && maxScreenshotHeight < MAX_SCREENSHOT_HEIGHT) {
         try {
-          const { scrollHeight, scrollWidth } = await page.evaluate(() => ({
+          // Fold the devicePixelRatio read into the same round trip that
+          // measures the scroll dimensions; the downscale below needs it.
+          const {
+            scrollHeight,
+            scrollWidth,
+            devicePixelRatio: dpr,
+          } = await page.evaluate(() => ({
             scrollHeight: document.documentElement.scrollHeight,
             scrollWidth: document.documentElement.scrollWidth,
+            devicePixelRatio: window.devicePixelRatio,
           }));
+          devicePixelRatio = dpr;
           if (scrollHeight > maxScreenshotHeight) {
             clipRegion = {
               x: 0,
@@ -543,6 +566,17 @@ const screenshotTool = defineTool({
         } catch (error: unknown) {
           // If we can't read the scroll height, proceed with fullPage.
           logger.debug("Failed to read page height for clipping, falling back to fullPage", {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      } else if (downscaleEnabled) {
+        // No scroll-dimension round trip to piggyback on (selector capture,
+        // viewport capture, or clipping disabled); read the DPR on its own.
+        try {
+          devicePixelRatio = await page.evaluate(() => window.devicePixelRatio);
+        } catch (error: unknown) {
+          // Leave it at 1; the downscale below simply won't fire.
+          logger.debug("Failed to read devicePixelRatio, skipping downscale", {
             error: error instanceof Error ? error.message : String(error),
           });
         }
@@ -580,6 +614,70 @@ const screenshotTool = defineTool({
           encoding: "base64",
           fullPage: effectiveFullPage,
         })) as string;
+      }
+
+      // Retina downscale (inline captures only): when the browser renders at
+      // devicePixelRatio > 1 (a Retina Mac without
+      // --force-device-scale-factor=1, an emulated device with
+      // deviceScaleFactor > 1), captures come back at physical resolution:
+      // a 1440px viewport yields a 2880px-wide image. Downscale to CSS
+      // pixels (1/dpr): the payload stops doubling, vision models lose
+      // nothing they could have seen (they downsample internally), and image
+      // pixels line up with the page coordinates charlotte_click_at takes.
+      // Never applies to output_file / save captures (files on disk are not
+      // consumed by a vision model); native_resolution: true opts out per
+      // call. Never fails the tool: on any error the original is returned.
+      if (downscaleEnabled && Number.isFinite(devicePixelRatio) && devicePixelRatio > 1) {
+        try {
+          // Lazy-import sharp: a top-level import would load its native
+          // binding at server startup, and a platform without a matching
+          // prebuilt binary (or an install with --omit=optional) would take
+          // down every Charlotte tool, not just screenshots.
+          const { default: sharp } = await import("sharp");
+          const rawScreenshotBuffer = Buffer.from(screenshotBase64, "base64");
+          const imageMetadata = await sharp(rawScreenshotBuffer).metadata();
+          // Target width: 1/dpr, i.e. CSS pixels. Never upscale.
+          const targetWidth = imageMetadata.width
+            ? Math.round(imageMetadata.width / devicePixelRatio)
+            : 0;
+          if (targetWidth > 0 && targetWidth < (imageMetadata.width ?? 0)) {
+            // Re-encode keeps the caller's choices: PNG stays lossless, and
+            // jpeg/webp keep an explicit quality (default 80 when none was
+            // given). Only replace the capture when the result is smaller.
+            const effectiveQuality = quality ?? 80;
+            let optimizedPipeline = sharp(rawScreenshotBuffer).resize({
+              width: targetWidth,
+              kernel: "lanczos3",
+            });
+            if (screenshotFormat === "png") {
+              optimizedPipeline = optimizedPipeline.png({ compressionLevel: 9 });
+            } else if (screenshotFormat === "jpeg") {
+              optimizedPipeline = optimizedPipeline.jpeg({
+                quality: effectiveQuality,
+                mozjpeg: true,
+              });
+            } else {
+              optimizedPipeline = optimizedPipeline.webp({ quality: effectiveQuality });
+            }
+            const optimizedBuffer = await optimizedPipeline.toBuffer();
+            if (optimizedBuffer.length < rawScreenshotBuffer.length) {
+              screenshotBase64 = optimizedBuffer.toString("base64");
+              logger.info("Downscaled screenshot to CSS pixels", {
+                devicePixelRatio,
+                originalWidth: imageMetadata.width,
+                targetWidth,
+                originalBytes: rawScreenshotBuffer.length,
+                optimizedBytes: optimizedBuffer.length,
+                format: screenshotFormat,
+              });
+            }
+          }
+        } catch (error: unknown) {
+          // Never fail the screenshot over the downscale; return the original.
+          logger.warn("Screenshot downscale failed, returning original", {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
       }
 
       // Empty-encode error (D6 §5, UNIVERSAL — both modes). webp cannot encode

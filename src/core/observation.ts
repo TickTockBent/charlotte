@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { Page } from "puppeteer";
+import sharp from "sharp";
 import { logger } from "../utils/logger.js";
 import { CharlotteError, CharlotteErrorCode } from "../types/errors.js";
 import { diffRepresentations } from "../state/differ.js";
@@ -26,6 +27,19 @@ import {
   getSessionForElement,
 } from "./tool-helpers.js";
 import { boundsFromContentQuad, getLiveBounds } from "./interaction-helpers.js";
+
+/**
+ * Screenshot size optimization constants.
+ *
+ * VISION_MAX_WIDTH: vision models downsample input internally; ~1.15 MP
+ * (e.g. 1568x700) is the sweet spot where detail is preserved without
+ * wasting tokens on resolution the model never sees.
+ *
+ * OPTIMIZE_THRESHOLD_BYTES: only bother re-encoding 1x screenshots when
+ * they are large enough for compression to matter.
+ */
+const VISION_MAX_WIDTH = 1568;
+const OPTIMIZE_THRESHOLD_BYTES = 300 * 1024;
 
 /** Lightweight result from CSS selector queries. */
 interface DOMElementResult {
@@ -580,6 +594,51 @@ const screenshotTool = defineTool({
           encoding: "base64",
           fullPage: effectiveFullPage,
         })) as string;
+      }
+
+      // Retina downscale + size optimization: when the browser renders at
+      // devicePixelRatio > 1 (i.e. NOT started with
+      // --force-device-scale-factor=1), captures come back at physical
+      // resolution (2x on Retina). Downscale to CSS pixels, cap at
+      // VISION_MAX_WIDTH (the largest width vision models usefully consume),
+      // and re-encode with quality-aware compression so the payload stays
+      // small while remaining readable for the model.
+      try {
+        const dpr = await page.evaluate(() => window.devicePixelRatio);
+        if (Number.isFinite(dpr) && (dpr > 1 || screenshotBase64.length > OPTIMIZE_THRESHOLD_BYTES)) {
+          const raw = Buffer.from(screenshotBase64, "base64");
+          const meta = await sharp(raw).metadata();
+          // Target width: 1/dpr for Retina, additionally capped at the
+          // vision-optimal width. Never upscale.
+          const dprWidth = meta.width ? Math.round(meta.width / dpr) : 0;
+          const targetWidth = Math.min(dprWidth || meta.width || 0, VISION_MAX_WIDTH);
+          if (targetWidth > 0 && targetWidth < (meta.width ?? 0)) {
+            let optimized = sharp(raw).resize({ width: targetWidth, kernel: "lanczos3" });
+            if (screenshotFormat === "png") {
+              // Palette-quantized PNG: keeps text crisp, typically 3-5x smaller.
+              optimized = optimized.png({ palette: true, quality: 90, compressionLevel: 9 });
+            } else if (screenshotFormat === "jpeg") {
+              optimized = optimized.jpeg({ quality: 80, mozjpeg: true });
+            } else if (screenshotFormat === "webp") {
+              optimized = optimized.webp({ quality: 80 });
+            }
+            const out = await optimized.toBuffer();
+            if (out.length < raw.length) {
+              screenshotBase64 = out.toString("base64");
+              logger.info("Optimized screenshot", {
+                dpr,
+                originalWidth: meta.width,
+                targetWidth,
+                originalBytes: raw.length,
+                optimizedBytes: out.length,
+                format: screenshotFormat,
+              });
+            }
+          }
+        }
+      } catch (err) {
+        // Never fail the screenshot over optimization; return the original.
+        logger.warn("Screenshot optimization failed, returning original", { err: String(err) });
       }
 
       // Empty-encode error (D6 §5, UNIVERSAL — both modes). webp cannot encode

@@ -132,8 +132,9 @@ export class StaticServer {
       return;
     }
 
+    const serverToClose = this.httpServer;
     return new Promise<void>((resolve, reject) => {
-      this.httpServer!.close((error) => {
+      serverToClose.close((error) => {
         if (error) {
           logger.warn("Error closing static server", error);
           reject(error);
@@ -144,6 +145,10 @@ export class StaticServer {
         this.httpServer = null;
         this.serverInfo = null;
       });
+      // close() alone waits for every open socket. Chrome opens speculative TCP
+      // connections to the served origin and never sends a request on them, so
+      // without this stop() blocks until Node's header-timeout sweep (~46 s). See #301.
+      serverToClose.closeAllConnections();
     });
   }
 

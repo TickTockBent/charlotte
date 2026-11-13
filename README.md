@@ -128,7 +128,7 @@ and sandbox internals: [Docker](https://charlotte.mintlify.site/docker).
 
 ### Prerequisites
 
-- Node.js >= 20
+- Node.js >= 22.12
 - npm
 
 ### Installation

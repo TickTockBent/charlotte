@@ -8,6 +8,10 @@
  * `tests/integration/http-transport.test.ts` for the 2025-era counterpart.
  * This test proves the modern side of that asymmetry: a modern request
  * actually observes `ttlMs`/`cacheScope` on the wire.
+ *
+ * `@modelcontextprotocol/server` >= 2.1.0 (upstream #2590) rejects a modern
+ * POST that omits the `MCP-Protocol-Version` header with HTTP 400 / JSON-RPC
+ * `-32020` (HeaderMismatch), so this hand-built request must send it.
  */
 import { describe, it, expect, afterEach } from "vitest";
 import { setupHttpHarness, readJsonRpc, type HttpHarness } from "../helpers/http-harness.js";
@@ -41,13 +45,16 @@ describe("HTTP tools/list cache hint (D20, modern 2026-07-28)", () => {
       },
       {
         headers: {
+          "MCP-Protocol-Version": "2026-07-28",
           "Mcp-Method": "tools/list",
           "Mcp-Name": "tools",
         },
       },
     );
 
+    expect(response.status).toBe(200);
     const message = await readJsonRpc(response);
+    expect(message.error).toBeUndefined();
 
     expect(message.result?.ttlMs).toBe(3_600_000);
     expect(message.result?.cacheScope).toBe("private");

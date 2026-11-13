@@ -366,7 +366,17 @@ describe("Iframe content extraction", () => {
       const childCounts = summary!.by_landmark[childMainKey!];
       expect(childCounts.button).toBeGreaterThanOrEqual(1);
       expect(childCounts.link).toBeGreaterThanOrEqual(1);
-      expect(childCounts.text_input).toBeGreaterThanOrEqual(1);
+
+      // Chrome 156 exposes the fixture's unnamed <form> as a form landmark (D34),
+      // so the form controls are counted under "> form" rather than "> main".
+      const childFormKey = keys.find(
+        (k) => k.includes("iframe-child.html") && k.endsWith("> form"),
+      );
+      expect(
+        childFormKey,
+        `expected an iframe-child form landmark key in ${JSON.stringify(keys)}`,
+      ).toBeDefined();
+      expect(summary!.by_landmark[childFormKey!].text_input).toBeGreaterThanOrEqual(1);
 
       // Grandchild iframe content is also grouped under its own frame key.
       const grandchildKey = keys.find((k) => k.includes("iframe-grandchild.html"));
@@ -542,7 +552,7 @@ describe("Iframe content extraction", () => {
   });
 
   describe("Puppeteer internals smoke test", () => {
-    // #84: Frame._id has no public Puppeteer accessor in 24.x, so
+    // #84: Frame._id has no public Puppeteer accessor in 25.16.0 (still @internal), so
     // CDPSessionManager.getFrameId still reads the internal field. Assert it
     // exists so a Puppeteer upgrade that removes it fails loudly here.
     it("Frame._id is a non-empty string (still required, no public accessor)", () => {

@@ -54,12 +54,14 @@
     "format:check": "prettier --check 'src/**/*.ts' 'tests/**/*.ts'"
   },
   "dependencies": {
-    "@modelcontextprotocol/node": "^2.0.0",
+    "@modelcontextprotocol/node": "^2.1.2",
     "@modelcontextprotocol/server": "^2.0.0",
     "chokidar": "^4.0.0",
     "express": "^5.2.1",
     "ipaddr.js": "^2.4.0",
-    "puppeteer": "^24.0.0",
+    "proxy-agent": "^8.0.2",
+    "puppeteer": "^25.16.0",
+    "yauzl": "^3.4.0",
     "zod": "^4.2.0"
   },
   "devDependencies": {
@@ -83,14 +85,13 @@
     "CHANGELOG.md"
   ],
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.12.0"
   },
   "mcpName": "io.github.TickTockBent/charlotte",
   "publishConfig": {
     "access": "public"
   },
   "overrides": {
-    "yauzl": "3.2.1",
     "basic-ftp": "6.2.3"
   }
 }

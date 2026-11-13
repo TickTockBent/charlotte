@@ -12,15 +12,9 @@
 import { execFileSync } from "node:child_process";
 
 /** GHSA IDs accepted per docs/security.mdx "Known accepted risks". */
-const ACCEPTED_ADVISORIES = new Set([
-  // extract-zip symlink traversal via puppeteer@24 -> @puppeteer/browsers@2.
-  // Install-time only (Chromium download from Google's CDN); no patch exists.
-  // Accepted 2026-08-18; clears with the Puppeteer 25 upgrade.
-  "GHSA-jmr9-qjv8-65gv",
-  // Second advisory ID for the same extract-zip symlink write, same package
-  // and version, same install-time-only exposure. Accepted 2026-09-11.
-  "GHSA-7pqw-9j4j-h8q3",
-]);
+// Currently no accepted high/critical advisories; entries must match
+// docs/security.mdx "Known accepted risks".
+const ACCEPTED_ADVISORIES = new Set<string>([]);
 
 const FAILING_SEVERITIES = new Set(["high", "critical"]);
 

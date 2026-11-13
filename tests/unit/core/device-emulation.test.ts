@@ -49,7 +49,9 @@ describe("resolveDeviceEmulation (#24)", () => {
     const charlotteError = thrown as CharlotteError;
     expect(charlotteError.code).toBe(CharlotteErrorCode.INVALID_ARGUMENT);
     expect(charlotteError.message).toBe("Unknown device 'iphone'.");
-    expect(charlotteError.suggestion).toContain("iPhone 15");
+    for (const suggestedName of suggestKnownDevices("iphone")) {
+      expect(charlotteError.suggestion).toContain(suggestedName);
+    }
     expect(charlotteError.suggestion).toContain("Did you mean");
     expect(charlotteError.suggestion).not.toContain("landscape");
   });

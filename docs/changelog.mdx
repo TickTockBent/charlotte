@@ -9,6 +9,13 @@ This is Charlotte's canonical changelog — every release from v0.1.0 through th
 
 ## [Unreleased]
 
+Week of 2026-11-23: the active tab and the focused tab can no longer drift apart. `charlotte_navigate` loads the URL in the active tab without activating it in the browser window, so `document.hasFocus()` keeps returning true for a different tab than the one Charlotte just navigated. Tab activation now goes through one PageManager choke point that both sets the active tab and focuses it.
+
+### Fixed
+
+- **`charlotte_navigate` now focuses the active tab before navigating it** ([#310](https://github.com/TickTockBent/charlotte/pull/310)). Previously the URL loaded in the target tab while the previously focused tab stayed on top of the browser window, so focus-based consumers (another CDP client picking the tab where `document.hasFocus()` is true, page scripts gating on focus, bwfill-style login helpers) kept operating on a different page than the one just navigated. The tab is now focused even while the page is still loading, matching what `charlotte_tab_switch` already did. Focus is only stolen when Charlotte owns a headless browser: attached to someone's real browser (`--cdp-endpoint`) or running a visible one (`--no-headless`), the visible tab is never switched, and the frontmost tab is never re-focused when it already has focus.
+- **The active tab and the browser's focused tab can no longer drift apart** ([#310](https://github.com/TickTockBent/charlotte/pull/310)). Every path that changes the active tab — `charlotte_tab_switch`, `charlotte_tab_open`, both close fallbacks (tool-initiated and site-initiated), and CDP adoption — now goes through one PageManager activation helper that sets the active tab and focuses it together. Previously, with tabs alpha, bravo and charlie active, closing charlie left Charlotte on alpha while Chrome focused bravo: the same focus bug, reachable without navigating.
+
 Week of 2026-10-26: Charlotte moves to Puppeteer 25.16 and Chrome for Testing 156, because Chrome 145 no longer receives security fixes. One breaking change: Charlotte now requires Node.js 22.12 or later. Chrome 156 reports forms and some accessible names differently, which changes output and element IDs on some pages, and double-clicks now send one extra `click` event. The upgrade clears both accepted `extract-zip` advisories, and a lockfile bump clears a `body-parser` advisory that was reachable in HTTP mode. Hand-written HTTP clients must now send the `MCP-Protocol-Version` header on requests that use MCP protocol version 2026-07-28, and restarting `charlotte_dev_serve` no longer stalls for about 46 seconds.
 
 ### Changed

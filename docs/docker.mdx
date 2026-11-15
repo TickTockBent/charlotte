@@ -94,6 +94,10 @@ To use the containerized Charlotte with Claude Desktop, you'll need a wrapper th
 
 Charlotte's BrowserManager passes `--disable-dev-shm-usage` to Chromium, which makes it use `/tmp` instead of `/dev/shm`. This means `--shm-size` is not strictly required. However, the docker-compose file and examples below include `--shm-size=2gb` as a safety net — if the flag is ever removed or overridden, the default Docker shm size (64MB) would cause Chromium crashes.
 
+### Dependencies (`sharp` / libvips)
+
+Charlotte depends on `sharp` for the inline screenshot downscale on high-DPR displays. `sharp` ships prebuilt `libvips` native binaries, which are LGPL-3.0 licensed and add roughly 30 MB to both Docker images (Debian and Alpine). `sharp` is imported lazily, only on the downscale path: if its native binding cannot load on an exotic platform, screenshots return the original capture and every other tool keeps working.
+
 ### Sandbox and security posture
 
 Chromium's own sandbox (user-namespaces + seccomp-BPF) is a load-bearing

@@ -19,6 +19,7 @@ function createFakePage(url = "about:blank") {
     removeAllListeners: vi.fn(),
     mainFrame: vi.fn(),
     goto: vi.fn().mockResolvedValue(undefined),
+    bringToFront: vi.fn().mockResolvedValue(undefined),
     url: () => url,
   };
   return { fakePage, listeners, page: fakePage as unknown as Page };
@@ -52,6 +53,21 @@ describe("PageManager init scripts (issue #18)", () => {
     await pageManager.openTab(createFakeBrowserManager(page));
 
     expect(fakePage.evaluateOnNewDocument).not.toHaveBeenCalled();
+  });
+
+  it("brings the newly opened tab to front before navigating it", async () => {
+    const pageManager = new PageManager();
+    const { fakePage, page } = createFakePage();
+
+    await pageManager.openTab(createFakeBrowserManager(page), "https://example.com/");
+
+    expect(fakePage.bringToFront).toHaveBeenCalledTimes(1);
+    expect(fakePage.goto).toHaveBeenCalledTimes(1);
+    // Focus before navigation: the tab is focused even while it loads, the
+    // same contract charlotte_navigate has.
+    expect(fakePage.bringToFront.mock.invocationCallOrder[0]).toBeLessThan(
+      fakePage.goto.mock.invocationCallOrder[0],
+    );
   });
 
   it("registerInitScript applies to existing pages and to pages opened afterwards", async () => {

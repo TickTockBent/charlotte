@@ -109,6 +109,12 @@ const navigateTool = defineTool({
 
       logger.info("Navigating", { url, waitUntil: waitUntilValue });
 
+      // Bring the tab to the front of the browser window BEFORE navigating, so
+      // the tab is focused even while the page is still loading. This keeps
+      // focus-based consumers (e.g. document.hasFocus()) on the navigated tab,
+      // matching what charlotte_tab_switch does via switchTab().
+      await page.bringToFront();
+
       // Clear errors before navigation
       deps.pageManager.clearErrors();
 

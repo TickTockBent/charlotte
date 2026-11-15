@@ -303,6 +303,10 @@ export class PageManager {
     this.pages.set(tabId, managedPage);
     this.activeTabId = tabId;
 
+    // Make the new tab the focused tab in the browser window (same mechanism
+    // as switchTab), so focus-based consumers see the right page.
+    await page.bringToFront();
+
     if (url) {
       await page.goto(url, { waitUntil: "load" });
     }

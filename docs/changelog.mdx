@@ -28,6 +28,7 @@ Week of 2026-10-26: Charlotte moves to Puppeteer 25.16 and Chrome for Testing 15
 
 ### Fixed
 
+- **`charlotte_navigate` and `charlotte_tab_open` now bring the tab to front.** Previously, navigating loaded the URL in the target tab but left the previously focused tab on top of the browser window, so `document.hasFocus()` kept returning true for the wrong tab and any focus-based consumer (another CDP client picking the focused tab, page scripts gating on focus) kept operating on a different page than the one just navigated. Both tools now activate the tab before navigation starts — the same mechanism `charlotte_tab_switch` already used — so the tab is focused even while the page is still loading.
 - **Restarting `charlotte_dev_serve` and shutting Charlotte down no longer stall for about 46 seconds** ([#301](https://github.com/TickTockBent/charlotte/issues/301)). Chrome 156 opens speculative TCP connections to the served origin and never sends a request on them. Stopping the dev server waited for those idle sockets until Node's header-timeout sweep closed them. It now closes all open connections when it stops. This also affected anyone already pointing Charlotte at a newer Chrome with `--cdp-endpoint`.
 
 ### Security

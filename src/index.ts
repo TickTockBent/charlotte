@@ -61,7 +61,13 @@ async function buildSessionContext(resolved: ResolvedOptions): Promise<SessionCo
   // In CDP mode, connection + page adoption happen lazily on first tool call,
   // so the remote browser isn't contacted until actually needed.
   const cdpSessionManager = new CDPSessionManager();
-  const pageManager = new PageManager(config, cdpSessionManager);
+  // Tab activation may focus the browser window only when Charlotte owns a
+  // headless browser: attached to a real browser (--cdp-endpoint) or running
+  // a visible one (--no-headless), switching the visible tab on every
+  // navigation would fight whoever is looking at the window (#310).
+  const pageManager = new PageManager(config, cdpSessionManager, {
+    focusTabs: !resolved.cdpEndpoint && resolved.headless,
+  });
   const browserManager = new BrowserManager(
     config,
     { headless: resolved.headless, noSandbox: resolved.noSandbox },

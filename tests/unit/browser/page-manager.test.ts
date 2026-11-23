@@ -19,6 +19,8 @@ function createFakePage(url = "about:blank") {
     removeAllListeners: vi.fn(),
     mainFrame: vi.fn(),
     goto: vi.fn().mockResolvedValue(undefined),
+    bringToFront: vi.fn().mockResolvedValue(undefined),
+    evaluate: vi.fn().mockResolvedValue(false),
     url: () => url,
   };
   return { fakePage, listeners, page: fakePage as unknown as Page };
@@ -52,6 +54,81 @@ describe("PageManager init scripts (issue #18)", () => {
     await pageManager.openTab(createFakeBrowserManager(page));
 
     expect(fakePage.evaluateOnNewDocument).not.toHaveBeenCalled();
+  });
+
+  it("activates a newly opened tab (focus before navigation) when it lacks focus", async () => {
+    const pageManager = new PageManager();
+    const { fakePage, page } = createFakePage();
+    fakePage.evaluate.mockResolvedValue(false); // not the focused tab
+
+    await pageManager.openTab(createFakeBrowserManager(page), "https://example.com/");
+
+    expect(fakePage.bringToFront).toHaveBeenCalledTimes(1);
+    expect(fakePage.goto).toHaveBeenCalledTimes(1);
+    // Focus before navigation: the tab is focused even while it loads, the
+    // same contract charlotte_navigate has.
+    expect(fakePage.bringToFront.mock.invocationCallOrder[0]).toBeLessThan(
+      fakePage.goto.mock.invocationCallOrder[0],
+    );
+  });
+
+  it("skips bringToFront for a newly opened tab that already has focus", async () => {
+    const pageManager = new PageManager();
+    const { fakePage, page } = createFakePage();
+    fakePage.evaluate.mockResolvedValue(true); // already frontmost (Chrome 156
+    // reports hasFocus() === true for fresh browser.newPage() tabs)
+
+    await pageManager.openTab(createFakeBrowserManager(page), "https://example.com/");
+
+    expect(fakePage.bringToFront).not.toHaveBeenCalled();
+    expect(fakePage.goto).toHaveBeenCalledTimes(1);
+  });
+
+  it("never focuses tabs when focusTabs is disabled (attached / visible browser)", async () => {
+    const pageManager = new PageManager(undefined, undefined, { focusTabs: false });
+    const { fakePage, page } = createFakePage();
+    fakePage.evaluate.mockResolvedValue(false);
+
+    await pageManager.openTab(createFakeBrowserManager(page), "https://example.com/");
+
+    // Bookkeeping only: the user's visible tab is never switched.
+    expect(fakePage.evaluate).not.toHaveBeenCalled();
+    expect(fakePage.bringToFront).not.toHaveBeenCalled();
+    expect(fakePage.goto).toHaveBeenCalledTimes(1);
+  });
+
+  it("switchTab focuses even when focusTabs is disabled (explicit switch)", async () => {
+    const pageManager = new PageManager(undefined, undefined, { focusTabs: false });
+    const first = createFakePage();
+    const second = createFakePage();
+    await pageManager.openTab(createFakeBrowserManager(first.page));
+    const secondTabId = await pageManager.openTab(createFakeBrowserManager(second.page));
+    second.fakePage.evaluate.mockResolvedValue(false);
+
+    await pageManager.switchTab(secondTabId);
+
+    // An explicit tab switch brings the tab to front in every browser
+    // mode; the focusTabs gate covers only implicit activations.
+    expect(second.fakePage.bringToFront).toHaveBeenCalledTimes(1);
+    expect(pageManager.getActiveTabId()).toBe(secondTabId);
+  });
+
+  it("closeTab focuses the fallback tab so activeTabId cannot drift from focus", async () => {
+    const pageManager = new PageManager();
+    const first = createFakePage();
+    const second = createFakePage();
+    // The first tab is frontmost when opened (no focus steal), but loses
+    // focus once the second tab is opened.
+    first.fakePage.evaluate.mockResolvedValue(true);
+    await pageManager.openTab(createFakeBrowserManager(first.page));
+    first.fakePage.evaluate.mockResolvedValue(false);
+    const secondTabId = await pageManager.openTab(createFakeBrowserManager(second.page));
+
+    await pageManager.closeTab(secondTabId);
+
+    // The remaining (first) tab becomes active and is brought to front.
+    expect(first.fakePage.bringToFront).toHaveBeenCalledTimes(1);
+    expect(pageManager.getActiveTabId()).not.toBe(secondTabId);
   });
 
   it("registerInitScript applies to existing pages and to pages opened afterwards", async () => {

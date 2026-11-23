@@ -76,12 +76,28 @@ export class PageManager {
    */
   private lastNavigationBlock: NavigationDenyInfo | null = null;
 
-  constructor(config?: CharlotteConfig, cdpSessionManager?: CDPSessionManager) {
+  constructor(
+    config?: CharlotteConfig,
+    cdpSessionManager?: CDPSessionManager,
+    options?: { focusTabs?: boolean },
+  ) {
     // Accept optional config; callers without config get a permissive default
     this.config = config ?? createDefaultConfig();
     this.cdpSessionManager = cdpSessionManager;
     this.initScripts = [...(this.config.initScripts ?? [])];
+    this.focusTabs = options?.focusTabs ?? true;
   }
+
+  /**
+   * Whether tab activation may focus the tab in the browser window.
+   * True when Charlotte owns a headless browser. False when it is attached
+   * to someone's real browser (--cdp-endpoint) or runs a visible one
+   * (--no-headless): there, switching the user's visible tab on every
+   * navigation would fight whoever is looking at the window. Explicit tab
+   * switches (switchTab) focus regardless; this gate covers the implicit
+   * activations (navigate, open, close fallbacks, adoption).
+   */
+  private focusTabs: boolean;
 
   /**
    * Register a script to run on every new document in every tab for the rest
@@ -232,8 +248,15 @@ export class PageManager {
         this.pages.delete(tabId);
         logger.info(`Tab ${tabId} closed by page`);
         if (this.activeTabId === tabId) {
+          // Site-initiated close: same sync-to-fallback as closeTab, but
+          // this runs in a synchronous event handler, so activation is
+          // fire-and-forget.
           const remaining = this.pages.keys().next();
           this.activeTabId = remaining.done ? null : remaining.value;
+          const fallback = this.activeTabId ? this.pages.get(this.activeTabId) : undefined;
+          if (this.activeTabId && fallback) {
+            void this.activateTab(this.activeTabId, fallback.page);
+          }
         }
       }
     });
@@ -284,6 +307,55 @@ export class PageManager {
     return tabs;
   }
 
+  /**
+   * Make tabId the active tab and focus it in the browser window. Single
+   * choke point for every path that changes the active tab (switchTab,
+   * openTab, the two close fallbacks, CDP adoption), so activeTabId can
+   * never drift from the focused tab: with tabs alpha, bravo and charlie
+   * active, closing charlie used to leave Charlotte on alpha while Chrome
+   * focused bravo. Focus is only stolen when this Charlotte owns a
+   * headless browser (see focusTabs), and is skipped when the tab already
+   * has it, so navigating the frontmost tab is free of side effects.
+   * Explicit switches (switchTab) pass explicit: true and focus
+   * regardless of the focusTabs gate: bringing the tab to front is the
+   * user-visible point of the call, in every browser mode.
+   */
+  private async activateTab(tabId: string, page: Page, explicit = false): Promise<void> {
+    this.activeTabId = tabId;
+    if (!explicit && !this.focusTabs) return;
+    try {
+      const focused = await page.evaluate(() => document.hasFocus());
+      if (!focused) {
+        // Re-check under the focus check: a site-initiated close handler
+        // fires this without awaiting, and a switchTab may have landed in
+        // between, in which case focusing the stale tab would reintroduce
+        // exactly the drift this helper exists to prevent.
+        if (this.activeTabId === tabId) {
+          await page.bringToFront();
+        }
+      }
+    } catch (error) {
+      // The page may be mid-navigation, crashed or already closing; the
+      // activeTabId bookkeeping above is the part that matters.
+      logger.debug("Tab focus check failed", {
+        tabId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  /**
+   * Bring the active tab to front (owned headless browsers only, skipped
+   * when it already has focus). Used by tools that operate on the active
+   * tab, so the tab is focused even while a navigation is still loading.
+   */
+  async focusActiveTab(): Promise<void> {
+    const managedPage = this.activeTabId ? this.pages.get(this.activeTabId) : undefined;
+    if (managedPage) {
+      await this.activateTab(this.activeTabId!, managedPage.page);
+    }
+  }
+
   async openTab(browserManager: BrowserManager, url?: string): Promise<string> {
     const page = await browserManager.newPage();
     await this.applyInitScripts(page);
@@ -301,7 +373,11 @@ export class PageManager {
     this.wirePageListeners(managedPage);
 
     this.pages.set(tabId, managedPage);
-    this.activeTabId = tabId;
+
+    // Make the new tab the active, focused tab before navigation starts
+    // (guarded: owned headless browsers only, skipped when already
+    // focused), so focus-based consumers see the right page.
+    await this.activateTab(tabId, page);
 
     if (url) {
       await page.goto(url, { waitUntil: "load" });
@@ -337,9 +413,10 @@ export class PageManager {
       this.wirePageListeners(managedPage);
       this.pages.set(tabId, managedPage);
 
-      // First adopted page becomes active
+      // First adopted page becomes active (focus only on owned headless
+      // browsers; adoption runs against an attached browser in CDP mode)
       if (!this.activeTabId) {
-        this.activeTabId = tabId;
+        await this.activateTab(tabId, page);
       }
     }
 
@@ -352,8 +429,7 @@ export class PageManager {
       throw new CharlotteError(CharlotteErrorCode.SESSION_ERROR, `Tab '${tabId}' not found`);
     }
 
-    this.activeTabId = tabId;
-    await managedPage.page.bringToFront();
+    await this.activateTab(tabId, managedPage.page, true);
     return managedPage.page;
   }
 
@@ -381,9 +457,15 @@ export class PageManager {
     this.pages.delete(tabId);
 
     if (this.activeTabId === tabId) {
-      // Switch to the first remaining tab
+      // Switch to the first remaining tab and focus it, so activeTabId and
+      // the browser's focused tab stay in sync (Chrome picks its own
+      // fallback tab, which may be a different one).
       const remaining = this.pages.keys().next();
       this.activeTabId = remaining.done ? null : remaining.value;
+      const fallback = this.activeTabId ? this.pages.get(this.activeTabId) : undefined;
+      if (this.activeTabId && fallback) {
+        await this.activateTab(this.activeTabId, fallback.page);
+      }
     }
 
     try {

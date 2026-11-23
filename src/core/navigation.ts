@@ -113,6 +113,14 @@ const navigateTool = defineTool({
       deps.pageManager.clearErrors();
 
       try {
+        // Focus the active tab before navigation starts, so the tab is
+        // focused even while the page is still loading — the same contract
+        // charlotte_tab_switch has. Guarded inside PageManager: owned
+        // headless browsers only, and skipped when the tab already has
+        // focus. Runs after clearErrors() inside this try, so a failure
+        // here can't be misreported as a stale NAVIGATION_BLOCKED.
+        await deps.pageManager.focusActiveTab();
+
         await page.goto(url, {
           waitUntil: waitUntilMap[waitUntilValue],
           timeout: navigationTimeout,
